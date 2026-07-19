@@ -1,0 +1,33 @@
+{
+  "generatedAt": "2026-07-19T16:21:27.805595+00:00",
+  "signals": [
+    {
+      "track": "AI practice",
+      "title": "AI Mania Is Eviscerating Global Decision-Making",
+      "url": "https://simonwillison.net/2026/Jul/19/ai-mania/#atom-everything",
+      "source": "Simon Willison",
+      "published": "Jul 19"
+    },
+    {
+      "track": "Systems",
+      "title": "\"Half a Second\" \u2014 a book on the XZ backdoor",
+      "url": "https://lwn.net/Articles/1083466/",
+      "source": "LWN.net",
+      "published": "Jul 18"
+    },
+    {
+      "track": "Architecture",
+      "title": "Google's AlphaEvolve Reaches General Availability with Evolutionary Code Optimization as a Service",
+      "url": "https://www.infoq.com/news/2026/07/alphaevolve-generally-available/?utm_campaign=infoq_content&utm_source=infoq&utm_medium=feed&utm_term=global",
+      "source": "InfoQ",
+      "published": "Jul 19"
+    },
+    {
+      "track": "Edge and cloud",
+      "title": "Cloudflare WAF protects WordPress applications from two high-severity vulnerabilities",
+      "url": "https://blog.cloudflare.com/wordpress-vulnerabilities/",
+      "source": "Cloudflare Blog",
+      "published": "Jul 17"
+    }
+  ]
+}
