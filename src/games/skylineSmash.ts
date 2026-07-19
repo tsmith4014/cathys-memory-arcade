@@ -42,6 +42,8 @@ type SmashState = {
   comboTimer: number;
   attackTimer: number;
   attackFlash: number;
+  rage: number;
+  rageFlash: number;
   time: number;
   shake: number;
   status: GameStatus;
@@ -87,6 +89,7 @@ export function mountSkylineSmash(canvas: HTMLCanvasElement, options: GameMountO
     state.time = Math.max(0, state.time - delta);
     state.attackTimer = Math.max(0, state.attackTimer - delta);
     state.attackFlash = Math.max(0, state.attackFlash - delta);
+    state.rageFlash = Math.max(0, state.rageFlash - delta);
     state.comboTimer = Math.max(0, state.comboTimer - delta);
     state.player.invulnerable = Math.max(0, state.player.invulnerable - delta);
     state.shake = Math.max(0, state.shake - delta * 20);
@@ -104,6 +107,7 @@ export function mountSkylineSmash(canvas: HTMLCanvasElement, options: GameMountO
       sound.play(170, 0.1, "square", 0.05);
     }
     if (input.take("space", "z", "x") && state.attackTimer <= 0) attack();
+    if (input.take("shift") && state.rage >= 100) unleashRage();
 
     state.player.vy += 1050 * delta;
     state.player.x = clamp(state.player.x + state.player.vx * delta, 6, GAME_WIDTH - state.player.width - 6);
@@ -164,6 +168,7 @@ export function mountSkylineSmash(canvas: HTMLCanvasElement, options: GameMountO
         state.combo += 1;
         state.comboTimer = 1.6;
         state.score += 100 * state.combo;
+        state.rage = Math.min(100, state.rage + 11);
         state.shake = 11;
         const hitY = ground - Math.min(height - 20, 35 + building.health * 31);
         burst(state.particles, building.x + building.width / 2, hitY, building.color, 24, 250);
@@ -178,11 +183,35 @@ export function mountSkylineSmash(canvas: HTMLCanvasElement, options: GameMountO
       if (intersects(attackBox, { x: drone.x, y: drone.y, width: 44, height: 25 })) {
         drone.health -= 1;
         state.score += 350;
+        state.rage = Math.min(100, state.rage + 18);
         burst(state.particles, drone.x + 20, drone.y + 12, "#52e7ef", 22, 260);
         hit = true;
       }
     }
     sound.play(hit ? 92 : 210, hit ? 0.18 : 0.07, hit ? "square" : "triangle", hit ? 0.1 : 0.04);
+  };
+
+  const unleashRage = (): void => {
+    state.rage = 0;
+    state.rageFlash = 0.55;
+    state.shake = 18;
+    state.bolts = [];
+    let hits = 0;
+    for (const building of state.buildings) {
+      if (building.health <= 0) continue;
+      building.health -= 1;
+      hits += 1;
+      burst(state.particles, building.x + building.width / 2, ground - building.floors * 32, building.color, 20, 300);
+      if (building.health === 0) state.score += 600;
+    }
+    for (const drone of state.drones) {
+      drone.health -= 1;
+      hits += 1;
+      burst(state.particles, drone.x + 20, drone.y + 12, "#52e7ef", 18, 280);
+    }
+    state.score += hits * 175;
+    sound.noise(0.28, 0.1);
+    sound.chord([55, 73.42, 110], 0.35, "sawtooth", 0.075);
   };
 
   const render = (): void => {
@@ -195,13 +224,21 @@ export function mountSkylineSmash(canvas: HTMLCanvasElement, options: GameMountO
     drawBolts(context, state.bolts);
     for (const drone of state.drones) drawDrone(context, drone);
     drawMonster(context, state);
+    if (state.rageFlash > 0) {
+      context.strokeStyle = `rgba(139,229,142,${state.rageFlash})`;
+      context.lineWidth = 12;
+      context.beginPath();
+      context.arc(state.player.x + 32, state.player.y + 38, (0.6 - state.rageFlash) * 900, 0, Math.PI * 2);
+      context.stroke();
+    }
     drawParticles(context, state.particles);
     context.restore();
 
     context.fillStyle = "rgba(4, 11, 18, 0.72)";
     context.fillRect(18, 18, 924, 54);
     drawPixelText(context, `SCORE ${String(state.score).padStart(6, "0")}`, 34, 33, 17, "#ffbf57");
-    drawPixelText(context, `ARMOR ${"<".repeat(state.player.health)}${".".repeat(4 - state.player.health)}`, 330, 33, 17, state.player.health > 1 ? "#8be58e" : "#ff6f61");
+    drawPixelText(context, `ARMOR ${"<".repeat(state.player.health)}${".".repeat(4 - state.player.health)}`, 300, 33, 16, state.player.health > 1 ? "#8be58e" : "#ff6f61");
+    drawPixelText(context, `RAGE ${String(Math.floor(state.rage)).padStart(3, "0")}%`, 590, 33, 16, state.rage >= 100 ? "#ffbf57" : "#8be58e");
     drawPixelText(context, `TIME ${Math.ceil(state.time)}`, 900, 33, 17, "#52e7ef", "right");
     if (state.combo > 1 && state.comboTimer > 0) drawPixelText(context, `${state.combo}X BLOCK COMBO`, 480, 95, 24, "#ff6f61", "center");
 
@@ -223,6 +260,7 @@ export function mountSkylineSmash(canvas: HTMLCanvasElement, options: GameMountO
       input.clear();
     },
     restart,
+    setSoundEnabled: (enabled) => sound.setEnabled(enabled),
     setInput: (key, active) => {
       if (active && key.toLowerCase() === "r") restart();
       else if (active && key.toLowerCase() === "p") togglePause();
@@ -255,6 +293,8 @@ function createState(): SmashState {
     comboTimer: 0,
     attackTimer: 0,
     attackFlash: 0,
+    rage: 0,
+    rageFlash: 0,
     time: 78,
     shake: 0,
     status: "playing",

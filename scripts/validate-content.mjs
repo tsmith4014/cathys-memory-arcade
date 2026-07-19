@@ -52,8 +52,11 @@ const assetFiles = await readdir("dist/assets");
 const entryScript = assetFiles.find((file) => file.startsWith("index-") && file.endsWith(".js"));
 if (!entryScript) throw new Error("production bundle entry script is missing");
 const javascript = await readFile(`dist/assets/${entryScript}`, "utf8");
-for (const gameTitle of ["Skyline Smash", "Token Trail", "Dungeon Circuit"]) {
+for (const gameTitle of ["Skyline Smash", "Token Trail", "Dungeon Circuit", "Highrise Havoc", "Sunset Run", "Dragonfire Descent"]) {
   if (!javascript.includes(gameTitle)) throw new Error(`production bundle is missing ${gameTitle}`);
+}
+for (const requiredCopy of ["$5", "all-you-can-play admission", "Fillmore Drive", "Moxie's Midnight Run", "Mountain King '86"]) {
+  if (!javascript.includes(requiredCopy)) throw new Error(`production bundle is missing required copy: ${requiredCopy}`);
 }
 for (const lifeDetail of ["Moxie, gardens, motorcycles", "Enid, Oklahoma", "A caring spirit"]) {
   if (!javascript.includes(lifeDetail)) throw new Error(`production bundle is missing Cathy detail: ${lifeDetail}`);

@@ -3,11 +3,17 @@ import { arcadeGames, mountGame, type GameController, type GameDefinition, type 
 
 type GameArcadeProps = {
   soundEnabled: boolean;
+  onActiveChange: (active: boolean) => void;
 };
 
-export function GameArcade({ soundEnabled }: GameArcadeProps) {
+export function GameArcade({ soundEnabled, onActiveChange }: GameArcadeProps) {
   const [activeGame, setActiveGame] = useState<GameDefinition | null>(() => requestedGame());
   const [scoreVersion, setScoreVersion] = useState(0);
+
+  useEffect(() => {
+    onActiveChange(Boolean(activeGame));
+    return () => onActiveChange(false);
+  }, [activeGame, onActiveChange]);
 
   const closeGame = (): void => {
     setActiveGame(null);
@@ -24,21 +30,34 @@ export function GameArcade({ soundEnabled }: GameArcadeProps) {
     <section className="lobby section-shell" id="lobby" aria-labelledby="lobby-title">
       <div className="section-heading split-heading">
         <div>
-          <p className="kicker">Free play // three cabinets online</p>
+          <p className="kicker">Free play // six cabinets online</p>
           <h2 id="lobby-title">Pick a game. Chase the board.</h2>
         </div>
         <p>Original games, rendered live in your browser. No downloads, accounts, ads, tracking, commercial characters, or borrowed cabinet art.</p>
       </div>
+      <div className="game-series-heading">
+        <span>Original trilogy // upgraded</span>
+        <p>Fast arcade experiments with new movement, scoring, and power systems.</p>
+      </div>
       <div className="game-grid">
-        {arcadeGames.map((game) => (
+        {arcadeGames.filter((game) => game.series === "original").map((game) => (
+          <GameCard game={game} key={`${game.id}-${scoreVersion}`} onLaunch={() => launchGame(game)} />
+        ))}
+      </div>
+      <div className="game-series-heading remix-heading">
+        <span>Memory remix // three deeper successors</span>
+        <p>Genre-faithful tributes built from original code, art, levels, characters, and sound.</p>
+      </div>
+      <div className="game-grid remix-grid">
+        {arcadeGames.filter((game) => game.series === "memory-remix").map((game) => (
           <GameCard game={game} key={`${game.id}-${scoreVersion}`} onLaunch={() => launchGame(game)} />
         ))}
       </div>
       <div className="floor-status" aria-label="Arcade floor status">
         <span><i className="status-light" /> Floor open</span>
-        <span>3 original games</span>
+        <span>6 original games</span>
         <span>Local high scores</span>
-        <span>Keyboard + touch</span>
+        <span>Keyboard + touch + sound</span>
       </div>
       {activeGame ? <GameStage game={activeGame} soundEnabled={soundEnabled} onClose={closeGame} /> : null}
     </section>
@@ -79,7 +98,16 @@ function AttractArt({ id }: { id: GameDefinition["id"] }) {
   if (id === "token-trail") {
     return <><i className="trail-moon" /><i className="trail-hill one" /><i className="trail-hill two" /><i className="trail-platform one" /><i className="trail-platform two" /><i className="trail-runner" /><i className="trail-token one" /><i className="trail-token two" /><i className="trail-token three" /></>;
   }
-  return <><i className="dungeon-grid" /><i className="dungeon-door" /><i className="dungeon-player" /><i className="dungeon-eye one" /><i className="dungeon-eye two" /><i className="dungeon-key" /></>;
+  if (id === "dungeon-circuit") {
+    return <><i className="dungeon-grid" /><i className="dungeon-door" /><i className="dungeon-player" /><i className="dungeon-eye one" /><i className="dungeon-eye two" /><i className="dungeon-key" /></>;
+  }
+  if (id === "highrise-havoc") {
+    return <><i className="havoc-sun" /><i className="havoc-tower one" /><i className="havoc-tower two" /><i className="havoc-tower three" /><i className="havoc-monster" /><i className="havoc-craft" /></>;
+  }
+  if (id === "sunset-run") {
+    return <><i className="sunset-orb" /><i className="sunset-ridge" /><i className="sunset-block one" /><i className="sunset-block two" /><i className="sunset-runner" /><i className="sunset-keepsake one" /><i className="sunset-keepsake two" /></>;
+  }
+  return <><i className="descent-maze" /><i className="descent-fog" /><i className="descent-hero" /><i className="descent-hoard" /><i className="descent-gate" /></>;
 }
 
 function GameStage({ game, soundEnabled, onClose }: { game: GameDefinition; soundEnabled: boolean; onClose: () => void }) {
@@ -93,6 +121,7 @@ function GameStage({ game, soundEnabled, onClose }: { game: GameDefinition; soun
     setPaused(nextHud.status === "paused");
     if (nextHud.status === "won" || nextHud.status === "lost") writeHighScore(game.id, nextHud.score);
   });
+  const requestClose = useEffectEvent(onClose);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -105,7 +134,7 @@ function GameStage({ game, soundEnabled, onClose }: { game: GameDefinition; soun
     const onKeyDown = (event: KeyboardEvent): void => {
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].includes(event.key)) event.preventDefault();
       if (event.key === "Escape") {
-        onClose();
+        requestClose();
         return;
       }
       controllerRef.current?.setInput(event.key, true);
@@ -120,7 +149,11 @@ function GameStage({ game, soundEnabled, onClose }: { game: GameDefinition; soun
       controllerRef.current?.destroy();
       controllerRef.current = null;
     };
-  }, [game, onClose, soundEnabled]);
+  }, [game]);
+
+  useEffect(() => {
+    controllerRef.current?.setSoundEnabled(soundEnabled);
+  }, [soundEnabled]);
 
   const setControl = (key: string, active: boolean): void => controllerRef.current?.setInput(key, active);
   const togglePause = (): void => controllerRef.current?.togglePause();
@@ -139,7 +172,7 @@ function GameStage({ game, soundEnabled, onClose }: { game: GameDefinition; soun
           <span className="bezel-glare" aria-hidden="true" />
         </div>
         <div className="game-console">
-          <div className="game-instructions"><strong>{game.objective}</strong><span>{game.controls}</span></div>
+          <div className="game-instructions"><strong>{game.objective}</strong><span>{hud.message ?? game.controls}</span><small>{game.controls}</small></div>
           <div className="game-console-actions">
             <button type="button" onClick={togglePause}>{paused ? "Resume" : "Pause"} <kbd>P</kbd></button>
             <button type="button" onClick={restart}>Restart <kbd>R</kbd></button>
@@ -167,8 +200,8 @@ function TouchControls({ onInput, game }: { onInput: (key: string, active: boole
         <button type="button" aria-label="Move right" {...bind("ArrowRight")}>RT</button>
       </div>
       <div className="touch-actions">
-        <button type="button" className="action-secondary" aria-label="Dash" {...bind("Shift")}>B</button>
-        <button type="button" className="action-primary" aria-label={game.id === "skyline-smash" ? "Smash" : game.id === "token-trail" ? "Dash" : "Strike"} {...bind(" ")}>A</button>
+        <button type="button" className="action-secondary" aria-label={game.secondaryAction} {...bind("Shift")}>B</button>
+        <button type="button" className="action-primary" aria-label={game.primaryAction} {...bind(" ")}>A</button>
       </div>
     </div>
   );

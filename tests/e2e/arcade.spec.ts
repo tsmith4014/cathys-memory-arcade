@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-test("enters the arcade and exposes three playable cabinets", async ({ page }) => {
+test("enters the arcade and exposes six playable cabinets", async ({ page }) => {
   await page.goto("./");
   await expect(page).toHaveTitle(/Cathy's Memory Arcade/);
   await expect(page.getByRole("button", { name: /insert two tokens/i })).toBeVisible();
@@ -11,11 +11,16 @@ test("enters the arcade and exposes three playable cabinets", async ({ page }) =
   await expect(page.getByRole("button", { name: /play skyline smash/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /play token trail/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /play dungeon circuit/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /play highrise havoc/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /play sunset run/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /play dragonfire descent/i })).toBeVisible();
 });
 
 test("launches, pauses, and exits every game cabinet", async ({ page }) => {
+  const runtimeErrors: string[] = [];
+  page.on("pageerror", (error) => runtimeErrors.push(error.message));
   await page.goto("./#lobby");
-  for (const game of ["Skyline Smash", "Token Trail", "Dungeon Circuit"]) {
+  for (const game of ["Skyline Smash", "Token Trail", "Dungeon Circuit", "Highrise Havoc", "Sunset Run", "Dragonfire Descent"]) {
     await page.getByRole("button", { name: `Play ${game}` }).click();
     await expect(page.getByRole("dialog", { name: game })).toBeVisible();
     await expect(page.getByLabel(new RegExp(`${game} game screen`, "i"))).toBeVisible();
@@ -26,6 +31,15 @@ test("launches, pauses, and exits every game cabinet", async ({ page }) => {
     await page.getByRole("button", { name: `Close ${game}` }).click();
     await expect(page.getByRole("dialog", { name: game })).toBeHidden();
   }
+  expect(runtimeErrors).toEqual([]);
+});
+
+test("shows the corrected admission timeline and jukebox credits", async ({ page }) => {
+  await page.goto("./#memory-core");
+  await expect(page.locator(".ledger-display").first()).toContainText("1987");
+  await expect(page.locator(".ledger-display").first()).toContainText("$5");
+  await expect(page.locator(".ledger-prototype")).toContainText("1986 // $2.50 // two hours");
+  await expect(page.getByText(/Edvard Grieg composition/i)).toBeVisible();
 });
 
 test("opens a shared game URL directly in its cabinet", async ({ page }) => {

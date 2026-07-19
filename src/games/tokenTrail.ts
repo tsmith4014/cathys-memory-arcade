@@ -24,7 +24,7 @@ type Token = { x: number; y: number; taken: boolean; phase: number };
 type Enemy = { x: number; y: number; minX: number; maxX: number; vx: number; alive: boolean };
 
 type TrailState = {
-  player: { x: number; y: number; previousY: number; vx: number; vy: number; width: number; height: number; health: number; invulnerable: number; dash: number; dashCooldown: number };
+  player: { x: number; y: number; previousY: number; vx: number; vy: number; width: number; height: number; health: number; invulnerable: number; dash: number; dashCooldown: number; coyote: number; jumpBuffer: number; airDashReady: boolean };
   tokens: Token[];
   enemies: Enemy[];
   particles: Particle[];
@@ -33,6 +33,8 @@ type TrailState = {
   checkpoint: number;
   camera: number;
   time: number;
+  stompChain: number;
+  stompTimer: number;
   status: GameStatus;
 };
 
@@ -71,7 +73,7 @@ export function mountTokenTrail(canvas: HTMLCanvasElement, options: GameMountOpt
     const hud: GameHud = {
       score: state.score,
       status: state.status,
-      message: state.status === "playing" ? `${state.collected}/24 tokens // ${state.player.health} hearts` : undefined,
+      message: state.status === "playing" ? `${state.collected}/24 tokens // ${state.player.health} hearts // chain x${Math.max(1, state.stompChain)}` : undefined,
     };
     const serialized = JSON.stringify(hud);
     if (serialized !== lastHud) {
@@ -99,6 +101,11 @@ export function mountTokenTrail(canvas: HTMLCanvasElement, options: GameMountOpt
     state.player.vx = 0;
     state.player.vy = 0;
     state.player.invulnerable = 1.4;
+    state.player.airDashReady = true;
+    state.player.coyote = 0;
+    state.player.jumpBuffer = 0;
+    state.stompChain = 0;
+    state.stompTimer = 0;
     state.camera = clamp(state.checkpoint - 180, 0, worldWidth - GAME_WIDTH);
   };
 
@@ -120,17 +127,31 @@ export function mountTokenTrail(canvas: HTMLCanvasElement, options: GameMountOpt
     state.player.invulnerable = Math.max(0, state.player.invulnerable - delta);
     state.player.dash = Math.max(0, state.player.dash - delta);
     state.player.dashCooldown = Math.max(0, state.player.dashCooldown - delta);
+    state.player.jumpBuffer = Math.max(0, state.player.jumpBuffer - delta);
+    state.stompTimer = Math.max(0, state.stompTimer - delta);
+    if (state.stompTimer <= 0) state.stompChain = 0;
     const direction = Number(input.down("arrowright", "d")) - Number(input.down("arrowleft", "a"));
     const onGround = isStanding(state.player);
+    if (onGround) {
+      state.player.coyote = 0.11;
+      state.player.airDashReady = true;
+    } else state.player.coyote = Math.max(0, state.player.coyote - delta);
 
-    if (input.take("arrowup", "w", "z") && onGround) {
+    if (input.take("arrowup", "w", "z")) state.player.jumpBuffer = 0.13;
+    if (state.player.jumpBuffer > 0 && state.player.coyote > 0) {
       state.player.vy = -510;
+      state.player.jumpBuffer = 0;
+      state.player.coyote = 0;
       sound.play(220, 0.1, "square", 0.06);
     }
-    if (input.take("space", "x") && state.player.dashCooldown <= 0 && direction !== 0) {
+    const dashPressed = input.take("space", "x", "shift");
+    if (dashPressed && state.player.dashCooldown <= 0 && (onGround || state.player.airDashReady)) {
+      const dashDirection = direction || Math.sign(state.player.vx) || 1;
       state.player.dash = 0.18;
       state.player.dashCooldown = 0.85;
-      state.player.vx = direction * 610;
+      state.player.airDashReady = onGround;
+      state.player.vx = dashDirection * 610;
+      if (!onGround) state.player.vy = Math.min(0, state.player.vy * 0.25);
       burst(state.particles, state.player.x, state.player.y + 35, "#52e7ef", 14, 160);
       sound.play(390, 0.13, "sawtooth", 0.05);
     }
@@ -140,6 +161,7 @@ export function mountTokenTrail(canvas: HTMLCanvasElement, options: GameMountOpt
       state.player.vx *= Math.pow(onGround ? 0.001 : 0.06, delta);
       state.player.vx = clamp(state.player.vx, -285, 285);
       state.player.vy += 1120 * delta;
+      if (state.player.vy < -180 && !input.down("arrowup", "w", "z")) state.player.vy += 1450 * delta;
     }
     state.player.previousY = state.player.y;
     state.player.x = clamp(state.player.x + state.player.vx * delta, 0, worldWidth - state.player.width);
@@ -191,9 +213,11 @@ export function mountTokenTrail(canvas: HTMLCanvasElement, options: GameMountOpt
         if (state.player.vy > 100 && playerPreviousBottom <= enemy.y + 12) {
           enemy.alive = false;
           state.player.vy = -300;
-          state.score += 300;
+          state.stompChain += 1;
+          state.stompTimer = 2.25;
+          state.score += 300 * state.stompChain;
           burst(state.particles, enemy.x + 20, enemy.y + 17, "#ef78ff", 22, 220);
-          sound.play(115, 0.13, "square", 0.08);
+          sound.play(115 + state.stompChain * 28, 0.13, "square", 0.08);
         } else hurt();
       }
     }
@@ -228,6 +252,7 @@ export function mountTokenTrail(canvas: HTMLCanvasElement, options: GameMountOpt
     drawPixelText(context, `SCORE ${String(state.score).padStart(6, "0")}`, 34, 33, 17, "#ffbf57");
     drawPixelText(context, `TOKENS ${String(state.collected).padStart(2, "0")}/24`, 360, 33, 17, "#52e7ef");
     drawPixelText(context, `TIME ${Math.ceil(state.time)}`, 900, 33, 17, "#8be58e", "right");
+    if (state.stompChain > 1) drawPixelText(context, `STOMP CHAIN x${state.stompChain}`, 480, 112, 17, "#ef78ff", "center");
     const zone = state.player.x < 1200 ? "NEON FOOTHILLS" : state.player.x < 2360 ? "MIDNIGHT SWITCHYARD" : "SUNRISE TERMINAL";
     drawPixelText(context, zone, 480, 87, 14, "rgba(234, 246, 242, 0.72)", "center");
 
@@ -249,6 +274,7 @@ export function mountTokenTrail(canvas: HTMLCanvasElement, options: GameMountOpt
       input.clear();
     },
     restart,
+    setSoundEnabled: (enabled) => sound.setEnabled(enabled),
     setInput: (key, active) => {
       if (active && key.toLowerCase() === "r") restart();
       else if (active && key.toLowerCase() === "p") togglePause();
@@ -265,7 +291,7 @@ function createState(): TrailState {
     [2835, 325], [2940, 425], [3100, 255], [3200, 425], [3290, 400], [3350, 365], [3410, 330], [3450, 290],
   ];
   return {
-    player: { x: 45, y: 390, previousY: 390, vx: 0, vy: 0, width: 36, height: 48, health: 3, invulnerable: 0, dash: 0, dashCooldown: 0 },
+    player: { x: 45, y: 390, previousY: 390, vx: 0, vy: 0, width: 36, height: 48, health: 3, invulnerable: 0, dash: 0, dashCooldown: 0, coyote: 0.11, jumpBuffer: 0, airDashReady: true },
     tokens: tokenPositions.map(([x, y], index) => ({ x, y, taken: false, phase: index * 0.5 })),
     enemies: [
       { x: 720, y: 446, minX: 680, maxX: 1040, vx: 70, alive: true },
@@ -280,6 +306,8 @@ function createState(): TrailState {
     checkpoint: 45,
     camera: 0,
     time: 120,
+    stompChain: 0,
+    stompTimer: 0,
     status: "playing",
   };
 }

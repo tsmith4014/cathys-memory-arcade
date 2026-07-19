@@ -17,6 +17,7 @@ export type GameMountOptions = {
 export type GameController = {
   destroy: () => void;
   restart: () => void;
+  setSoundEnabled: (enabled: boolean) => void;
   setInput: (key: string, active: boolean) => void;
   togglePause: () => void;
 };
@@ -79,13 +80,19 @@ export class ArcadeSfx {
   private context: AudioContext | null = null;
   private master: GainNode | null = null;
 
-  constructor(private readonly enabled: boolean) {}
+  constructor(private enabled: boolean) {}
 
-  play(frequency: number, duration = 0.08, wave: OscillatorType = "square", volume = 0.08): void {
+  setEnabled(enabled: boolean): void {
+    this.enabled = enabled;
+    if (enabled && this.context?.state === "suspended") void this.context.resume();
+  }
+
+  play(frequency: number, duration = 0.08, wave: OscillatorType = "square", volume = 0.08, endFrequency = frequency * 0.76): void {
     if (!this.enabled) return;
-    const AudioContextClass = window.AudioContext;
+    const AudioContextClass = window.AudioContext ?? (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AudioContextClass) return;
     this.context ??= new AudioContextClass();
+    if (this.context.state === "suspended") void this.context.resume();
     if (!this.master) {
       this.master = this.context.createGain();
       this.master.gain.value = 0.24;
@@ -96,7 +103,7 @@ export class ArcadeSfx {
     const envelope = this.context.createGain();
     oscillator.type = wave;
     oscillator.frequency.setValueAtTime(frequency, now);
-    oscillator.frequency.exponentialRampToValueAtTime(Math.max(35, frequency * 0.76), now + duration);
+    oscillator.frequency.exponentialRampToValueAtTime(Math.max(35, endFrequency), now + duration);
     envelope.gain.setValueAtTime(0.0001, now);
     envelope.gain.exponentialRampToValueAtTime(volume, now + 0.008);
     envelope.gain.exponentialRampToValueAtTime(0.0001, now + duration);
@@ -104,6 +111,42 @@ export class ArcadeSfx {
     envelope.connect(this.master);
     oscillator.start(now);
     oscillator.stop(now + duration + 0.02);
+  }
+
+  chord(frequencies: number[], duration = 0.16, wave: OscillatorType = "square", volume = 0.035): void {
+    frequencies.forEach((frequency, index) => {
+      window.setTimeout(() => this.play(frequency, duration, wave, volume), index * 18);
+    });
+  }
+
+  noise(duration = 0.1, volume = 0.045): void {
+    if (!this.enabled) return;
+    const AudioContextClass = window.AudioContext ?? (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) return;
+    this.context ??= new AudioContextClass();
+    if (!this.master) {
+      this.master = this.context.createGain();
+      this.master.gain.value = 0.24;
+      this.master.connect(this.context.destination);
+    }
+    const frameCount = Math.max(1, Math.floor(this.context.sampleRate * duration));
+    const buffer = this.context.createBuffer(1, frameCount, this.context.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let index = 0; index < data.length; index += 1) data[index] = Math.random() * 2 - 1;
+    const source = this.context.createBufferSource();
+    const filter = this.context.createBiquadFilter();
+    const envelope = this.context.createGain();
+    const now = this.context.currentTime;
+    source.buffer = buffer;
+    filter.type = "bandpass";
+    filter.frequency.value = 850;
+    filter.Q.value = 0.8;
+    envelope.gain.setValueAtTime(volume, now);
+    envelope.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    source.connect(filter);
+    filter.connect(envelope);
+    envelope.connect(this.master);
+    source.start(now);
   }
 
   destroy(): void {

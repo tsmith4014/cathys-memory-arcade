@@ -129,6 +129,13 @@ button { color: inherit; }
 .tone-coral { --tone: var(--coral); }
 .tone-amber { --tone: var(--amber); }
 .tone-green { --tone: var(--green); }
+.game-series-heading { display: flex; justify-content: space-between; gap: 2rem; align-items: end; margin: 0 0 1.2rem; padding-bottom: 0.8rem; border-bottom: 1px solid rgba(82, 231, 239, 0.22); }
+.game-series-heading span { color: var(--cyan); font-family: var(--display); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.game-series-heading p { max-width: 34rem; margin: 0; color: var(--muted); font-size: 0.75rem; text-align: right; }
+.remix-heading { margin-top: 4.5rem; border-color: rgba(255, 191, 87, 0.28); }
+.remix-heading span { color: var(--amber); }
+.remix-grid { position: relative; }
+.remix-grid::before { content: "NEW FLOOR"; position: absolute; z-index: 2; top: -1.25rem; right: 1rem; padding: 0.35rem 0.55rem; color: var(--night); background: var(--amber); font-family: ui-monospace, monospace; font-size: 0.55rem; font-weight: 900; letter-spacing: 0.12em; transform: rotate(2deg); }
 .game-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
 .game-card { --tone: var(--cyan); position: relative; min-width: 0; border: 1px solid var(--line); background: linear-gradient(160deg, rgba(14, 37, 49, 0.9), rgba(5, 13, 20, 0.98)); transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease; }
 .game-card::before { content: ""; position: absolute; z-index: -1; inset: 1rem -0.45rem -0.45rem 1rem; border: 1px solid color-mix(in srgb, var(--tone), transparent 78%); }
@@ -183,6 +190,33 @@ button { color: inherit; }
 .dungeon-eye.two { left: 63%; bottom: 26%; transform: scale(1.4); }
 .dungeon-key { position: absolute; z-index: 4; left: 44%; top: 54%; width: 2.8rem; height: 0.6rem; background: var(--amber); box-shadow: -0.4rem 0 0 0.35rem #03080d, -0.4rem 0 0 0.55rem var(--amber), 0 0 1.1rem var(--amber); animation: key-float 1.2s ease-in-out infinite alternate; }
 
+.attract-highrise-havoc { background: linear-gradient(#10233d 0 43%, #24506a 43% 66%, #07131f 66%); }
+.havoc-sun { position: absolute; top: 2.2rem; right: 2rem; width: 4.2rem; aspect-ratio: 1; border-radius: 50%; background: var(--coral); box-shadow: 0 0 2.2rem rgba(255, 111, 97, 0.45); }
+.havoc-tower { position: absolute; z-index: 3; bottom: 2.5rem; border: 2px solid #62869b; background: repeating-linear-gradient(0deg, #132e40 0 13px, #ffc45c 14px 20px); box-shadow: inset 0 0 1.4rem #02070b; }
+.havoc-tower.one { left: 6%; width: 21%; height: 52%; }
+.havoc-tower.two { left: 36%; width: 24%; height: 70%; }
+.havoc-tower.three { right: 5%; width: 23%; height: 59%; }
+.havoc-monster { position: absolute; z-index: 6; left: 43%; bottom: 29%; width: 3.6rem; height: 4.3rem; border-radius: 45% 45% 22% 22%; background: var(--green); box-shadow: -1.15rem 1.5rem 0 -0.6rem var(--green), 1.15rem 1.5rem 0 -0.6rem var(--green), 0 -0.65rem 0 -0.75rem #d8ffc8; animation: tower-climb 1.4s steps(4) infinite alternate; }
+.havoc-craft { position: absolute; z-index: 5; top: 23%; left: 19%; width: 3.2rem; height: 0.7rem; background: var(--coral); box-shadow: 0.65rem 0.45rem 0 -0.2rem var(--amber), -0.65rem 0.45rem 0 -0.2rem var(--amber); animation: craft-sweep 2.8s linear infinite alternate; }
+
+.attract-sunset-run { background: linear-gradient(#432049 0 48%, #c66054 48% 70%, #0a1820 70%); }
+.sunset-orb { position: absolute; top: 2.3rem; left: 50%; width: 5.5rem; aspect-ratio: 1; border-radius: 50%; background: #ffcf67; box-shadow: 0 0 2.4rem rgba(255, 191, 87, 0.5); transform: translateX(-50%); }
+.sunset-ridge { position: absolute; z-index: 2; left: -5%; right: -5%; bottom: 25%; height: 42%; background: #18213e; clip-path: polygon(0 100%, 14% 55%, 26% 82%, 41% 20%, 54% 73%, 70% 37%, 83% 76%, 100% 34%, 100% 100%); }
+.sunset-block { position: absolute; z-index: 4; width: 3rem; aspect-ratio: 1; border: 3px solid #fff0b0; background: var(--amber); box-shadow: inset 0 0 0 0.45rem #b46627, 0 0 1rem rgba(255, 191, 87, 0.35); }
+.sunset-block.one { left: 21%; bottom: 33%; }
+.sunset-block.two { right: 20%; bottom: 45%; }
+.sunset-runner { position: absolute; z-index: 6; left: 41%; bottom: 22%; width: 1.8rem; height: 2.8rem; background: var(--cyan); box-shadow: 0.7rem 0.65rem 0 -0.3rem var(--coral), -0.45rem 2.2rem 0 -0.35rem var(--amber); animation: runner-hop 1.25s cubic-bezier(.4, 0, .6, 1) infinite; }
+.sunset-keepsake { position: absolute; z-index: 6; width: 1.15rem; aspect-ratio: 1; border: 2px solid #fff0b0; border-radius: 50%; background: var(--coral); box-shadow: 0 0 1rem var(--amber); animation: token-spin 800ms ease-in-out infinite alternate; }
+.sunset-keepsake.one { left: 30%; top: 31%; }
+.sunset-keepsake.two { right: 31%; top: 39%; animation-delay: -400ms; }
+
+.attract-dragonfire-descent { background: radial-gradient(circle at 72% 62%, rgba(255, 111, 97, 0.2), transparent 15%), #020609; }
+.descent-maze { position: absolute; inset: 1.25rem; border: 3px solid #6a3b2c; background: repeating-linear-gradient(0deg, transparent 0 27px, #4f2c2c 28px 31px), repeating-linear-gradient(90deg, transparent 0 37px, #4f2c2c 38px 41px); box-shadow: inset 0 0 4rem #000; }
+.descent-fog { position: absolute; z-index: 2; inset: 0; background: radial-gradient(circle at 27% 63%, transparent 0 11%, rgba(1, 4, 7, 0.72) 27%, rgba(1, 4, 7, 0.96) 56%); }
+.descent-hero { position: absolute; z-index: 5; left: 24%; bottom: 27%; width: 1.8rem; aspect-ratio: 1; border: 3px solid var(--cyan); background: var(--amber); box-shadow: 0 0 1.2rem var(--cyan); }
+.descent-hoard { position: absolute; z-index: 5; right: 19%; bottom: 25%; width: 4rem; height: 2rem; border-radius: 50% 50% 20% 20%; background: var(--amber); box-shadow: -1.2rem 0.45rem 0 -0.45rem #cf6e32, 1.1rem 0.55rem 0 -0.5rem #ef8f37, 0 0 1.7rem rgba(255, 191, 87, 0.55); }
+.descent-gate { position: absolute; z-index: 5; left: 1.3rem; bottom: 29%; width: 1rem; height: 4rem; border: 2px solid var(--green); background: rgba(139, 229, 142, 0.16); box-shadow: 0 0 1.4rem var(--green); }
+
 .game-modal { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; overflow-y: auto; padding: 1.25rem; background: rgba(1, 5, 8, 0.92); backdrop-filter: blur(18px); }
 .game-stage { --tone: var(--cyan); width: min(68rem, 100%); border: 1px solid color-mix(in srgb, var(--tone), transparent 28%); background: #07131f; box-shadow: 0 0 8rem color-mix(in srgb, var(--tone), transparent 88%); }
 .game-stage-header { min-height: 5.5rem; display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 2rem; padding: 1rem 1.4rem; border-bottom: 1px solid var(--line); }
@@ -198,7 +232,8 @@ button { color: inherit; }
 .game-console { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2rem; padding: 1rem 1.4rem 1.25rem; border-top: 1px solid var(--line); }
 .game-instructions { display: grid; gap: 0.25rem; }
 .game-instructions strong { color: var(--ink); font-size: 0.8rem; }
-.game-instructions span { color: var(--muted); font-size: 0.68rem; }
+.game-instructions span { color: var(--tone); font-size: 0.68rem; }
+.game-instructions small { color: var(--muted); font-size: 0.62rem; }
 .game-console-actions { display: flex; gap: 0.6rem; }
 .game-console-actions button { padding: 0.65rem 0.8rem; border: 1px solid var(--line); background: #040b12; color: var(--muted); cursor: pointer; font-size: 0.68rem; text-transform: uppercase; }
 .game-console-actions button:hover, .game-console-actions button:focus-visible { border-color: var(--tone); color: var(--tone); outline: none; }
@@ -214,6 +249,27 @@ kbd { margin-left: 0.35rem; color: var(--tone); font-family: ui-monospace, monos
 .touch-actions button { width: 4.2rem; aspect-ratio: 1; border-radius: 50%; color: var(--night); font-family: var(--display); font-weight: 800; }
 .touch-actions .action-primary { background: var(--coral); }
 .touch-actions .action-secondary { align-self: end; width: 3.4rem; background: var(--amber); }
+
+.jukebox-section { position: relative; overflow: hidden; padding-block: clamp(5rem, 9vw, 9rem); border-block: 1px solid rgba(255, 191, 87, 0.22); background: radial-gradient(circle at 75% 50%, rgba(255, 111, 97, 0.13), transparent 34%), repeating-linear-gradient(90deg, transparent 0 64px, rgba(82, 231, 239, 0.022) 65px), #050c13; }
+.jukebox-section::before { content: "J-86"; position: absolute; top: -2rem; left: -1rem; color: rgba(255, 191, 87, 0.035); font-family: var(--display); font-size: clamp(12rem, 30vw, 32rem); font-weight: 900; line-height: 1; }
+.jukebox-shell { position: relative; display: grid; grid-template-columns: 0.75fr 1.25fr; gap: clamp(3rem, 7vw, 8rem); align-items: center; }
+.jukebox-copy h2 { max-width: 10ch; margin: 0; font-family: var(--display); font-size: clamp(2.25rem, 5vw, 5.6rem); font-weight: 760; line-height: 0.93; letter-spacing: -0.055em; text-transform: uppercase; }
+.jukebox-copy > p:not(.kicker) { max-width: 38rem; color: var(--muted); line-height: 1.7; }
+.jukebox-power { display: flex; align-items: center; gap: 0.8rem; margin-top: 2rem; padding: 0.85rem 1rem; border: 1px solid var(--amber); background: rgba(255, 191, 87, 0.06); color: var(--amber); cursor: pointer; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.11em; text-transform: uppercase; }
+.jukebox-power:hover, .jukebox-power:focus-visible, .jukebox-power[aria-pressed="true"] { color: var(--night); background: var(--amber); outline: none; }
+.jukebox-power[aria-pressed="true"] .sound-bars i { animation: eq 520ms steps(3) infinite alternate; }
+.jukebox-machine { position: relative; padding: clamp(1rem, 3vw, 2rem); border: 1px solid rgba(255, 191, 87, 0.62); border-radius: 8rem 8rem 1rem 1rem; background: radial-gradient(ellipse at 50% 14%, rgba(255, 191, 87, 0.3), transparent 28%), linear-gradient(155deg, #371a20, #0a1620 52%, #050a0e); box-shadow: inset 0 0 0 0.55rem #101d25, inset 0 0 0 0.7rem rgba(255, 111, 97, 0.5), 0 2rem 6rem rgba(0, 0, 0, 0.45); }
+.jukebox-machine::before { content: ""; position: absolute; inset: 0.7rem; pointer-events: none; border: 1px solid rgba(82, 231, 239, 0.25); border-radius: inherit; }
+.jukebox-now { position: relative; display: grid; min-height: 10rem; place-content: center; gap: 0.65rem; margin: 0 auto 1rem; text-align: center; }
+.jukebox-now span { color: var(--cyan); font-size: 0.58rem; letter-spacing: 0.18em; text-transform: uppercase; }
+.jukebox-now strong { color: var(--amber); font-family: var(--display); font-size: clamp(1.15rem, 2.6vw, 2.1rem); text-transform: uppercase; }
+.jukebox-now i { width: 9rem; height: 0.4rem; margin: 0.5rem auto 0; background: linear-gradient(90deg, transparent, var(--cyan), var(--coral), transparent); box-shadow: 0 0 1.2rem var(--coral); animation: jukebox-pulse 1.6s ease-in-out infinite alternate; }
+.jukebox-tracks { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; }
+.jukebox-tracks button { min-width: 0; min-height: 8.6rem; display: grid; grid-template-columns: auto 1fr; align-content: start; gap: 0.45rem 0.65rem; padding: 1rem; border: 1px solid rgba(234, 246, 242, 0.16); background: rgba(2, 7, 11, 0.82); color: var(--muted); cursor: pointer; text-align: left; }
+.jukebox-tracks button:hover, .jukebox-tracks button:focus-visible, .jukebox-tracks button.active { border-color: var(--cyan); color: var(--ink); outline: none; box-shadow: inset 0 -0.2rem 0 var(--cyan); }
+.jukebox-tracks button > span { color: var(--coral); font-family: ui-monospace, monospace; }
+.jukebox-tracks strong { color: var(--amber); font-size: 0.83rem; line-height: 1.25; }
+.jukebox-tracks small { grid-column: 1 / -1; font-size: 0.62rem; line-height: 1.55; }
 
 .memory-section { padding-block: clamp(6rem, 9vw, 9rem); background: linear-gradient(135deg, rgba(255, 111, 97, 0.11), transparent 42%), #07131f; border-block: 1px solid rgba(255, 111, 97, 0.15); }
 .memory-layout { display: grid; grid-template-columns: 1.15fr 0.75fr; gap: clamp(3rem, 8vw, 9rem); align-items: center; }
@@ -251,6 +307,9 @@ kbd { margin-left: 0.35rem; color: var(--tone); font-family: ui-monospace, monos
 .ledger-display span, .ledger-display small { color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.65rem; }
 .ledger-display strong { color: var(--amber); font-family: var(--display); font-size: clamp(2.1rem, 5vw, 4.3rem); letter-spacing: -0.07em; }
 .ledger-display.current strong { color: var(--cyan); }
+.ledger-prototype { display: grid; gap: 0.45rem; margin-top: 2rem; padding: 1rem; border: 1px solid rgba(82, 231, 239, 0.2); background: rgba(82, 231, 239, 0.04); }
+.ledger-prototype span, .ledger-prototype small { color: var(--muted); font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.ledger-prototype strong { color: var(--cyan); font-family: ui-monospace, monospace; font-size: 0.9rem; }
 .ledger-rule { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0.8rem; align-items: center; margin: 1.8rem 0; color: var(--muted); font-size: 0.7rem; text-transform: uppercase; }
 .ledger-rule span { height: 1px; background: var(--line); }
 .labor-share { margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid var(--line); }
@@ -324,6 +383,9 @@ footer div { display: flex; gap: 1.5rem; }
 @keyframes runner-hop { 50% { transform: translate(3.5rem, -3.4rem) rotate(8deg); } }
 @keyframes token-spin { to { transform: scaleX(0.25); } }
 @keyframes key-float { to { transform: translateY(-0.75rem); filter: brightness(1.35); } }
+@keyframes tower-climb { to { transform: translateY(-2.8rem) rotate(-3deg); } }
+@keyframes craft-sweep { to { transform: translateX(9rem); } }
+@keyframes jukebox-pulse { to { width: 15rem; filter: hue-rotate(45deg); } }
 
 @media (max-width: 1050px) {
   .topbar { grid-template-columns: 1fr auto; }
@@ -335,6 +397,7 @@ footer div { display: flex; gap: 1.5rem; }
   .game-title-block { grid-column: 1 / -1; }
   .signal-layout { grid-template-columns: 1fr; }
   .family-memory-room { grid-template-columns: 1fr; }
+  .jukebox-shell { grid-template-columns: 1fr; }
   .touch-controls { display: grid; }
 }
 
@@ -357,6 +420,10 @@ footer div { display: flex; gap: 1.5rem; }
   .hero-note, .scroll-cue { display: none; }
   .section-shell { width: min(100% - 2rem, 92rem); }
   .game-grid, .project-grid, .memory-layout, .split-heading, .game-memory-strip, .terminal-body, .continue-section { grid-template-columns: 1fr; }
+  .game-series-heading { display: block; }
+  .game-series-heading p { margin-top: 0.55rem; text-align: left; }
+  .jukebox-tracks { grid-template-columns: 1fr; }
+  .jukebox-machine { border-radius: 4rem 4rem 0.7rem 0.7rem; }
   .split-heading { gap: 1rem; }
   .attract-screen { min-height: 17rem; }
   .game-card-copy > p { min-height: auto; }

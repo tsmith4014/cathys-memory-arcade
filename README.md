@@ -6,14 +6,14 @@ This is a living 1986-meets-AI memorial for Cathy and a real browser arcade. It 
 
 ## Experience
 
-- A two-token entrance built around the likely $2.50 admission for both Cathy and Chad
-- Three original, full-canvas games with enemies, scoring, win/loss states, keyboard controls, and mobile controls
+- A sourced admission timeline: the $2.50 Fillmore prototype in 1986 and the $5 all-you-can-play Boardwalk arcade in 1987
+- Six original, full-canvas games with enemies, scoring systems, win/loss states, keyboard controls, and mobile controls
 - Local high scores that never leave the visitor's browser
 - A memory core that separates personal recollection from sourced historical context
 - The real Cathy-and-Chad photo-booth portraits and a life file sourced from her family-authorized program
 - A secondary builder's workshop for mobile, infrastructure, systems, and applied AI work
 - A signal reel refreshed daily by GitHub Actions from a small set of respected sources
-- An optional procedural soundtrack and game effects created locally with the Web Audio API
+- A three-track browser jukebox, ambient arcade sound, and game effects synthesized locally with the Web Audio API
 - Keyboard, touch, reduced-motion, and screen-reader support
 
 ## Playable floor
@@ -23,8 +23,13 @@ This is a living 1986-meets-AI memorial for Cathy and a real browser arcade. It 
 | Skyline Smash | Destruction brawler | Clear five towers while defense drones attack |
 | Token Trail | Three-zone platform run | Reach the sunrise terminal and collect 24 tokens |
 | Dungeon Circuit | Top-down action dungeon | Clear three rooms, carry each key, defeat the Warden |
+| Highrise Havoc | Facade-climbing destruction game | Break 54 windows and collapse four defended towers |
+| Sunset Run | Long-form platform adventure | Find two keepsakes and reach the exit before sunset |
+| Dragonfire Descent | Fog-of-war castle raid | Steal the hoard and retrace the lethal maze to escape |
 
 All graphics and game systems are code-native and original to this project. No commercial sprites, cabinet art, characters, or sound recordings are included.
+
+The jukebox contains two original procedural compositions and a new Web Audio arrangement of Edvard Grieg's public-domain composition "In the Hall of the Mountain King." No audio recording or commercial game sound is included.
 
 ## Local development
 

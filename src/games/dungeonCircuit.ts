@@ -34,6 +34,8 @@ type DungeonState = {
   keyReady: boolean;
   keyTaken: boolean;
   score: number;
+  combo: number;
+  comboTimer: number;
   status: GameStatus;
   roomBanner: number;
   shake: number;
@@ -50,7 +52,7 @@ export function mountDungeonCircuit(canvas: HTMLCanvasElement, options: GameMoun
     const hud: GameHud = {
       score: state.score,
       status: state.status,
-      message: state.status === "playing" ? `room ${state.room + 1}/3 // ${state.player.health} charge` : undefined,
+      message: state.status === "playing" ? `room ${state.room + 1}/3 // ${state.player.health} charge // chain x${Math.max(1, state.combo)}` : undefined,
     };
     const serialized = JSON.stringify(hud);
     if (serialized !== lastHud) {
@@ -81,6 +83,8 @@ export function mountDungeonCircuit(canvas: HTMLCanvasElement, options: GameMoun
     state.player.dashCooldown = Math.max(0, state.player.dashCooldown - delta);
     state.roomBanner = Math.max(0, state.roomBanner - delta);
     state.shake = Math.max(0, state.shake - delta * 18);
+    state.comboTimer = Math.max(0, state.comboTimer - delta);
+    if (state.comboTimer <= 0) state.combo = 0;
 
     const horizontal = Number(input.down("arrowright", "d")) - Number(input.down("arrowleft", "a"));
     const vertical = Number(input.down("arrowdown", "s")) - Number(input.down("arrowup", "w"));
@@ -120,7 +124,8 @@ export function mountDungeonCircuit(canvas: HTMLCanvasElement, options: GameMoun
       state.keyReady = false;
       state.keyTaken = true;
       state.score += 300;
-      sound.play(940, 0.16, "square", 0.06);
+      state.player.health = Math.min(5, state.player.health + 1);
+      sound.chord([660, 830, 990], 0.18, "square", 0.045);
     }
 
     const door = { x: 915, y: 216, width: 35, height: 108 };
@@ -149,9 +154,16 @@ export function mountDungeonCircuit(canvas: HTMLCanvasElement, options: GameMoun
     let hit = false;
     for (const enemy of state.enemies) {
       if (intersects(attackBox, enemy)) {
+        const wasAlive = enemy.health > 0;
         enemy.health -= state.player.dash > 0 ? 3 : 1;
         enemy.flash = 0.12;
-        state.score += enemy.health <= 0 ? 350 : 85;
+        if (wasAlive && enemy.health <= 0) {
+          state.combo += 1;
+          state.comboTimer = 2.6;
+          state.score += 350 * state.combo;
+          if (state.combo % 4 === 0) state.player.health = Math.min(5, state.player.health + 1);
+          sound.chord([210 + state.combo * 22, 315 + state.combo * 24], 0.12, "square", 0.05);
+        } else state.score += 85;
         state.shake = enemy.kind === "warden" ? 8 : 4;
         burst(state.particles, enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, enemy.kind === "warden" ? "#ff6f61" : "#ef78ff", 16, 210);
         hit = true;
@@ -176,6 +188,7 @@ export function mountDungeonCircuit(canvas: HTMLCanvasElement, options: GameMoun
     drawPixelText(context, `SCORE ${String(state.score).padStart(6, "0")}`, 34, 33, 17, "#ffbf57");
     drawPixelText(context, `CHARGE ${"+".repeat(state.player.health)}${".".repeat(5 - state.player.health)}`, 335, 33, 17, state.player.health > 1 ? "#8be58e" : "#ff6f61");
     drawPixelText(context, `ROOM ${state.room + 1}/3`, 900, 33, 17, "#52e7ef", "right");
+    if (state.combo > 1) drawPixelText(context, `CIRCUIT CHAIN x${state.combo}`, 480, 112, 17, "#ef78ff", "center");
     if (state.roomBanner > 0) drawPixelText(context, roomName(state.room), 480, 94, 24, "#eaf6f2", "center");
 
     if (state.status === "paused") drawOverlay(context, "PAUSED", "THE CIRCUIT IS HOLDING", "#52e7ef");
@@ -196,6 +209,7 @@ export function mountDungeonCircuit(canvas: HTMLCanvasElement, options: GameMoun
       input.clear();
     },
     restart,
+    setSoundEnabled: (enabled) => sound.setEnabled(enabled),
     setInput: (key, active) => {
       if (active && key.toLowerCase() === "r") restart();
       else if (active && key.toLowerCase() === "p") togglePause();
@@ -216,6 +230,8 @@ function createState(): DungeonState {
     keyReady: false,
     keyTaken: false,
     score: 0,
+    combo: 0,
+    comboTimer: 0,
     status: "playing",
     roomBanner: 2,
     shake: 0,
@@ -235,6 +251,8 @@ function loadRoom(state: DungeonState, room: number): void {
   state.particles = [];
   state.keyReady = false;
   state.keyTaken = false;
+  state.combo = 0;
+  state.comboTimer = 0;
   state.roomBanner = 2;
 
   const roomObstacles: Obstacle[][] = [

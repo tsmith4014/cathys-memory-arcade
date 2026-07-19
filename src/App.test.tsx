@@ -9,12 +9,25 @@ describe("Cathy's Memory Arcade", () => {
     expect(screen.getByRole("button", { name: /sound off/i })).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("offers three original playable cabinets before the portfolio content", () => {
+  it("offers six original playable cabinets before the portfolio content", () => {
     render(<App />);
     expect(screen.getByRole("button", { name: /play skyline smash/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /play token trail/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /play dungeon circuit/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /play highrise havoc/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /play sunset run/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /play dragonfire descent/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Workshop" })).toHaveAttribute("href", "#project-arcade");
+  });
+
+  it("documents the five-dollar unlimited-play timeline and exposes the jukebox", () => {
+    render(<App />);
+    expect(screen.getByText("$5", { selector: ".ledger-display strong" })).toBeInTheDocument();
+    expect(screen.getByText(/all-you-can-play admission/i)).toBeInTheDocument();
+    expect(screen.getByText(/1986 \/\/ \$2.50 \/\/ two hours/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /arcade finally sounds alive/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /power up the jukebox/i })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: /mountain king/i })).toBeInTheDocument();
   });
 
   it("uses the authorized family photograph and Catherine's program details", () => {

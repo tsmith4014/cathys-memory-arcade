@@ -1,7 +1,7 @@
 import { startTransition, useEffect, useRef, useState } from "react";
 import { GameArcade } from "./components/GameArcade";
 import { lifeDetails, memorialCopy, projects, rememberedGames, terminalPrompts } from "./data/content";
-import { ArcadeSoundscape } from "./lib/audio";
+import { ArcadeSoundscape, JUKEBOX_TRACKS, type JukeboxTrackId } from "./lib/audio";
 import { formatDollars, shareOfPay, valueIn2026 } from "./lib/currency";
 import type { SignalPayload } from "./types";
 
@@ -21,6 +21,7 @@ const fallbackSignals: SignalPayload = {
 function App() {
   const [entered, setEntered] = useState(false);
   const [soundOn, setSoundOn] = useState(false);
+  const [jukeboxTrack, setJukeboxTrack] = useState<JukeboxTrackId>("fillmore-drive");
   const [signals, setSignals] = useState<SignalPayload>(fallbackSignals);
   const [terminalIndex, setTerminalIndex] = useState(0);
   const soundscape = useRef<ArcadeSoundscape | null>(null);
@@ -51,13 +52,20 @@ function App() {
     const next = !soundOn;
     if (next) {
       soundscape.current ??= new ArcadeSoundscape();
-      const started = await soundscape.current.start();
+      const started = await soundscape.current.start(jukeboxTrack);
       setSoundOn(started);
       return;
     }
     await soundscape.current?.stop();
     soundscape.current = null;
     setSoundOn(false);
+  }
+
+  async function selectJukeboxTrack(trackId: JukeboxTrackId) {
+    setJukeboxTrack(trackId);
+    soundscape.current ??= new ArcadeSoundscape();
+    soundscape.current.setTrack(trackId);
+    if (!soundOn) setSoundOn(await soundscape.current.start(trackId));
   }
 
   return (
@@ -69,6 +77,7 @@ function App() {
         </a>
         <nav aria-label="Primary navigation">
           <a href="#lobby">Games</a>
+          <a href="#jukebox">Jukebox</a>
           <a href="#memory-core">Memory</a>
           <a href="#project-arcade">Workshop</a>
         </nav>
@@ -87,12 +96,12 @@ function App() {
           />
           <div className="hero-shade" />
           <div className="hero-copy">
-            <p className="kicker">Colorado Springs // 710 E. Fillmore // 1986 -&gt; now</p>
+            <p className="kicker">Fillmore 1986 // Boardwalk 1987 // now</p>
             <h1 id="hero-title"><span>Cathy's</span> Memory Arcade</h1>
             <p className="hero-line">Two tokens. One memory. Infinite continues.</p>
             <button className="token-button" type="button" onClick={enterArcade}>
               <span className="token-pair" aria-hidden="true"><i>C</i><i>C</i></span>
-              <span><strong>Insert two tokens</strong><small>$2.50 each, one for both of us</small></span>
+              <span><strong>Insert two tokens</strong><small>$5 all-you-can-play // the memory was right</small></span>
               <span className="enter-arrow" aria-hidden="true">-&gt;</span>
             </button>
             <p className="hero-note">A living memorial with original games, local high scores, and infinite room to grow.</p>
@@ -100,7 +109,14 @@ function App() {
           <div className="scroll-cue" aria-hidden="true"><span>Scroll to continue</span><i /></div>
         </section>
 
-        <GameArcade soundEnabled={soundOn} />
+        <GameArcade soundEnabled={soundOn} onActiveChange={(active) => soundscape.current?.setDucked(active)} />
+
+        <Jukebox
+          activeTrack={jukeboxTrack}
+          soundOn={soundOn}
+          onSelect={selectJukeboxTrack}
+          onToggle={toggleSound}
+        />
 
         <section className="memory-section" id="memory-core" aria-labelledby="memory-title">
           <div className="section-shell memory-layout">
@@ -267,23 +283,78 @@ function App() {
 }
 
 function TokenLedger() {
-  const combinedAdmission = 5;
-  const currentValue = valueIn2026(combinedAdmission);
-  const lowShare = shareOfPay(combinedAdmission, 40);
-  const highShare = shareOfPay(combinedAdmission, 25);
+  const admission = 5;
+  const currentValue = valueIn2026(admission);
+  const lowShare = shareOfPay(admission, 40);
+  const highShare = shareOfPay(admission, 25);
 
   return (
     <aside className="token-ledger" aria-labelledby="ledger-title">
-      <div className="ledger-display"><span>1986</span><strong>$2.50 x 2</strong><small>possible Saturday admission</small></div>
+      <div className="ledger-display"><span>1987 // The Boardwalk</span><strong>$5</strong><small>all-you-can-play admission</small></div>
       <div className="ledger-rule"><span /><i>worth</i><span /></div>
       <div className="ledger-display current"><span>June 2026</span><strong>{formatDollars(currentValue)}</strong><small>approximate buying power</small></div>
+      <div className="ledger-prototype">
+        <span>Where it started</span>
+        <strong>1986 // $2.50 // two hours</strong>
+        <small>Saturday morning prototype at 710 E. Fillmore</small>
+      </div>
       <div className="labor-share">
         <p id="ledger-title">The number that matters more</p>
         <strong>{lowShare.toFixed(1)}% - {highShare.toFixed(0)}%</strong>
         <span>of a $25-$40 large-house cleaning job</span>
       </div>
-      <p className="ledger-note">CPI-U comparison using 1986 annual and June 2026 indexes. Memory details remain labeled as memory.</p>
+      <p className="ledger-note">CPI-U comparison using the 1987 annual index and June 2026 index. The labor comparison is Chad's family recollection; the arcade timeline is documented by the Fillmore manager.</p>
     </aside>
+  );
+}
+
+function Jukebox({
+  activeTrack,
+  soundOn,
+  onSelect,
+  onToggle,
+}: {
+  activeTrack: JukeboxTrackId;
+  soundOn: boolean;
+  onSelect: (trackId: JukeboxTrackId) => void;
+  onToggle: () => void;
+}) {
+  return (
+    <section className="jukebox-section" id="jukebox" aria-labelledby="jukebox-title">
+      <div className="section-shell jukebox-shell">
+        <div className="jukebox-copy">
+          <p className="kicker">Jukebox J-86 // synthesized live</p>
+          <h2 id="jukebox-title">The arcade finally sounds alive.</h2>
+          <p>Every tone is generated in your browser. Two tracks are original compositions; the third is a new chiptune arrangement of a public-domain Grieg melody. No streamed recordings, trackers, or borrowed game audio.</p>
+          <button className="jukebox-power" type="button" aria-pressed={soundOn} onClick={onToggle}>
+            <span className="sound-bars" aria-hidden="true"><i /><i /><i /></span>
+            {soundOn ? "Stop the jukebox" : "Power up the jukebox"}
+          </button>
+        </div>
+        <div className="jukebox-machine" aria-label="Jukebox track selector">
+          <div className="jukebox-now">
+            <span>{soundOn ? "Now playing" : "Ready"}</span>
+            <strong>{JUKEBOX_TRACKS.find((track) => track.id === activeTrack)?.title}</strong>
+            <i aria-hidden="true" />
+          </div>
+          <div className="jukebox-tracks">
+            {JUKEBOX_TRACKS.map((track, index) => (
+              <button
+                type="button"
+                className={track.id === activeTrack ? "active" : ""}
+                aria-pressed={track.id === activeTrack}
+                onClick={() => onSelect(track.id)}
+                key={track.id}
+              >
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <strong>{track.title}</strong>
+                <small>{track.style}<br />{track.credit}</small>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 

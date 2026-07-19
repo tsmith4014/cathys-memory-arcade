@@ -14,11 +14,11 @@ export type TerminalPrompt = {
 };
 
 export const memorialCopy = {
-  eyebrow: "Memory Core // continue 01",
-  title: "She paid to be there, too.",
-  lead: "Chad remembered five-dollar unlimited-play days. The surviving history points to $2.50 Saturday sessions. The missing piece may be the best one: two admissions, one for him and one for Cathy.",
+  eyebrow: "Memory Core // the five-dollar summer",
+  title: "The memory was right: five dollars, all you could play.",
+  lead: "The idea began at Nickels & Dimes on Fillmore in 1986 with $2.50 Saturday parties for two hours. In 1987, the experiment became The Boardwalk at Citadel Mall: first unlimited-play parties, then an entire arcade on free play for a $5 admission.",
   quote: "She cleaned houses, waited tables, managed hotels, and cleaned rooms. Five dollars could be a fifth of a large-house job. She spent it making a memory.",
-  body: "This room begins with what is known and leaves space for what returns later. Cathy loved classic rock. She was hardworking, funny, a motorcycle enthusiast, and, as her son puts it, a wild one.",
+  body: "That documented timeline matches Chad's memory of five-dollar unlimited-play days. This room holds the record and the recollection together, while leaving space for more details to return. Cathy loved classic rock. She was hardworking, funny, a motorcycle enthusiast, and, as her son puts it, a wild one.",
 };
 
 export const lifeDetails = [
