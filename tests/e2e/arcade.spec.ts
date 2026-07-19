@@ -1,15 +1,31 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-test("enters the arcade and exposes every cabinet", async ({ page }) => {
+test("enters the arcade and exposes three playable cabinets", async ({ page }) => {
   await page.goto("./");
   await expect(page).toHaveTitle(/Cathy's Memory Arcade/);
   await expect(page.getByRole("button", { name: /insert two tokens/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /sound off/i })).toHaveAttribute("aria-pressed", "false");
   await page.getByRole("button", { name: /insert two tokens/i }).click();
   await expect(page.locator("#lobby")).toBeInViewport();
-  await expect(page.getByRole("link", { name: /memory core/i })).toBeVisible();
-  await expect(page.getByRole("link", { name: /project arcade/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /play skyline smash/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /play token trail/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /play dungeon circuit/i })).toBeVisible();
+});
+
+test("launches, pauses, and exits every game cabinet", async ({ page }) => {
+  await page.goto("./#lobby");
+  for (const game of ["Skyline Smash", "Token Trail", "Dungeon Circuit"]) {
+    await page.getByRole("button", { name: `Play ${game}` }).click();
+    await expect(page.getByRole("dialog", { name: game })).toBeVisible();
+    await expect(page.getByLabel(new RegExp(`${game} game screen`, "i"))).toBeVisible();
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("Space");
+    await page.getByRole("button", { name: /pause/i }).click();
+    await expect(page.getByRole("button", { name: /resume/i })).toBeVisible();
+    await page.getByRole("button", { name: `Close ${game}` }).click();
+    await expect(page.getByRole("dialog", { name: game })).toBeHidden();
+  }
 });
 
 test("changes the origin terminal locally", async ({ page }) => {
@@ -20,8 +36,11 @@ test("changes the origin terminal locally", async ({ page }) => {
 
 test("has no automatically detectable accessibility violations", async ({ page }) => {
   await page.goto("./");
-  const results = await new AxeBuilder({ page }).analyze();
-  expect(results.violations).toEqual([]);
+  const pageResults = await new AxeBuilder({ page }).analyze();
+  expect(pageResults.violations).toEqual([]);
+  await page.getByRole("button", { name: /play dungeon circuit/i }).click();
+  const gameResults = await new AxeBuilder({ page }).analyze();
+  expect(gameResults.violations).toEqual([]);
 });
 
 test("renders the mobile entrance without horizontal overflow", async ({ page, isMobile }) => {

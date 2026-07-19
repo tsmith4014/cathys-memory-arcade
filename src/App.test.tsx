@@ -9,12 +9,12 @@ describe("Cathy's Memory Arcade", () => {
     expect(screen.getByRole("button", { name: /sound off/i })).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("offers four distinct cabinet destinations", () => {
+  it("offers three original playable cabinets before the portfolio content", () => {
     render(<App />);
-    expect(screen.getByRole("link", { name: /memory core/i })).toHaveAttribute("href", "#memory-core");
-    expect(screen.getByRole("link", { name: /project arcade/i })).toHaveAttribute("href", "#project-arcade");
-    expect(screen.getByRole("link", { name: /signal machine/i })).toHaveAttribute("href", "#signal-machine");
-    expect(screen.getByRole("link", { name: /origin terminal/i })).toHaveAttribute("href", "#origin-terminal");
+    expect(screen.getByRole("button", { name: /play skyline smash/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /play token trail/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /play dungeon circuit/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Workshop" })).toHaveAttribute("href", "#project-arcade");
   });
 
   it("changes the memory terminal response without a network request", () => {

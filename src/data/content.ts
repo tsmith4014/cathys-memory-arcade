@@ -1,11 +1,3 @@
-export type Cabinet = {
-  eyebrow: string;
-  title: string;
-  description: string;
-  href: string;
-  tone: "cyan" | "coral" | "amber" | "green";
-};
-
 export type Project = {
   code: string;
   title: string;
@@ -28,37 +20,6 @@ export const memorialCopy = {
   quote: "She cleaned houses, waited tables, managed hotels, and cleaned rooms. Five dollars could be a fifth of a large-house job. She spent it making a memory.",
   body: "This room begins with what is known and leaves space for what returns later. Cathy loved classic rock. She was hardworking, funny, and, as her son puts it, a wild one.",
 };
-
-export const cabinets: Cabinet[] = [
-  {
-    eyebrow: "Cabinet 01",
-    title: "Memory Core",
-    description: "The Fillmore Street arcade, two admissions, and the woman who made the memory possible.",
-    href: "#memory-core",
-    tone: "coral",
-  },
-  {
-    eyebrow: "Cabinet 02",
-    title: "Project Arcade",
-    description: "Mobile, cloud, infrastructure, and AI systems built for the world outside the demo.",
-    href: "#project-arcade",
-    tone: "cyan",
-  },
-  {
-    eyebrow: "Cabinet 03",
-    title: "Signal Machine",
-    description: "A daily-changing reel of engineering and AI work worth paying attention to.",
-    href: "#signal-machine",
-    tone: "green",
-  },
-  {
-    eyebrow: "Cabinet 04",
-    title: "Origin Terminal",
-    description: "Code Platoon, week-one GPT, and the path from curiosity to applied AI engineering.",
-    href: "#origin-terminal",
-    tone: "amber",
-  },
-];
 
 export const rememberedGames = [
   { title: "Rampage", note: "The game that comes back first when Chad remembers those afternoons." },

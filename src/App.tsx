@@ -1,5 +1,6 @@
 import { startTransition, useEffect, useRef, useState } from "react";
-import { cabinets, memorialCopy, projects, rememberedGames, terminalPrompts } from "./data/content";
+import { GameArcade } from "./components/GameArcade";
+import { memorialCopy, projects, rememberedGames, terminalPrompts } from "./data/content";
 import { ArcadeSoundscape } from "./lib/audio";
 import { formatDollars, shareOfPay, valueIn2026 } from "./lib/currency";
 import type { SignalPayload } from "./types";
@@ -67,9 +68,9 @@ function App() {
           <span>Cathy's Memory Arcade</span>
         </a>
         <nav aria-label="Primary navigation">
+          <a href="#lobby">Games</a>
           <a href="#memory-core">Memory</a>
-          <a href="#project-arcade">Projects</a>
-          <a href="#signal-machine">Signals</a>
+          <a href="#project-arcade">Workshop</a>
         </nav>
         <button className="sound-button" type="button" aria-pressed={soundOn} onClick={toggleSound}>
           <span className="sound-bars" aria-hidden="true"><i /><i /><i /></span>
@@ -94,32 +95,12 @@ function App() {
               <span><strong>Insert two tokens</strong><small>$2.50 each, one for both of us</small></span>
               <span className="enter-arrow" aria-hidden="true">-&gt;</span>
             </button>
-            <p className="hero-note">A living digital memorial and build lab by Chad Thompson-Smith.</p>
+            <p className="hero-note">A living memorial with original games, local high scores, and infinite room to grow.</p>
           </div>
           <div className="scroll-cue" aria-hidden="true"><span>Scroll to continue</span><i /></div>
         </section>
 
-        <section className="lobby section-shell" id="lobby" aria-labelledby="lobby-title">
-          <div className="section-heading">
-            <p className="kicker">Player select</p>
-            <h2 id="lobby-title">Choose a cabinet</h2>
-            <p>This is not a portfolio with an arcade skin. Each cabinet does something different.</p>
-          </div>
-          <div className="cabinet-grid">
-            {cabinets.map((cabinet, index) => (
-              <a className={`cabinet-card tone-${cabinet.tone}`} href={cabinet.href} key={cabinet.title}>
-                <div className="cabinet-screen">
-                  <span className="cabinet-scan" />
-                  <span className="cabinet-number">0{index + 1}</span>
-                  <p>{cabinet.eyebrow}</p>
-                  <h3>{cabinet.title}</h3>
-                  <span className="play-prompt">Press start</span>
-                </div>
-                <p>{cabinet.description}</p>
-              </a>
-            ))}
-          </div>
-        </section>
+        <GameArcade soundEnabled={soundOn} />
 
         <section className="memory-section" id="memory-core" aria-labelledby="memory-title">
           <div className="section-shell memory-layout">
@@ -130,9 +111,13 @@ function App() {
               <blockquote>{memorialCopy.quote}</blockquote>
               <p>{memorialCopy.body}</p>
               <div className="source-links">
-                <a href="https://www.artieromero.com/video_games.html" target="_blank" rel="noreferrer">Arcade history</a>
+                <a href="https://www.artieromero.com/video_games.html" target="_blank" rel="noreferrer">See the surviving arcade history and photographs</a>
                 <a href="https://www.bls.gov/data/inflation_calculator_inside.htm" target="_blank" rel="noreferrer">Inflation method</a>
               </div>
+              <aside className="archive-note">
+                <span>Archive note // source respected</span>
+                <p>Actual Nickels &amp; Dimes photographs survive on historian Artie Romero's site. They are linked, not copied here, because the images are copyrighted. If permission is secured, they can become a future archive room with full attribution.</p>
+              </aside>
             </div>
             <TokenLedger />
           </div>
@@ -152,8 +137,8 @@ function App() {
 
         <section className="projects-section section-shell" id="project-arcade" aria-labelledby="projects-title">
           <div className="section-heading split-heading">
-            <div><p className="kicker">Project Arcade // live floor</p><h2 id="projects-title">Built beyond the demo.</h2></div>
-            <p>Software, infrastructure, and AI work scored by usefulness, not novelty alone.</p>
+            <div><p className="kicker">Builder's workshop // behind the arcade</p><h2 id="projects-title">The work that keeps the lights on.</h2></div>
+            <p>The arcade is the experience. This quieter room shows the mobile, cloud, infrastructure, and AI practice behind it.</p>
           </div>
           <div className="project-grid">
             {projects.map((project) => {
