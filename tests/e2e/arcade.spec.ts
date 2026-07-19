@@ -28,6 +28,13 @@ test("launches, pauses, and exits every game cabinet", async ({ page }) => {
   }
 });
 
+test("opens a shared game URL directly in its cabinet", async ({ page }) => {
+  await page.goto("./?game=token-trail#lobby");
+  await expect(page.getByRole("dialog", { name: "Token Trail" })).toBeVisible();
+  await page.getByRole("button", { name: "Close Token Trail" }).click();
+  await expect(page).not.toHaveURL(/game=token-trail/);
+});
+
 test("changes the origin terminal locally", async ({ page }) => {
   await page.goto("./#origin-terminal");
   await page.getByRole("button", { name: /why ai/i }).click();

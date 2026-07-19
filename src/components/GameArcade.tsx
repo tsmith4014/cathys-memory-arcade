@@ -6,12 +6,18 @@ type GameArcadeProps = {
 };
 
 export function GameArcade({ soundEnabled }: GameArcadeProps) {
-  const [activeGame, setActiveGame] = useState<GameDefinition | null>(null);
+  const [activeGame, setActiveGame] = useState<GameDefinition | null>(() => requestedGame());
   const [scoreVersion, setScoreVersion] = useState(0);
 
   const closeGame = (): void => {
     setActiveGame(null);
+    setGameUrl(null);
     setScoreVersion((version) => version + 1);
+  };
+
+  const launchGame = (game: GameDefinition): void => {
+    setActiveGame(game);
+    setGameUrl(game);
   };
 
   return (
@@ -25,7 +31,7 @@ export function GameArcade({ soundEnabled }: GameArcadeProps) {
       </div>
       <div className="game-grid">
         {arcadeGames.map((game) => (
-          <GameCard game={game} key={`${game.id}-${scoreVersion}`} onLaunch={() => setActiveGame(game)} />
+          <GameCard game={game} key={`${game.id}-${scoreVersion}`} onLaunch={() => launchGame(game)} />
         ))}
       </div>
       <div className="floor-status" aria-label="Arcade floor status">
@@ -183,4 +189,17 @@ function writeHighScore(gameId: string, score: number): void {
   } catch {
     // Storage can be unavailable in hardened browser modes; gameplay remains fully functional.
   }
+}
+
+function requestedGame(): GameDefinition | null {
+  const gameId = new URLSearchParams(window.location.search).get("game");
+  return arcadeGames.find((game) => game.id === gameId) ?? null;
+}
+
+function setGameUrl(game: GameDefinition | null): void {
+  const url = new URL(window.location.href);
+  if (game) url.searchParams.set("game", game.id);
+  else url.searchParams.delete("game");
+  url.hash = "lobby";
+  window.history.replaceState(null, "", url);
 }
