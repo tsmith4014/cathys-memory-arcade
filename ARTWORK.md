@@ -6,4 +6,8 @@ The production prompt was:
 
 > Create an entirely original, empty after-hours arcade inspired by mid-1980s Colorado Springs. The emotional focus is two worn nickel-colored arcade tokens resting side by side on an original cabinet, symbolizing a mother and son entering together. Include no people, faces, photographs, silhouettes, or human figures. Transition the practical 1986 arcade gradually into a hopeful AI-era digital horizon. Use cinematic realistic environmental artwork, tactile film grain, warm marquee bulbs, dark geometric carpet, midnight navy, electric cyan, warm amber, faded coral, nickel silver, and restrained phosphor green. Every cabinet and screen graphic must be original. Include no text, logos, commercial characters, trade dress, funeral imagery, religious imagery, or watermarks.
 
-The generated source is preserved by Codex; the optimized website asset is `public/art/cathy-arcade-hero.jpg`. Memorial art remains all rights reserved by the Thompson-Smith family and is excluded from the MIT source-code license. Future family photographs must be composited from original pixels without synthetic face generation.
+The generated source is preserved by Codex; the optimized website asset is `public/art/cathy-arcade-hero.jpg`. Memorial art remains all rights reserved by the Thompson-Smith family and is excluded from the MIT source-code license.
+
+## Family photographs
+
+`public/memory/cathy-chad-photobooth-program.jpg` and `public/memory/cathy-life-program.jpg` are privacy-safe web derivatives of family-owned program photographs supplied and authorized by Chad Thompson-Smith. Processing is limited to metadata removal, deterministic resizing, JPEG compression, and CSS cropping. The faces and visible program content are the original photographic pixels; no generative editing, face replacement, restoration, or synthetic likeness work is permitted.

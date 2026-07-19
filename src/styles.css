@@ -225,6 +225,26 @@ kbd { margin-left: 0.35rem; color: var(--tone); font-family: ui-monospace, monos
 .archive-note { margin-top: 2.5rem; padding: 1.1rem 1.25rem; border-left: 2px solid var(--cyan); background: rgba(82, 231, 239, 0.05); }
 .archive-note span { color: var(--cyan); font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.14em; }
 .archive-note p { margin: 0.55rem 0 0; color: var(--muted); font-size: 0.8rem; line-height: 1.6; }
+.family-memory-room { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: clamp(1.5rem, 4vw, 4rem); margin-top: clamp(5rem, 9vw, 9rem); align-items: stretch; }
+.photo-booth-card { margin: 0; border: 1px solid rgba(255, 191, 87, 0.38); background: linear-gradient(155deg, #eadfc9, #bda98e); box-shadow: 1.2rem 1.2rem 0 rgba(255, 111, 97, 0.07); }
+.photo-booth-window { position: relative; aspect-ratio: 1.5; overflow: hidden; margin: clamp(0.7rem, 2vw, 1.25rem); border: 0.55rem solid #f2e9d7; background: #d5c5aa; box-shadow: 0 0.8rem 2.2rem rgba(24, 13, 6, 0.26); }
+.photo-booth-window img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center 58%; }
+.photo-booth-scan { position: absolute; inset: 0; pointer-events: none; opacity: 0.13; background: repeating-linear-gradient(0deg, transparent 0 5px, #4a2d1e 6px); mix-blend-mode: multiply; }
+.photo-booth-card figcaption { padding: clamp(1.3rem, 3vw, 2.25rem); color: #251a15; background: rgba(248, 239, 220, 0.72); }
+.photo-booth-card .kicker { color: #a54242; }
+.photo-booth-card h3, .life-file h3 { margin: 0; font-family: var(--display); font-size: clamp(1.55rem, 3vw, 3.2rem); line-height: 1.05; text-transform: uppercase; }
+.photo-booth-card figcaption > p:not(.kicker) { color: #5c4a41; line-height: 1.7; }
+.program-links { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-top: 1.5rem; }
+.program-links a { padding: 0.65rem 0.8rem; border: 1px solid rgba(79, 47, 35, 0.42); color: #5c2929; text-decoration: none; font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; }
+.program-links a:hover, .program-links a:focus-visible { color: #f8efdc; background: #7c3434; outline: none; }
+.life-file { padding: clamp(1.5rem, 4vw, 3.2rem); border: 1px solid rgba(255, 111, 97, 0.3); background: radial-gradient(circle at 100% 0, rgba(255, 111, 97, 0.14), transparent 28%), linear-gradient(145deg, #0c202b, #050d14); }
+.life-file-heading { max-width: 43rem; }
+.life-file-heading > p:not(.kicker) { color: var(--muted); line-height: 1.7; }
+.life-detail-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; margin-top: 2.5rem; border: 1px solid var(--line); background: var(--line); }
+.life-detail-grid article { min-height: 12.5rem; padding: 1.4rem; background: rgba(5, 16, 24, 0.96); }
+.life-detail-grid span { color: var(--coral); font-family: ui-monospace, monospace; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.12em; }
+.life-detail-grid h4 { margin: 1.1rem 0 0.65rem; color: var(--amber); font-family: var(--display); font-size: 1rem; line-height: 1.2; text-transform: uppercase; }
+.life-detail-grid p { margin: 0; color: var(--muted); font-size: 0.82rem; line-height: 1.6; }
 .token-ledger { position: relative; padding: clamp(1.5rem, 4vw, 3rem); border: 1px solid rgba(255, 191, 87, 0.35); background: linear-gradient(160deg, rgba(255, 191, 87, 0.08), rgba(4, 11, 18, 0.9)); box-shadow: 1.25rem 1.25rem 0 rgba(255, 111, 97, 0.06); }
 .token-ledger::before { content: "TOKEN LEDGER"; position: absolute; top: -0.7rem; left: 1.5rem; padding-inline: 0.6rem; color: var(--amber); background: #07131f; font-size: 0.65rem; letter-spacing: 0.18em; }
 .ledger-display { display: grid; gap: 0.4rem; }
@@ -314,6 +334,7 @@ footer div { display: flex; gap: 1.5rem; }
   .game-memory-strip { grid-template-columns: repeat(3, 1fr); }
   .game-title-block { grid-column: 1 / -1; }
   .signal-layout { grid-template-columns: 1fr; }
+  .family-memory-room { grid-template-columns: 1fr; }
   .touch-controls { display: grid; }
 }
 
@@ -340,6 +361,9 @@ footer div { display: flex; gap: 1.5rem; }
   .attract-screen { min-height: 17rem; }
   .game-card-copy > p { min-height: auto; }
   .memory-layout { gap: 4rem; }
+  .life-detail-grid { grid-template-columns: 1fr; }
+  .life-detail-grid article { min-height: auto; }
+  .photo-booth-window { aspect-ratio: 1.25; }
   .game-title-block { grid-column: auto; }
   .project-card { min-height: 20rem; }
   .signal-row { grid-template-columns: 2rem 1fr; }

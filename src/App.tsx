@@ -1,6 +1,6 @@
 import { startTransition, useEffect, useRef, useState } from "react";
 import { GameArcade } from "./components/GameArcade";
-import { memorialCopy, projects, rememberedGames, terminalPrompts } from "./data/content";
+import { lifeDetails, memorialCopy, projects, rememberedGames, terminalPrompts } from "./data/content";
 import { ArcadeSoundscape } from "./lib/audio";
 import { formatDollars, shareOfPay, valueIn2026 } from "./lib/currency";
 import type { SignalPayload } from "./types";
@@ -120,6 +120,43 @@ function App() {
               </aside>
             </div>
             <TokenLedger />
+          </div>
+          <div className="family-memory-room section-shell" aria-labelledby="family-memory-title">
+            <figure className="photo-booth-card">
+              <div className="photo-booth-window">
+                <img
+                  src={`${import.meta.env.BASE_URL}memory/cathy-chad-photobooth-program.jpg`}
+                  alt="Two original photo-booth portraits of Cathy and her son Chad laughing and making faces together"
+                  loading="lazy"
+                />
+                <span className="photo-booth-scan" aria-hidden="true" />
+              </div>
+              <figcaption>
+                <p className="kicker">Authorized family photograph // circa 1986</p>
+                <h3 id="family-memory-title">These are the faces behind the tokens.</h3>
+                <p>The exact booth and date are still unconfirmed. Chad remembers the strip as coming from around the same years as the Fillmore Street arcade trips. The expressions are unmistakably theirs.</p>
+                <div className="program-links">
+                  <a href={`${import.meta.env.BASE_URL}memory/cathy-chad-photobooth-program.jpg`} target="_blank" rel="noreferrer">Open program front</a>
+                  <a href={`${import.meta.env.BASE_URL}memory/cathy-life-program.jpg`} target="_blank" rel="noreferrer">Read original remembrance</a>
+                </div>
+              </figcaption>
+            </figure>
+            <div className="life-file">
+              <div className="life-file-heading">
+                <p className="kicker">CATHY.LOG // sourced from her program</p>
+                <h3>A life larger than one arcade memory.</h3>
+                <p>The program provides the facts. Chad's memories provide the voice. This room keeps both visible without turning a life into a list of dates.</p>
+              </div>
+              <div className="life-detail-grid">
+                {lifeDetails.map((detail) => (
+                  <article key={detail.code}>
+                    <span>{detail.code}</span>
+                    <h4>{detail.title}</h4>
+                    <p>{detail.body}</p>
+                  </article>
+                ))}
+              </div>
+            </div>
           </div>
           <div className="game-memory-strip section-shell" aria-labelledby="games-title">
             <div className="game-title-block">

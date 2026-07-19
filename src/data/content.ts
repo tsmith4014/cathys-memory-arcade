@@ -18,8 +18,31 @@ export const memorialCopy = {
   title: "She paid to be there, too.",
   lead: "Chad remembered five-dollar unlimited-play days. The surviving history points to $2.50 Saturday sessions. The missing piece may be the best one: two admissions, one for him and one for Cathy.",
   quote: "She cleaned houses, waited tables, managed hotels, and cleaned rooms. Five dollars could be a fifth of a large-house job. She spent it making a memory.",
-  body: "This room begins with what is known and leaves space for what returns later. Cathy loved classic rock. She was hardworking, funny, and, as her son puts it, a wild one.",
+  body: "This room begins with what is known and leaves space for what returns later. Cathy loved classic rock. She was hardworking, funny, a motorcycle enthusiast, and, as her son puts it, a wild one.",
 };
+
+export const lifeDetails = [
+  {
+    code: "1960 // ROOTS",
+    title: "Enid, Oklahoma",
+    body: "Catherine Denise Smith-Fitts was born January 13, 1960, to Charles and Joyce (Suit) Smith. She attended Fairview schools.",
+  },
+  {
+    code: "HOME // COMMUNITY",
+    title: "Okeene and Canton",
+    body: "She spent her final five years in the Okeene community as a homemaker and was a member of the Church of Christ in Canton.",
+  },
+  {
+    code: "JOY // OPEN ROAD",
+    title: "Moxie, gardens, motorcycles",
+    body: "She deeply loved her dog Moxie, found joy in gardening, and carried a lasting passion for motorcycles.",
+  },
+  {
+    code: "2026 // CONTINUE",
+    title: "A caring spirit",
+    body: "Cathy died April 14, 2026, at 66. Her program remembers her love of family, caring spirit, and the simple joys that gave life meaning.",
+  },
+];
 
 export const rememberedGames = [
   { title: "Rampage", note: "The game that comes back first when Chad remembers those afternoons." },
@@ -82,7 +105,7 @@ export const terminalPrompts: TerminalPrompt[] = [
   {
     command: "OPEN CATHY.LOG",
     label: "Who was Cathy?",
-    response: "A hardworking mother, a classic-rock fan, and, in Chad's words, a wild one. This is a living archive. More of her story will arrive as the memories do.",
+    response: "Catherine Denise Smith-Fitts was a hardworking mother, classic-rock fan, gardener, motorcycle enthusiast, and devoted human to her dog Moxie. Born in Enid and rooted in Oklahoma, she is remembered for family, a caring spirit, simple joys, and, in Chad's words, being a wild one.",
   },
   {
     command: "TRACE AI_ORIGIN",

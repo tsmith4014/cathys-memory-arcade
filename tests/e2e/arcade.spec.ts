@@ -41,6 +41,17 @@ test("changes the origin terminal locally", async ({ page }) => {
   await expect(page.getByRole("status")).toContainText("first week at Code Platoon");
 });
 
+test("renders the authorized photo-booth memory and sourced life details", async ({ page }) => {
+  await page.goto("./#memory-core");
+  const familyPhoto = page.getByRole("img", { name: /two original photo-booth portraits/i });
+  await familyPhoto.scrollIntoViewIfNeeded();
+  await expect(familyPhoto).toBeVisible();
+  await expect.poll(() => familyPhoto.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+  await expect(page.getByText(/moxie, gardens, motorcycles/i)).toBeVisible();
+  await expect(page.getByText(/enid, oklahoma/i)).toBeVisible();
+  await expect(page.getByRole("link", { name: /read original remembrance/i })).toHaveAttribute("href", "/cathys-memory-arcade/memory/cathy-life-program.jpg");
+});
+
 test("has no automatically detectable accessibility violations", async ({ page }) => {
   await page.goto("./");
   const pageResults = await new AxeBuilder({ page }).analyze();

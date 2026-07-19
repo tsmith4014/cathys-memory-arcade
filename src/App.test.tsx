@@ -17,6 +17,14 @@ describe("Cathy's Memory Arcade", () => {
     expect(screen.getByRole("link", { name: "Workshop" })).toHaveAttribute("href", "#project-arcade");
   });
 
+  it("uses the authorized family photograph and Catherine's program details", () => {
+    render(<App />);
+    expect(screen.getByRole("img", { name: /two original photo-booth portraits/i })).toBeInTheDocument();
+    expect(screen.getByText(/moxie, gardens, motorcycles/i)).toBeInTheDocument();
+    expect(screen.getByText(/born january 13, 1960/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /read original remembrance/i })).toHaveAttribute("href", "/memory/cathy-life-program.jpg");
+  });
+
   it("changes the memory terminal response without a network request", () => {
     render(<App />);
     fireEvent.click(screen.getByRole("button", { name: /why ai/i }));

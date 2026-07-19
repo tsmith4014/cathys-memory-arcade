@@ -10,6 +10,7 @@ This is a living 1986-meets-AI memorial for Cathy and a real browser arcade. It 
 - Three original, full-canvas games with enemies, scoring, win/loss states, keyboard controls, and mobile controls
 - Local high scores that never leave the visitor's browser
 - A memory core that separates personal recollection from sourced historical context
+- The real Cathy-and-Chad photo-booth portraits and a life file sourced from her family-authorized program
 - A secondary builder's workshop for mobile, infrastructure, systems, and applied AI work
 - A signal reel refreshed daily by GitHub Actions from a small set of respected sources
 - An optional procedural soundtrack and game effects created locally with the Web Audio API
