@@ -82,7 +82,7 @@ function App() {
           <img
             className="hero-art"
             src={`${import.meta.env.BASE_URL}art/cathy-arcade-hero.jpg`}
-            alt="AI-assisted retro-future arcade artwork built around a four-frame mother-and-son photo-booth memory"
+            alt="A people-free retro-future arcade with two tokens resting together on a cabinet"
           />
           <div className="hero-shade" />
           <div className="hero-copy">
