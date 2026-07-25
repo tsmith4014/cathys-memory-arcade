@@ -2,14 +2,17 @@ import {
   ArcadeSfx,
   burst,
   clamp,
+  drawGameBackdrop,
   drawOverlay,
   drawParticles,
   drawPixelText,
+  drawScreenFinish,
   FrameLoop,
   GAME_HEIGHT,
   GAME_WIDTH,
   InputState,
   intersects,
+  loadGameBackdrop,
   prepareCanvas,
   updateParticles,
   type GameController,
@@ -64,6 +67,7 @@ export function mountDragonfireDescent(canvas: HTMLCanvasElement, options: GameM
   const context = prepareCanvas(canvas);
   const input = new InputState();
   const sound = new ArcadeSfx(options.soundEnabled);
+  const backdrop = loadGameBackdrop("dragonfire-backdrop-v2.webp");
   let state = createState();
   let lastHud = "";
 
@@ -217,7 +221,7 @@ export function mountDragonfireDescent(canvas: HTMLCanvasElement, options: GameM
   const render = (): void => {
     context.save();
     if (state.shake) context.translate((Math.random() - 0.5) * state.shake, (Math.random() - 0.5) * state.shake);
-    drawBackdrop(context, state.time);
+    drawBackdrop(context, state.time, backdrop);
     context.save();
     context.translate(mapX, mapY);
     drawMaze(context, state);
@@ -230,6 +234,7 @@ export function mountDragonfireDescent(canvas: HTMLCanvasElement, options: GameM
     drawParticles(context, state.particles);
     context.restore();
     context.restore();
+    drawScreenFinish(context, "#ff6f61");
 
     context.fillStyle = "rgba(2,7,11,0.82)";
     context.fillRect(18, 18, 924, 54);
@@ -376,12 +381,15 @@ function keyOf(cell: Cell): string {
   return `${cell.column}:${cell.row}`;
 }
 
-function drawBackdrop(context: CanvasRenderingContext2D, time: number): void {
+function drawBackdrop(context: CanvasRenderingContext2D, time: number, backdrop: HTMLImageElement): void {
   const danger = clamp(1 - time / 102, 0, 1);
   const gradient = context.createRadialGradient(480, 285, 60, 480, 285, 540);
   gradient.addColorStop(0, `rgb(${Math.round(13 + danger * 35)}, 24, 39)`);
   gradient.addColorStop(1, "#020408");
   context.fillStyle = gradient;
+  context.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+  drawGameBackdrop(context, backdrop, 0.52, danger * 0.25);
+  context.fillStyle = `rgba(255, 67, 47, ${danger * 0.08})`;
   context.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 }
 
@@ -389,7 +397,7 @@ function drawMaze(context: CanvasRenderingContext2D, state: DescentState): void 
   for (let row = 0; row < rows; row += 1) {
     for (let column = 0; column < columns; column += 1) {
       const wall = state.maze[row][column];
-      context.fillStyle = wall ? "#13212a" : "#071018";
+      context.fillStyle = wall ? "rgba(19, 33, 42, 0.94)" : "rgba(7, 16, 24, 0.72)";
       context.fillRect(column * tile, row * tile, tile, tile);
       context.strokeStyle = wall ? "#263842" : "rgba(255,191,87,0.12)";
       context.strokeRect(column * tile + 1, row * tile + 1, tile - 2, tile - 2);

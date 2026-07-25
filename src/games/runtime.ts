@@ -212,6 +212,60 @@ export function prepareCanvas(canvas: HTMLCanvasElement): CanvasRenderingContext
   return context;
 }
 
+export function loadGameBackdrop(filename: string): HTMLImageElement {
+  const image = new Image();
+  image.decoding = "async";
+  image.src = `${import.meta.env.BASE_URL}art/${filename}`;
+  return image;
+}
+
+export function drawGameBackdrop(
+  context: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  opacity = 0.72,
+  horizontalDrift = 0,
+): boolean {
+  if (!image.complete || !image.naturalWidth || !image.naturalHeight) return false;
+  const imageRatio = image.naturalWidth / image.naturalHeight;
+  const canvasRatio = GAME_WIDTH / GAME_HEIGHT;
+  let sourceWidth = image.naturalWidth;
+  let sourceHeight = image.naturalHeight;
+  if (imageRatio > canvasRatio) sourceWidth = image.naturalHeight * canvasRatio;
+  else sourceHeight = image.naturalWidth / canvasRatio;
+  const travel = Math.max(0, image.naturalWidth - sourceWidth);
+  const sourceX = (image.naturalWidth - sourceWidth) / 2 + clamp(horizontalDrift, -1, 1) * travel * 0.42;
+  const sourceY = (image.naturalHeight - sourceHeight) / 2;
+
+  context.save();
+  context.globalAlpha = opacity;
+  context.imageSmoothingEnabled = true;
+  context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, GAME_WIDTH, GAME_HEIGHT);
+  context.restore();
+  context.imageSmoothingEnabled = false;
+  return true;
+}
+
+export function drawScreenFinish(context: CanvasRenderingContext2D, accent: string): void {
+  context.save();
+  const vignette = context.createRadialGradient(GAME_WIDTH / 2, GAME_HEIGHT / 2, 120, GAME_WIDTH / 2, GAME_HEIGHT / 2, 590);
+  vignette.addColorStop(0, "rgba(0, 0, 0, 0)");
+  vignette.addColorStop(0.72, "rgba(0, 0, 0, 0.06)");
+  vignette.addColorStop(1, "rgba(0, 0, 0, 0.58)");
+  context.fillStyle = vignette;
+  context.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+  context.globalAlpha = 0.035;
+  context.fillStyle = accent;
+  for (let y = 1; y < GAME_HEIGHT; y += 4) context.fillRect(0, y, GAME_WIDTH, 1);
+  context.globalAlpha = 0.13;
+  const glow = context.createLinearGradient(0, 0, GAME_WIDTH, 0);
+  glow.addColorStop(0, "rgba(0, 0, 0, 0)");
+  glow.addColorStop(0.5, accent);
+  glow.addColorStop(1, "rgba(0, 0, 0, 0)");
+  context.fillStyle = glow;
+  context.fillRect(0, GAME_HEIGHT - 3, GAME_WIDTH, 3);
+  context.restore();
+}
+
 export function drawPixelText(
   context: CanvasRenderingContext2D,
   text: string,

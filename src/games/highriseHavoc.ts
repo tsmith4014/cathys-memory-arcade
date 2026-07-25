@@ -2,14 +2,17 @@ import {
   ArcadeSfx,
   burst,
   clamp,
+  drawGameBackdrop,
   drawOverlay,
   drawParticles,
   drawPixelText,
+  drawScreenFinish,
   FrameLoop,
   GAME_HEIGHT,
   GAME_WIDTH,
   InputState,
   intersects,
+  loadGameBackdrop,
   prepareCanvas,
   updateParticles,
   type GameController,
@@ -63,6 +66,7 @@ export function mountHighriseHavoc(canvas: HTMLCanvasElement, options: GameMount
   const context = prepareCanvas(canvas);
   const input = new InputState();
   const sound = new ArcadeSfx(options.soundEnabled);
+  const backdrop = loadGameBackdrop("highrise-havoc-backdrop-v2.webp");
   let state = createState();
   let lastHud = "";
 
@@ -282,7 +286,7 @@ export function mountHighriseHavoc(canvas: HTMLCanvasElement, options: GameMount
   const render = (): void => {
     context.save();
     if (state.shake) context.translate((Math.random() - 0.5) * state.shake, (Math.random() - 0.5) * state.shake);
-    drawBackground(context);
+    drawBackground(context, backdrop);
     for (const tower of state.towers) drawTower(context, tower);
     for (const pickup of state.pickups) if (!pickup.taken) drawPickup(context, pickup);
     for (const craft of state.crafts) drawCraft(context, craft);
@@ -290,6 +294,7 @@ export function mountHighriseHavoc(canvas: HTMLCanvasElement, options: GameMount
     drawMonster(context, state);
     drawParticles(context, state.particles);
     context.restore();
+    drawScreenFinish(context, "#ff6f61");
 
     context.fillStyle = "rgba(2, 7, 11, 0.78)";
     context.fillRect(18, 18, 924, 54);
@@ -370,13 +375,14 @@ function windowPosition(tower: Tower, window: WindowCell): { x: number; y: numbe
   };
 }
 
-function drawBackground(context: CanvasRenderingContext2D): void {
+function drawBackground(context: CanvasRenderingContext2D, backdrop: HTMLImageElement): void {
   const gradient = context.createLinearGradient(0, 0, 0, GAME_HEIGHT);
   gradient.addColorStop(0, "#10102e");
   gradient.addColorStop(0.55, "#4d244b");
   gradient.addColorStop(1, "#08131b");
   context.fillStyle = gradient;
   context.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+  drawGameBackdrop(context, backdrop, 0.68, 0.22);
   context.fillStyle = "#ff8b67";
   context.beginPath();
   context.arc(820, 120, 68, 0, Math.PI * 2);

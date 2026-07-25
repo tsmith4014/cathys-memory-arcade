@@ -2,14 +2,17 @@ import {
   ArcadeSfx,
   burst,
   clamp,
+  drawGameBackdrop,
   drawOverlay,
   drawParticles,
   drawPixelText,
+  drawScreenFinish,
   FrameLoop,
   GAME_HEIGHT,
   GAME_WIDTH,
   InputState,
   intersects,
+  loadGameBackdrop,
   prepareCanvas,
   updateParticles,
   type GameController,
@@ -86,6 +89,7 @@ export function mountSunsetRun(canvas: HTMLCanvasElement, options: GameMountOpti
   const context = prepareCanvas(canvas);
   const input = new InputState();
   const sound = new ArcadeSfx(options.soundEnabled);
+  const backdrop = loadGameBackdrop("sunset-run-backdrop-v2.webp");
   let state = createState();
   let lastHud = "";
 
@@ -275,7 +279,7 @@ export function mountSunsetRun(canvas: HTMLCanvasElement, options: GameMountOpti
   };
 
   const render = (): void => {
-    drawBackground(context, state.camera);
+    drawBackground(context, state.camera, backdrop);
     context.save();
     context.translate(-Math.round(state.camera), 0);
     for (const platform of platforms) drawPlatform(context, platform);
@@ -288,6 +292,7 @@ export function mountSunsetRun(canvas: HTMLCanvasElement, options: GameMountOpti
     drawRunner(context, state);
     drawParticles(context, state.particles);
     context.restore();
+    drawScreenFinish(context, "#ffbf57");
 
     context.fillStyle = "rgba(2, 7, 11, 0.78)";
     context.fillRect(18, 18, 924, 54);
@@ -392,7 +397,7 @@ function breakCrate(state: SunsetState, crate: Crate, sound: ArcadeSfx): void {
   }
 }
 
-function drawBackground(context: CanvasRenderingContext2D, camera: number): void {
+function drawBackground(context: CanvasRenderingContext2D, camera: number, backdrop: HTMLImageElement): void {
   const district = camera < 1300 ? 0 : camera < 2700 ? 1 : camera < 3900 ? 2 : 3;
   const skies = [
     ["#061a36", "#185a68"],
@@ -405,6 +410,7 @@ function drawBackground(context: CanvasRenderingContext2D, camera: number): void
   gradient.addColorStop(1, skies[district][1]);
   context.fillStyle = gradient;
   context.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+  drawGameBackdrop(context, backdrop, 0.66, camera / (worldWidth - GAME_WIDTH) * 2 - 1);
   context.fillStyle = district >= 2 ? "#ffbf57" : "#52e7ef";
   context.beginPath();
   context.arc(800, 125, 38 + district * 8, 0, Math.PI * 2);

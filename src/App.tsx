@@ -1,6 +1,6 @@
 import { startTransition, useEffect, useRef, useState } from "react";
 import { GameArcade } from "./components/GameArcade";
-import { lifeDetails, memorialCopy, projects, rememberedGames, terminalPrompts } from "./data/content";
+import { lifeDetails, memorialCopy, rememberedGames, terminalPrompts } from "./data/content";
 import { ArcadeSoundscape, JUKEBOX_TRACKS, type JukeboxTrackId } from "./lib/audio";
 import { formatDollars, shareOfPay, valueIn2026 } from "./lib/currency";
 import type { SignalPayload } from "./types";
@@ -13,6 +13,34 @@ const fallbackSignals: SignalPayload = {
       title: "Open the live signal reel",
       url: "https://simonwillison.net/",
       source: "Simon Willison",
+      published: "Live feed warming up",
+    },
+    {
+      track: "Systems",
+      title: "Read the systems desk",
+      url: "https://lwn.net/",
+      source: "LWN.net",
+      published: "Live feed warming up",
+    },
+    {
+      track: "Architecture",
+      title: "Visit the architecture shelf",
+      url: "https://martinfowler.com/",
+      source: "Martin Fowler",
+      published: "Live feed warming up",
+    },
+    {
+      track: "Edge and cloud",
+      title: "Check the edge network",
+      url: "https://blog.cloudflare.com/",
+      source: "Cloudflare Blog",
+      published: "Live feed warming up",
+    },
+    {
+      track: "Play and preservation",
+      title: "Enter the game history archive",
+      url: "https://gamehistory.org/blog/",
+      source: "Video Game History Foundation",
       published: "Live feed warming up",
     },
   ],
@@ -77,9 +105,9 @@ function App() {
         </a>
         <nav aria-label="Primary navigation">
           <a href="#lobby">Games</a>
+          <a href="#memory-route">Route</a>
           <a href="#jukebox">Jukebox</a>
           <a href="#memory-core">Memory</a>
-          <a href="#project-arcade">Workshop</a>
         </nav>
         <button className="sound-button" type="button" aria-pressed={soundOn} onClick={toggleSound}>
           <span className="sound-bars" aria-hidden="true"><i /><i /><i /></span>
@@ -188,39 +216,12 @@ function App() {
           </div>
         </section>
 
-        <section className="projects-section section-shell" id="project-arcade" aria-labelledby="projects-title">
-          <div className="section-heading split-heading">
-            <div><p className="kicker">Builder's workshop // behind the arcade</p><h2 id="projects-title">The work that keeps the lights on.</h2></div>
-            <p>The arcade is the experience. This quieter room shows the mobile, cloud, infrastructure, and AI practice behind it.</p>
-          </div>
-          <div className="project-grid">
-            {projects.map((project) => {
-              const content = (
-                <>
-                  <div className="project-topline"><span>{project.code}</span><span>{project.status}</span></div>
-                  <h3>{project.title}</h3>
-                  <p>{project.description}</p>
-                  <ul aria-label={`${project.title} technologies`}>
-                    {project.tags.map((tag) => <li key={tag}>{tag}</li>)}
-                  </ul>
-                  <span className="project-action">{project.href ? "Launch cabinet ->" : "Case study loading"}</span>
-                </>
-              );
-              return project.href ? (
-                <a className="project-card" href={project.href} target="_blank" rel="noreferrer" key={project.code}>{content}</a>
-              ) : (
-                <article className="project-card" key={project.code}>{content}</article>
-              );
-            })}
-          </div>
-        </section>
-
         <section className="signal-section" id="signal-machine" aria-labelledby="signal-title">
           <div className="section-shell signal-layout">
             <div className="signal-intro">
-              <p className="kicker">Signal Machine // auto-refresh</p>
-              <h2 id="signal-title">Fresh inputs, low noise.</h2>
-              <p>A GitHub Actions pipeline scans a deliberately small pool of respected technical sources and keeps one fresh item per track.</p>
+              <p className="kicker">After-hours signal booth // auto-refresh</p>
+              <h2 id="signal-title">Five things worth staying late for.</h2>
+              <p>The room keeps changing after closing time. A small automated reel finds one thoughtful dispatch per track from deliberately chosen independent sources.</p>
               <p className="generated-time">{signals.generatedAt ? `Last reel change: ${new Date(signals.generatedAt).toLocaleString()}` : "Live reel warming up"}</p>
             </div>
             <div className="signal-reel" aria-live="polite">
@@ -267,7 +268,7 @@ function App() {
             <p>New memories, experiments, and people can enter without erasing what came before.</p>
             <div className="continue-actions">
               <a className="primary-link" href="https://github.com/tsmith4014/cathys-memory-arcade/discussions" target="_blank" rel="noreferrer">Leave a signal</a>
-              <a href="https://github.com/tsmith4014" target="_blank" rel="noreferrer">Visit Chad on GitHub</a>
+              <a href="#top">Return to the entrance</a>
             </div>
           </div>
           <div className="continue-token" aria-hidden="true"><span>C</span><p>Infinite<br />continues</p></div>
@@ -319,13 +320,20 @@ function Jukebox({
   onSelect: (trackId: JukeboxTrackId) => void;
   onToggle: () => void;
 }) {
+  const selectedTrack = JUKEBOX_TRACKS.find((track) => track.id === activeTrack) ?? JUKEBOX_TRACKS[0];
+
   return (
     <section className="jukebox-section" id="jukebox" aria-labelledby="jukebox-title">
       <div className="section-shell jukebox-shell">
         <div className="jukebox-copy">
-          <p className="kicker">Jukebox J-86 // synthesized live</p>
-          <h2 id="jukebox-title">The arcade finally sounds alive.</h2>
-          <p>Every tone is generated in your browser. Two tracks are original compositions; the third is a new chiptune arrangement of a public-domain Grieg melody. No streamed recordings, trackers, or borrowed game audio.</p>
+          <p className="kicker">Jukebox J-86 // adaptive browser score</p>
+          <h2 id="jukebox-title">The room has a pulse now.</h2>
+          <p>Five arrangements build and break down in real time with drums, bass, pads, lead voices, tape echo, generated reverb, and a low arcade-room hum. Four are original compositions; Mountain King '86 reimagines a public-domain Grieg melody. No streams, samples, trackers, or borrowed game audio.</p>
+          <div className="mix-notes" aria-label="Soundtrack behavior">
+            <span>8-bar evolving forms</span>
+            <span>Cabinet auto-ducking</span>
+            <span>Zero audio downloads</span>
+          </div>
           <button className="jukebox-power" type="button" aria-pressed={soundOn} onClick={onToggle}>
             <span className="sound-bars" aria-hidden="true"><i /><i /><i /></span>
             {soundOn ? "Stop the jukebox" : "Power up the jukebox"}
@@ -333,9 +341,12 @@ function Jukebox({
         </div>
         <div className="jukebox-machine" aria-label="Jukebox track selector">
           <div className="jukebox-now">
-            <span>{soundOn ? "Now playing" : "Ready"}</span>
-            <strong>{JUKEBOX_TRACKS.find((track) => track.id === activeTrack)?.title}</strong>
-            <i aria-hidden="true" />
+            <span>{soundOn ? "Now playing // live arrangement" : "Ready // choose a reel"}</span>
+            <strong>{selectedTrack.title}</strong>
+            <small>{selectedTrack.mood} // {selectedTrack.bpm} BPM</small>
+            <div className={soundOn ? "jukebox-meter active" : "jukebox-meter"} aria-hidden="true">
+              {Array.from({ length: 16 }, (_, index) => <i key={index} />)}
+            </div>
           </div>
           <div className="jukebox-tracks">
             {JUKEBOX_TRACKS.map((track, index) => (
@@ -348,7 +359,9 @@ function Jukebox({
               >
                 <span>{String(index + 1).padStart(2, "0")}</span>
                 <strong>{track.title}</strong>
+                <span className="track-bpm">{track.bpm} BPM</span>
                 <small>{track.style}<br />{track.credit}</small>
+                <span className="track-layers">{track.layers.join(" / ")}</span>
               </button>
             ))}
           </div>

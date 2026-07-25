@@ -1,33 +1,40 @@
 {
-  "generatedAt": "2026-07-19T16:21:27.805595+00:00",
+  "generatedAt": "2026-07-25T20:29:56.587087+00:00",
   "signals": [
     {
       "track": "AI practice",
-      "title": "AI Mania Is Eviscerating Global Decision-Making",
-      "url": "https://simonwillison.net/2026/Jul/19/ai-mania/#atom-everything",
+      "title": "Quoting Boris Cherny",
+      "url": "https://simonwillison.net/2026/Jul/25/boris-cherny/#atom-everything",
       "source": "Simon Willison",
-      "published": "Jul 19"
+      "published": "Jul 25"
     },
     {
       "track": "Systems",
-      "title": "\"Half a Second\" \u2014 a book on the XZ backdoor",
-      "url": "https://lwn.net/Articles/1083466/",
+      "title": "In remembrance of Dan Williams",
+      "url": "https://lwn.net/Articles/1085021/",
       "source": "LWN.net",
-      "published": "Jul 18"
+      "published": "Jul 25"
     },
     {
       "track": "Architecture",
-      "title": "Google's AlphaEvolve Reaches General Availability with Evolutionary Code Optimization as a Service",
-      "url": "https://www.infoq.com/news/2026/07/alphaevolve-generally-available/?utm_campaign=infoq_content&utm_source=infoq&utm_medium=feed&utm_term=global",
+      "title": "AI Root Cause Analysis Shifts from Model Reasoning to Context Engineering",
+      "url": "https://www.infoq.com/news/2026/07/ai-rca-context-engineering/?utm_campaign=infoq_content&utm_source=infoq&utm_medium=feed&utm_term=global",
       "source": "InfoQ",
-      "published": "Jul 19"
+      "published": "Jul 25"
     },
     {
       "track": "Edge and cloud",
-      "title": "Cloudflare WAF protects WordPress applications from two high-severity vulnerabilities",
-      "url": "https://blog.cloudflare.com/wordpress-vulnerabilities/",
-      "source": "Cloudflare Blog",
-      "published": "Jul 17"
+      "title": "Amazon Connect now supports audio optimization for Azure Virtual Desktop and Windows 365 Cloud PC",
+      "url": "https://aws.amazon.com/about-aws/whats-new/2026/06/amazon-connect/",
+      "source": "AWS What's New",
+      "published": "Jul 24"
+    },
+    {
+      "track": "Play and preservation",
+      "title": "Revisit E3 like you\u2019ve never seen it before",
+      "url": "https://gamehistory.org/e3-history/",
+      "source": "Video Game History Foundation",
+      "published": "Jul 22"
     }
   ]
 }

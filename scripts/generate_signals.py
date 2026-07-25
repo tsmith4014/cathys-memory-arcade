@@ -43,6 +43,13 @@ TRACKS = (
             ("AWS What's New", "https://aws.amazon.com/about-aws/whats-new/recent/feed/", "https://aws.amazon.com/about-aws/whats-new/"),
         ),
     ),
+    (
+        "Play and preservation",
+        (
+            ("Video Game History Foundation", "https://gamehistory.org/feed/", "https://gamehistory.org/blog/"),
+            ("The Strong Museum of Play", "https://www.museumofplay.org/blog/feed/", "https://www.museumofplay.org/blog/"),
+        ),
+    ),
 )
 
 

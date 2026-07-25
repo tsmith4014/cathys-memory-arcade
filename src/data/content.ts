@@ -1,12 +1,3 @@
-export type Project = {
-  code: string;
-  title: string;
-  description: string;
-  tags: string[];
-  href?: string;
-  status: string;
-};
-
 export type TerminalPrompt = {
   command: string;
   label: string;
@@ -50,57 +41,11 @@ export const rememberedGames = [
   { title: "Dungeon Quest", note: "Remembered for being brutally hard, and for making every small win count." },
 ];
 
-export const projects: Project[] = [
-  {
-    code: "SHIP-01",
-    title: "Expense Capture Mobile",
-    description: "iOS and Android receipt capture, expense assembly, and signed PDF packages backed by AWS Lambda and S3.",
-    tags: ["React Native", "Lambda", "S3", "PDF"],
-    status: "Field testing",
-  },
-  {
-    code: "AI-OPS",
-    title: "Shared Engineering AI",
-    description: "Claude in Slack with Jira and Confluence context so senior engineers can work from a shared knowledge surface.",
-    tags: ["Claude", "Slack", "Jira", "Confluence"],
-    status: "In progress",
-  },
-  {
-    code: "DRIFT-86",
-    title: "Configuration Intelligence",
-    description: "Trade-server scans stored in Git so AI can expose drift, misalignment, and operational inconsistencies.",
-    tags: ["GitOps", "AI", "Systems", "Analysis"],
-    status: "In progress",
-  },
-  {
-    code: "NET-MAP",
-    title: "Interactive AWS Network",
-    description: "A browser-based infrastructure diagram built to explain topology rather than decorate a slide.",
-    tags: ["AWS", "SVG", "Networking"],
-    status: "Playable",
-    href: "https://tsmith4014.github.io/twoge_aws_deployment/",
-  },
-  {
-    code: "DOC-QA",
-    title: "Regulatory Q&A Engine",
-    description: "A 225-page source turned into more than 800 structured lookups in about 15 minutes for less than $4.",
-    tags: ["OpenAI", "Extraction", "Batching"],
-    status: "Shipped",
-  },
-  {
-    code: "CIVIC-20K",
-    title: "Housing Data Pipeline",
-    description: "Automated ingest, SQL storage, geocoding, and API exposure for more than 20,000 residential sales.",
-    tags: ["Python", "SQL", "APIs", "Geospatial"],
-    status: "Shipped",
-  },
-];
-
 export const terminalPrompts: TerminalPrompt[] = [
   {
     command: "RUN TWO_TOKENS",
     label: "Why two tokens?",
-    response: "The memory is five dollars total: about $2.50 for Chad, and likely another $2.50 for Cathy to be there with him. The real gift was not the credits. It was her time after hard work.",
+    response: "The memory is the five-dollar unlimited-play days. The documented history begins with a $2.50 two-hour Fillmore prototype in 1986, then reaches $5 all-you-can-play at The Boardwalk in 1987. The real gift was not a guessed admission split. It was Cathy's time after hard work.",
   },
   {
     command: "OPEN CATHY.LOG",
@@ -115,6 +60,6 @@ export const terminalPrompts: TerminalPrompt[] = [
   {
     command: "LIST NEXT_CONTINUE",
     label: "What happens next?",
-    response: "New memories become rooms. New software becomes cabinets. The signal machine keeps moving. Nothing here needs to be finished to remain alive.",
+    response: "New memories become rooms. New games become chapters. The signal booth keeps moving after closing time. Nothing here needs to be finished to remain alive.",
   },
 ];

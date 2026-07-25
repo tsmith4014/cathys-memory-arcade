@@ -2,14 +2,17 @@ import {
   ArcadeSfx,
   burst,
   clamp,
+  drawGameBackdrop,
   drawOverlay,
   drawParticles,
   drawPixelText,
+  drawScreenFinish,
   FrameLoop,
   GAME_HEIGHT,
   GAME_WIDTH,
   InputState,
   intersects,
+  loadGameBackdrop,
   prepareCanvas,
   updateParticles,
   type GameController,
@@ -55,6 +58,7 @@ export function mountSkylineSmash(canvas: HTMLCanvasElement, options: GameMountO
   const context = prepareCanvas(canvas);
   const input = new InputState();
   const sound = new ArcadeSfx(options.soundEnabled);
+  const backdrop = loadGameBackdrop("highrise-havoc-backdrop-v2.webp");
   let state = createState();
   let lastHud = "";
 
@@ -219,7 +223,7 @@ export function mountSkylineSmash(canvas: HTMLCanvasElement, options: GameMountO
     const shakeX = state.shake ? (Math.random() - 0.5) * state.shake : 0;
     const shakeY = state.shake ? (Math.random() - 0.5) * state.shake : 0;
     context.translate(shakeX, shakeY);
-    drawBackground(context);
+    drawBackground(context, backdrop);
     for (const building of state.buildings) drawBuilding(context, building);
     drawBolts(context, state.bolts);
     for (const drone of state.drones) drawDrone(context, drone);
@@ -233,6 +237,7 @@ export function mountSkylineSmash(canvas: HTMLCanvasElement, options: GameMountO
     }
     drawParticles(context, state.particles);
     context.restore();
+    drawScreenFinish(context, "#52e7ef");
 
     context.fillStyle = "rgba(4, 11, 18, 0.72)";
     context.fillRect(18, 18, 924, 54);
@@ -301,13 +306,14 @@ function createState(): SmashState {
   };
 }
 
-function drawBackground(context: CanvasRenderingContext2D): void {
+function drawBackground(context: CanvasRenderingContext2D, backdrop: HTMLImageElement): void {
   const gradient = context.createLinearGradient(0, 0, 0, GAME_HEIGHT);
   gradient.addColorStop(0, "#091023");
   gradient.addColorStop(0.55, "#17314a");
   gradient.addColorStop(1, "#07131f");
   context.fillStyle = gradient;
   context.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+  drawGameBackdrop(context, backdrop, 0.7, -0.2);
   context.fillStyle = "#ff6f61";
   context.beginPath();
   context.arc(770, 126, 62, 0, Math.PI * 2);

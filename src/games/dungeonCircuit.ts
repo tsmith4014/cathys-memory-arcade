@@ -2,14 +2,17 @@ import {
   ArcadeSfx,
   burst,
   clamp,
+  drawGameBackdrop,
   drawOverlay,
   drawParticles,
   drawPixelText,
+  drawScreenFinish,
   FrameLoop,
   GAME_HEIGHT,
   GAME_WIDTH,
   InputState,
   intersects,
+  loadGameBackdrop,
   prepareCanvas,
   updateParticles,
   type GameController,
@@ -45,6 +48,7 @@ export function mountDungeonCircuit(canvas: HTMLCanvasElement, options: GameMoun
   const context = prepareCanvas(canvas);
   const input = new InputState();
   const sound = new ArcadeSfx(options.soundEnabled);
+  const backdrop = loadGameBackdrop("dragonfire-backdrop-v2.webp");
   let state = createState();
   let lastHud = "";
 
@@ -175,13 +179,14 @@ export function mountDungeonCircuit(canvas: HTMLCanvasElement, options: GameMoun
   const render = (): void => {
     context.save();
     if (state.shake) context.translate((Math.random() - 0.5) * state.shake, (Math.random() - 0.5) * state.shake);
-    drawDungeon(context, state.room, state.obstacles, state.keyTaken);
+    drawDungeon(context, state.room, state.obstacles, state.keyTaken, backdrop);
     if (state.keyReady) drawCircuitKey(context);
     for (const enemy of state.enemies) drawEnemy(context, enemy);
     for (const projectile of state.projectiles) drawProjectile(context, projectile);
     drawPlayer(context, state);
     drawParticles(context, state.particles);
     context.restore();
+    drawScreenFinish(context, "#ef78ff");
 
     context.fillStyle = "rgba(2, 7, 11, 0.78)";
     context.fillRect(18, 18, 924, 54);
@@ -336,12 +341,13 @@ function hurtPlayer(state: DungeonState, sound: ArcadeSfx, x: number, y: number)
   sound.play(72, 0.22, "sawtooth", 0.1);
 }
 
-function drawDungeon(context: CanvasRenderingContext2D, room: number, obstacles: Obstacle[], doorOpen: boolean): void {
+function drawDungeon(context: CanvasRenderingContext2D, room: number, obstacles: Obstacle[], doorOpen: boolean, backdrop: HTMLImageElement): void {
   const tones = ["#52e7ef", "#ef78ff", "#ff6f61"];
   const tone = tones[room];
   context.fillStyle = "#03080d";
   context.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-  context.fillStyle = "#07131f";
+  drawGameBackdrop(context, backdrop, 0.46, room * 0.15 - 0.15);
+  context.fillStyle = "rgba(7, 19, 31, 0.74)";
   context.fillRect(24, 82, GAME_WIDTH - 48, GAME_HEIGHT - 106);
   context.strokeStyle = `${tone}33`;
   context.lineWidth = 1;

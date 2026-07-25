@@ -2,14 +2,17 @@ import {
   ArcadeSfx,
   burst,
   clamp,
+  drawGameBackdrop,
   drawOverlay,
   drawParticles,
   drawPixelText,
+  drawScreenFinish,
   FrameLoop,
   GAME_HEIGHT,
   GAME_WIDTH,
   InputState,
   intersects,
+  loadGameBackdrop,
   prepareCanvas,
   updateParticles,
   type GameController,
@@ -66,6 +69,7 @@ export function mountTokenTrail(canvas: HTMLCanvasElement, options: GameMountOpt
   const context = prepareCanvas(canvas);
   const input = new InputState();
   const sound = new ArcadeSfx(options.soundEnabled);
+  const backdrop = loadGameBackdrop("sunset-run-backdrop-v2.webp");
   let state = createState();
   let lastHud = "";
 
@@ -236,7 +240,7 @@ export function mountTokenTrail(canvas: HTMLCanvasElement, options: GameMountOpt
   };
 
   const render = (): void => {
-    drawTrailBackground(context, state.camera);
+    drawTrailBackground(context, state.camera, backdrop);
     context.save();
     context.translate(-Math.round(state.camera), 0);
     for (const platform of platforms) drawPlatform(context, platform);
@@ -246,6 +250,7 @@ export function mountTokenTrail(canvas: HTMLCanvasElement, options: GameMountOpt
     drawRunner(context, state);
     drawParticles(context, state.particles);
     context.restore();
+    drawScreenFinish(context, "#52e7ef");
 
     context.fillStyle = "rgba(4, 11, 18, 0.76)";
     context.fillRect(18, 18, 924, 54);
@@ -317,7 +322,7 @@ function isStanding(player: TrailState["player"]): boolean {
   return platforms.some((platform) => Math.abs(bottom - platform.y) < 3 && player.x + player.width > platform.x && player.x < platform.x + platform.width);
 }
 
-function drawTrailBackground(context: CanvasRenderingContext2D, camera: number): void {
+function drawTrailBackground(context: CanvasRenderingContext2D, camera: number, backdrop: HTMLImageElement): void {
   const zone = camera < 1050 ? 0 : camera < 2250 ? 1 : 2;
   const skies = [["#071631", "#155261"], ["#150e2c", "#4a244a"], ["#291128", "#d26f45"]];
   const gradient = context.createLinearGradient(0, 0, 0, GAME_HEIGHT);
@@ -325,6 +330,7 @@ function drawTrailBackground(context: CanvasRenderingContext2D, camera: number):
   gradient.addColorStop(1, skies[zone][1]);
   context.fillStyle = gradient;
   context.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+  drawGameBackdrop(context, backdrop, 0.62, camera / (worldWidth - GAME_WIDTH) * 2 - 1);
   context.fillStyle = zone === 2 ? "#ffbf57" : "#52e7ef";
   context.beginPath();
   context.arc(780, 130, zone === 2 ? 55 : 34, 0, Math.PI * 2);

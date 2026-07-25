@@ -6,6 +6,9 @@ const requiredFiles = [
   "dist/credits.html",
   "dist/token.svg",
   "dist/art/cathy-arcade-hero.jpg",
+  "dist/art/highrise-havoc-backdrop-v2.webp",
+  "dist/art/sunset-run-backdrop-v2.webp",
+  "dist/art/dragonfire-backdrop-v2.webp",
   "dist/memory/cathy-chad-photobooth-program.jpg",
   "dist/memory/cathy-life-program.jpg",
   "dist/data/signals.json",
@@ -55,14 +58,14 @@ const javascript = await readFile(`dist/assets/${entryScript}`, "utf8");
 for (const gameTitle of ["Skyline Smash", "Token Trail", "Dungeon Circuit", "Highrise Havoc", "Sunset Run", "Dragonfire Descent"]) {
   if (!javascript.includes(gameTitle)) throw new Error(`production bundle is missing ${gameTitle}`);
 }
-for (const requiredCopy of ["$5", "all-you-can-play admission", "Fillmore Drive", "Moxie's Midnight Run", "Mountain King '86"]) {
+for (const requiredCopy of ["$5", "all-you-can-play admission", "Six chapters. One way home.", "Fillmore After Dark", "Moxie's Midnight Run", "Garden Static", "Open Road '86", "Mountain King '86"]) {
   if (!javascript.includes(requiredCopy)) throw new Error(`production bundle is missing required copy: ${requiredCopy}`);
 }
 for (const lifeDetail of ["Moxie, gardens, motorcycles", "Enid, Oklahoma", "A caring spirit"]) {
   if (!javascript.includes(lifeDetail)) throw new Error(`production bundle is missing Cathy detail: ${lifeDetail}`);
 }
-if (!Array.isArray(signals.signals) || signals.signals.length < 4) {
-  throw new Error("signal reel must contain at least four tracks");
+if (!Array.isArray(signals.signals) || signals.signals.length < 5) {
+  throw new Error("signal reel must contain at least five tracks");
 }
 for (const signal of signals.signals) {
   if (!signal.track || !signal.title || !signal.url.startsWith("https://")) {

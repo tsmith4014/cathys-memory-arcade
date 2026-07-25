@@ -9,6 +9,7 @@ type GameArcadeProps = {
 export function GameArcade({ soundEnabled, onActiveChange }: GameArcadeProps) {
   const [activeGame, setActiveGame] = useState<GameDefinition | null>(() => requestedGame());
   const [scoreVersion, setScoreVersion] = useState(0);
+  const [progressVersion, setProgressVersion] = useState(0);
 
   useEffect(() => {
     onActiveChange(Boolean(activeGame));
@@ -41,7 +42,7 @@ export function GameArcade({ soundEnabled, onActiveChange }: GameArcadeProps) {
       </div>
       <div className="game-grid">
         {arcadeGames.filter((game) => game.series === "original").map((game) => (
-          <GameCard game={game} key={`${game.id}-${scoreVersion}`} onLaunch={() => launchGame(game)} />
+          <GameCard game={game} key={`${game.id}-${scoreVersion}-${progressVersion}`} onLaunch={() => launchGame(game)} />
         ))}
       </div>
       <div className="game-series-heading remix-heading">
@@ -50,45 +51,66 @@ export function GameArcade({ soundEnabled, onActiveChange }: GameArcadeProps) {
       </div>
       <div className="game-grid remix-grid">
         {arcadeGames.filter((game) => game.series === "memory-remix").map((game) => (
-          <GameCard game={game} key={`${game.id}-${scoreVersion}`} onLaunch={() => launchGame(game)} />
+          <GameCard game={game} key={`${game.id}-${scoreVersion}-${progressVersion}`} onLaunch={() => launchGame(game)} />
         ))}
       </div>
       <div className="floor-status" aria-label="Arcade floor status">
         <span><i className="status-light" /> Floor open</span>
         <span>6 original games</span>
         <span>Local high scores</span>
-        <span>Keyboard + touch + sound</span>
+        <span>Story progress saved locally</span>
       </div>
-      {activeGame ? <GameStage game={activeGame} soundEnabled={soundEnabled} onClose={closeGame} /> : null}
+      <MemoryRoute version={progressVersion} />
+      {activeGame ? (
+        <GameStage
+          game={activeGame}
+          soundEnabled={soundEnabled}
+          onClose={closeGame}
+          onComplete={() => setProgressVersion((version) => version + 1)}
+        />
+      ) : null}
     </section>
   );
 }
 
 function GameCard({ game, onLaunch }: { game: GameDefinition; onLaunch: () => void }) {
   const [highScore, setHighScore] = useState(0);
+  const [completed, setCompleted] = useState(false);
 
   useEffect(() => {
     setHighScore(readHighScore(game.id));
+    setCompleted(readCompletion(game.id));
   }, [game.id]);
 
   return (
     <article className={`game-card tone-${game.tone}`}>
       <button type="button" className="game-launch" onClick={onLaunch} aria-label={`Play ${game.title}`}>
         <div className={`attract-screen attract-${game.id}`} aria-hidden="true">
+          <img className="attract-backdrop" src={`${import.meta.env.BASE_URL}art/${backdropFor(game.id)}`} alt="" />
           <span className="attract-scan" />
           <AttractArt id={game.id} />
           <span className="attract-prompt">Press start</span>
         </div>
         <div className="game-card-copy">
-          <span className="game-cabinet">{game.cabinet} // {game.difficulty}</span>
+          <div className="game-card-meta">
+            <span className="game-cabinet">{game.cabinet} // {game.difficulty}</span>
+            <span className={completed ? "chapter-state recovered" : "chapter-state"}>{completed ? "Signal recovered" : game.chapter}</span>
+          </div>
           <h3>{game.title}</h3>
           <p className="game-subtitle">{game.subtitle}</p>
           <p>{game.description}</p>
+          <div className="game-theme"><span>{game.theme}</span><small>{game.keepsake}</small></div>
           <div className="game-scoreline"><span>Local best</span><strong>{String(highScore).padStart(6, "0")}</strong></div>
         </div>
       </button>
     </article>
   );
+}
+
+function backdropFor(id: GameDefinition["id"]): string {
+  if (id === "skyline-smash" || id === "highrise-havoc") return "highrise-havoc-backdrop-v2.webp";
+  if (id === "token-trail" || id === "sunset-run") return "sunset-run-backdrop-v2.webp";
+  return "dragonfire-backdrop-v2.webp";
 }
 
 function AttractArt({ id }: { id: GameDefinition["id"] }) {
@@ -110,26 +132,43 @@ function AttractArt({ id }: { id: GameDefinition["id"] }) {
   return <><i className="descent-maze" /><i className="descent-fog" /><i className="descent-hero" /><i className="descent-hoard" /><i className="descent-gate" /></>;
 }
 
-function GameStage({ game, soundEnabled, onClose }: { game: GameDefinition; soundEnabled: boolean; onClose: () => void }) {
+function GameStage({
+  game,
+  soundEnabled,
+  onClose,
+  onComplete,
+}: {
+  game: GameDefinition;
+  soundEnabled: boolean;
+  onClose: () => void;
+  onComplete: () => void;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const controllerRef = useRef<GameController | null>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const startButtonRef = useRef<HTMLButtonElement>(null);
+  const completionReported = useRef(false);
   const [hud, setHud] = useState<GameHud>({ score: 0, status: "playing" });
   const [paused, setPaused] = useState(false);
+  const [started, setStarted] = useState(false);
+  const reportCompletion = useEffectEvent(onComplete);
   const receiveHud = useEffectEvent((nextHud: GameHud) => {
     setHud(nextHud);
     setPaused(nextHud.status === "paused");
-    if (nextHud.status === "won" || nextHud.status === "lost") writeHighScore(game.id, nextHud.score);
+    if (nextHud.status === "won" || nextHud.status === "lost") {
+      writeHighScore(game.id, nextHud.score);
+      if (nextHud.status === "won" && !completionReported.current) {
+        completionReported.current = true;
+        writeCompletion(game.id);
+        reportCompletion();
+      }
+    }
   });
   const requestClose = useEffectEvent(onClose);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return undefined;
-    controllerRef.current = mountGame(canvas, game, { soundEnabled, onHud: receiveHud });
-    closeButtonRef.current?.focus();
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    startButtonRef.current?.focus();
 
     const onKeyDown = (event: KeyboardEvent): void => {
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].includes(event.key)) event.preventDefault();
@@ -146,10 +185,19 @@ function GameStage({ game, soundEnabled, onClose }: { game: GameDefinition; soun
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
       document.body.style.overflow = previousOverflow;
+    };
+  }, [game]);
+
+  useEffect(() => {
+    if (!started) return undefined;
+    const canvas = canvasRef.current;
+    if (!canvas) return undefined;
+    controllerRef.current = mountGame(canvas, game, { soundEnabled, onHud: receiveHud });
+    return () => {
       controllerRef.current?.destroy();
       controllerRef.current = null;
     };
-  }, [game]);
+  }, [game, started]);
 
   useEffect(() => {
     controllerRef.current?.setSoundEnabled(soundEnabled);
@@ -157,7 +205,10 @@ function GameStage({ game, soundEnabled, onClose }: { game: GameDefinition; soun
 
   const setControl = (key: string, active: boolean): void => controllerRef.current?.setInput(key, active);
   const togglePause = (): void => controllerRef.current?.togglePause();
-  const restart = (): void => controllerRef.current?.restart();
+  const restart = (): void => {
+    completionReported.current = false;
+    controllerRef.current?.restart();
+  };
 
   return (
     <div className="game-modal" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
@@ -165,22 +216,82 @@ function GameStage({ game, soundEnabled, onClose }: { game: GameDefinition; soun
         <header className="game-stage-header">
           <div><span>{game.cabinet} // now playing</span><h2 id="active-game-title">{game.title}</h2></div>
           <div className="game-stage-score"><span>Score</span><strong>{String(hud.score).padStart(6, "0")}</strong></div>
-          <button ref={closeButtonRef} type="button" className="game-close" onClick={onClose} aria-label={`Close ${game.title}`}>Exit</button>
+          <button type="button" className="game-close" onClick={onClose} aria-label={`Close ${game.title}`}>Exit</button>
         </header>
         <div className="canvas-bezel">
           <canvas ref={canvasRef} className="game-canvas" aria-label={`${game.title} game screen. ${game.objective}`} />
+          {!started ? (
+            <div className="game-briefing">
+              <img className="game-briefing-art" src={`${import.meta.env.BASE_URL}art/${backdropFor(game.id)}`} alt="" />
+              <span>{game.chapter} // {game.theme}</span>
+              <h3>{game.keepsake}</h3>
+              <p>{game.briefing}</p>
+              <dl>
+                <div><dt>Mission</dt><dd>{game.objective}</dd></div>
+                <div><dt>Controls</dt><dd>{game.controls}</dd></div>
+              </dl>
+              <button ref={startButtonRef} type="button" onClick={() => setStarted(true)}>Begin chapter</button>
+            </div>
+          ) : null}
           <span className="bezel-glare" aria-hidden="true" />
         </div>
         <div className="game-console">
-          <div className="game-instructions"><strong>{game.objective}</strong><span>{hud.message ?? game.controls}</span><small>{game.controls}</small></div>
+          <div className="game-instructions">
+            <strong>{hud.status === "won" ? game.completion : game.objective}</strong>
+            <span>{started ? hud.message ?? game.controls : `${game.chapter} briefing loaded`}</span>
+            <small>{game.controls}</small>
+          </div>
           <div className="game-console-actions">
-            <button type="button" onClick={togglePause}>{paused ? "Resume" : "Pause"} <kbd>P</kbd></button>
-            <button type="button" onClick={restart}>Restart <kbd>R</kbd></button>
+            <button type="button" disabled={!started} onClick={togglePause}>{paused ? "Resume" : "Pause"} <kbd>P</kbd></button>
+            <button type="button" disabled={!started} onClick={restart}>Restart <kbd>R</kbd></button>
           </div>
         </div>
-        <TouchControls onInput={setControl} game={game} />
+        {started ? <TouchControls onInput={setControl} game={game} /> : null}
       </div>
     </div>
+  );
+}
+
+function MemoryRoute({ version }: { version: number }) {
+  const completed = arcadeGames.filter((game) => readCompletion(game.id));
+  const complete = completed.length === arcadeGames.length;
+
+  return (
+    <section className="memory-route" id="memory-route" aria-labelledby="memory-route-title" data-version={version}>
+      <div className="memory-route-heading">
+        <div>
+          <p className="kicker">Cathy route // local save file</p>
+          <h3 id="memory-route-title">Six chapters. One way home.</h3>
+        </div>
+        <div className="route-progress" aria-label={`${completed.length} of ${arcadeGames.length} memory signals recovered`}>
+          <strong>{completed.length}/{arcadeGames.length}</strong>
+          <span>signals recovered</span>
+        </div>
+      </div>
+      <p className="route-disclaimer">These cabinet stories are original metaphors inspired by known memories and Cathy's family-authorized program. They are not presented as additional biographical claims.</p>
+      <div className="route-line">
+        {arcadeGames.map((game, index) => {
+          const recovered = readCompletion(game.id);
+          return (
+            <article className={recovered ? "route-stop recovered" : "route-stop"} key={game.id}>
+              <span className="route-node">{String(index + 1).padStart(2, "0")}</span>
+              <small>{game.theme}</small>
+              <strong>{recovered ? game.keepsake : "Signal locked"}</strong>
+              <p>{recovered ? game.completion : `Complete ${game.title} to recover this chapter.`}</p>
+              <button type="button" onClick={() => {
+                const target = document.querySelector<HTMLButtonElement>(`[aria-label="Play ${game.title}"]`);
+                target?.click();
+              }}>{recovered ? "Replay chapter" : "Enter cabinet"}</button>
+            </article>
+          );
+        })}
+      </div>
+      <aside className={complete ? "route-epilogue unlocked" : "route-epilogue"}>
+        <span>{complete ? "After closing // unlocked" : "After closing // 6 signals required"}</span>
+        <h4>{complete ? "The lights stay on because the memory changed shape." : "There is one room behind the last cabinet."}</h4>
+        <p>{complete ? "The point was never clearing every machine. It was making a place where Cathy's story could remain active: played, heard, remembered, and still unfinished." : "Complete all six chapters on this browser to open the epilogue."}</p>
+      </aside>
+    </section>
   );
 }
 
@@ -221,6 +332,22 @@ function writeHighScore(gameId: string, score: number): void {
     if (score > current) window.localStorage.setItem(`cathy-arcade:${gameId}:high-score`, String(score));
   } catch {
     // Storage can be unavailable in hardened browser modes; gameplay remains fully functional.
+  }
+}
+
+function readCompletion(gameId: string): boolean {
+  try {
+    return window.localStorage.getItem(`cathy-arcade:${gameId}:complete`) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function writeCompletion(gameId: string): void {
+  try {
+    window.localStorage.setItem(`cathy-arcade:${gameId}:complete`, "true");
+  } catch {
+    // The story route is optional; hardened storage settings do not block gameplay.
   }
 }
 

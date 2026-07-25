@@ -8,12 +8,13 @@ This is a living 1986-meets-AI memorial for Cathy and a real browser arcade. It 
 
 - A sourced admission timeline: the $2.50 Fillmore prototype in 1986 and the $5 all-you-can-play Boardwalk arcade in 1987
 - Six original, full-canvas games with enemies, scoring systems, win/loss states, keyboard controls, and mobile controls
-- Local high scores that never leave the visitor's browser
+- A six-chapter memory route with cabinet briefings, metaphorical story keepsakes, local completion saves, and an unlockable epilogue
+- Local high scores and story progress that never leave the visitor's browser
 - A memory core that separates personal recollection from sourced historical context
 - The real Cathy-and-Chad photo-booth portraits and a life file sourced from her family-authorized program
-- A secondary builder's workshop for mobile, infrastructure, systems, and applied AI work
-- A signal reel refreshed daily by GitHub Actions from a small set of respected sources
-- A three-track browser jukebox, ambient arcade sound, and game effects synthesized locally with the Web Audio API
+- Original AI-assisted Colorado and fantasy landscape backplates layered beneath code-native game geometry
+- An after-hours signal booth refreshed daily by GitHub Actions from a small set of respected sources
+- A five-track adaptive browser score with evolving arrangements, drums, bass, pads, leads, echo, generated reverb, room ambience, and game effects synthesized locally with the Web Audio API
 - Keyboard, touch, reduced-motion, and screen-reader support
 
 ## Playable floor
@@ -27,9 +28,9 @@ This is a living 1986-meets-AI memorial for Cathy and a real browser arcade. It 
 | Sunset Run | Long-form platform adventure | Find two keepsakes and reach the exit before sunset |
 | Dragonfire Descent | Fog-of-war castle raid | Steal the hoard and retrace the lethal maze to escape |
 
-All graphics and game systems are code-native and original to this project. No commercial sprites, cabinet art, characters, or sound recordings are included.
+All game systems, collision geometry, characters, and foreground graphics are code-native and original to this project. Three AI-assisted original environment backplates add atmosphere without reproducing commercial game art. No commercial sprites, cabinet art, characters, or sound recordings are included.
 
-The jukebox contains two original procedural compositions and a new Web Audio arrangement of Edvard Grieg's public-domain composition "In the Hall of the Mountain King." No audio recording or commercial game sound is included.
+The jukebox contains four original procedural compositions and a new Web Audio arrangement of Edvard Grieg's public-domain composition "In the Hall of the Mountain King." Each piece changes instrumentation and density across an eight-bar form. No audio recording or commercial game sound is included.
 
 ## Local development
 
@@ -50,6 +51,8 @@ npm run test:e2e
 ## Content boundaries
 
 The MIT license covers source code only. Family photographs, memorial materials, and generated art remain all rights reserved by the Thompson-Smith family. Commercial game titles are referenced only as personal memories; no commercial character or cabinet artwork is reproduced.
+
+The six cabinet narratives are original metaphors inspired by known memories and the family-authorized program. They are not presented as additional facts about Cathy's life.
 
 Period Nickels & Dimes photographs are available on Artie Romero's historical site, but are copyrighted. This project links to that source instead of copying the images. They should only be incorporated after explicit permission and with full attribution.
 
