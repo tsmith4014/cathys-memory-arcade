@@ -110,7 +110,7 @@ export function mountSkylineSmash(canvas: HTMLCanvasElement, options: GameMountO
       state.player.vy = -470;
       sound.play(170, 0.1, "square", 0.05);
     }
-    if (input.take("space", "z", "x") && state.attackTimer <= 0) attack();
+    if (input.down("space", "z", "x") && state.attackTimer <= 0) attack();
     if (input.take("shift") && state.rage >= 100) unleashRage();
 
     state.player.vy += 1050 * delta;
@@ -125,7 +125,7 @@ export function mountSkylineSmash(canvas: HTMLCanvasElement, options: GameMountO
       if (drone.cooldown <= 0) {
         const angle = Math.atan2(state.player.y - drone.y, state.player.x - drone.x);
         state.bolts.push({ x: drone.x + 20, y: drone.y + 12, vx: Math.cos(angle) * 180, vy: Math.sin(angle) * 180 });
-        drone.cooldown = 1.8 + Math.random() * 1.8;
+        drone.cooldown = 2.1 + Math.random() * 1.9;
         sound.play(520, 0.05, "sawtooth", 0.025);
       }
     }
@@ -136,7 +136,7 @@ export function mountSkylineSmash(canvas: HTMLCanvasElement, options: GameMountO
       bolt.y += bolt.vy * delta;
       if (state.player.invulnerable <= 0 && intersects(state.player, { x: bolt.x - 5, y: bolt.y - 5, width: 10, height: 10 })) {
         state.player.health -= 1;
-        state.player.invulnerable = 1.1;
+        state.player.invulnerable = 1.35;
         bolt.x = -100;
         state.shake = 8;
         burst(state.particles, state.player.x + 30, state.player.y + 35, "#ff6f61", 18, 220);
@@ -300,7 +300,7 @@ function createState(): SmashState {
     attackFlash: 0,
     rage: 0,
     rageFlash: 0,
-    time: 78,
+    time: 92,
     shake: 0,
     status: "playing",
   };
@@ -330,18 +330,12 @@ function drawBackground(context: CanvasRenderingContext2D, backdrop: HTMLImageEl
   context.lineTo(960, 500);
   context.lineTo(0, 500);
   context.fill();
-  context.strokeStyle = "rgba(82, 231, 239, 0.28)";
-  context.lineWidth = 2;
-  for (let x = -120; x < 1000; x += 110) {
+  context.strokeStyle = "rgba(82, 231, 239, 0.1)";
+  context.lineWidth = 4;
+  for (const offset of [-250, 0, 270]) {
     context.beginPath();
-    context.moveTo(480, 350);
-    context.lineTo(x, GAME_HEIGHT);
-    context.stroke();
-  }
-  for (let y = 370; y < GAME_HEIGHT; y += 32) {
-    context.beginPath();
-    context.moveTo(0, y);
-    context.lineTo(GAME_WIDTH, y);
+    context.moveTo(480 + offset * 0.25, 355);
+    context.quadraticCurveTo(480 + offset * 0.65, 430, 480 + offset, GAME_HEIGHT);
     context.stroke();
   }
   context.fillStyle = "#05090e";

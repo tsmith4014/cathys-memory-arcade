@@ -108,9 +108,15 @@ function GameCard({ game, onLaunch }: { game: GameDefinition; onLaunch: () => vo
 }
 
 function backdropFor(id: GameDefinition["id"]): string {
-  if (id === "skyline-smash" || id === "highrise-havoc") return "highrise-havoc-backdrop-v2.webp";
-  if (id === "token-trail" || id === "sunset-run") return "sunset-run-backdrop-v2.webp";
-  return "dragonfire-backdrop-v2.webp";
+  const backdrops: Record<GameDefinition["id"], string> = {
+    "skyline-smash": "highrise-havoc-backdrop-v2.webp",
+    "token-trail": "sunset-run-backdrop-v2.webp",
+    "dungeon-circuit": "dungeon-circuit-backdrop-v3.webp",
+    "highrise-havoc": "highrise-havoc-backdrop-v3.webp",
+    "sunset-run": "sunset-run-backdrop-v3.webp",
+    "dragonfire-descent": "dragonfire-descent-backdrop-v3.webp",
+  };
+  return backdrops[id];
 }
 
 function AttractArt({ id }: { id: GameDefinition["id"] }) {
@@ -121,7 +127,7 @@ function AttractArt({ id }: { id: GameDefinition["id"] }) {
     return <><i className="trail-moon" /><i className="trail-hill one" /><i className="trail-hill two" /><i className="trail-platform one" /><i className="trail-platform two" /><i className="trail-runner" /><i className="trail-token one" /><i className="trail-token two" /><i className="trail-token three" /></>;
   }
   if (id === "dungeon-circuit") {
-    return <><i className="dungeon-grid" /><i className="dungeon-door" /><i className="dungeon-player" /><i className="dungeon-eye one" /><i className="dungeon-eye two" /><i className="dungeon-key" /></>;
+    return <><i className="dungeon-chamber" /><i className="dungeon-door" /><i className="dungeon-player" /><i className="dungeon-eye one" /><i className="dungeon-eye two" /><i className="dungeon-key" /></>;
   }
   if (id === "highrise-havoc") {
     return <><i className="havoc-sun" /><i className="havoc-tower one" /><i className="havoc-tower two" /><i className="havoc-tower three" /><i className="havoc-monster" /><i className="havoc-craft" /></>;
@@ -129,7 +135,7 @@ function AttractArt({ id }: { id: GameDefinition["id"] }) {
   if (id === "sunset-run") {
     return <><i className="sunset-orb" /><i className="sunset-ridge" /><i className="sunset-block one" /><i className="sunset-block two" /><i className="sunset-runner" /><i className="sunset-keepsake one" /><i className="sunset-keepsake two" /></>;
   }
-  return <><i className="descent-maze" /><i className="descent-fog" /><i className="descent-hero" /><i className="descent-hoard" /><i className="descent-gate" /></>;
+  return <><i className="descent-vault" /><i className="descent-fog" /><i className="descent-hero" /><i className="descent-hoard" /><i className="descent-gate" /></>;
 }
 
 function GameStage({

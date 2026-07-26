@@ -10,13 +10,26 @@ The generated source is preserved by Codex; the optimized website asset is `publ
 
 ## Game environment backplates
 
-Three additional original environments were generated with the built-in OpenAI image-generation tool, compressed to 1280 by 720 WebP assets, and layered beneath deterministic canvas geometry. Each game retains a fully code-rendered fallback while an image loads. The images contain no people, family likenesses, text, logos, commercial characters, or borrowed game assets.
+Six original game environments were generated with the built-in OpenAI image-generation tool, compressed to 1280 by 720 WebP assets, and layered beneath deterministic canvas geometry. Every cabinet now has a unique environment. Each game retains a fully code-rendered fallback while an image loads. The images contain no people, family likenesses, text, logos, commercial characters, grids, or borrowed game assets.
 
-- `public/art/highrise-havoc-backdrop-v2.webp` supports Skyline Smash and Highrise Havoc. Prompt direction: an original 1986-retrofuture Colorado Springs cityscape beneath the Front Range, with coral sunset, cyan and amber haze, and disciplined 1980s arcade airbrush and pixel-art language.
-- `public/art/sunset-run-backdrop-v2.webp` supports Token Trail and Sunset Run. Prompt direction: Colorado foothills in summer 1987 moving from dusk toward sunrise, with mountain ridges, a distant arcade glow, highway forms, garden wildflowers, and restrained retro-arcade atmosphere.
-- `public/art/dragonfire-backdrop-v2.webp` supports Dungeon Circuit and Dragonfire Descent. Prompt direction: a top-down ancient castle floor with torchlight, mosaics, an abstract relic, and original 1980s fantasy-arcade atmosphere.
+- `public/art/highrise-havoc-backdrop-v2.webp` supports Skyline Smash. Prompt direction: an original 1986-retrofuture Colorado Springs skyline beneath the Front Range, with coral sunset, cyan and amber haze, and disciplined arcade airbrush language.
+- `public/art/sunset-run-backdrop-v2.webp` supports Token Trail. Prompt direction: Colorado foothills moving from dusk toward sunrise, with mountain ridges, a distant arcade glow, road forms, wildflowers, and restrained retro-arcade atmosphere.
+- `public/art/dungeon-circuit-backdrop-v3.webp` supports Dungeon Circuit. The original top-down torchlit chamber was edited to retain its compass, room layout, and palette while replacing its uniform tile grid with broad worn stone, irregular cracks, soot, and masonry.
+- `public/art/highrise-havoc-backdrop-v3.webp` supports Highrise Havoc. Prompt direction: a low rooftop view between four climbable blue-hour towers, with a coral mountain storm, amber windows, cyan edges, open gameplay space, and no grid patterns.
+- `public/art/sunset-run-backdrop-v3.webp` supports Sunset Run. Prompt direction: a side-on mountain garden journey through terraced wildflowers, stone walls, bridges, roadside lamps, and a golden-to-indigo sky, with no repeated screen patterns.
+- `public/art/dragonfire-descent-backdrop-v3.webp` supports Dragonfire Descent. Prompt direction: a high oblique ruined citadel with an irregular path from a cyan dawn gate to an orange dragon core, using curved halls, collapsed arches, molten cracks, smoke, and no modular tiles.
 
 The generated sources are preserved by Codex. The optimized WebP files are the only versions shipped to visitors.
+
+## Branching story illustrations
+
+Three more 1280 by 720 illustrations were generated with the same built-in tool for the fictional After Closing story cabinet:
+
+- `public/art/story-horror-last-token.webp`: a rain-dark locked arcade, one unknown amber cabinet, keys, and a brass token, composed as intimate psychological horror without people, monsters, brands, or gore.
+- `public/art/story-action-neon-runner.webp`: a storm-black retro-future Colorado Springs courier route from wet rooftops to a mountain relay, with a protected memory cartridge and no visible courier.
+- `public/art/story-mystery-memory-cabinet.webp`: a secret analog archive inside an open cabinet, with tapes, contact sheets, brass machinery, three evidence doors, a detective desk, and no readable documents or people.
+
+The story art depicts original fiction. It does not depict Cathy, Chad, or additional biographical events.
 
 ## Family photographs
 

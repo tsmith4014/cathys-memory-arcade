@@ -23,8 +23,28 @@ import {
 } from "./runtime";
 
 type Cell = { column: number; row: number };
-type Guardian = { x: number; y: number; width: number; height: number; health: number; speed: number; flash: number; kind: "shade" | "knight" };
+type Guardian = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  health: number;
+  speed: number;
+  flash: number;
+  recoilX: number;
+  recoilY: number;
+  kind: "shade" | "knight";
+};
 type Trap = { column: number; row: number; triggered: boolean; cooldown: number };
+type PlayerBolt = {
+  x: number;
+  y: number;
+  previousX: number;
+  previousY: number;
+  vx: number;
+  vy: number;
+  life: number;
+};
 
 type DescentState = {
   player: {
@@ -36,24 +56,35 @@ type DescentState = {
     facingX: number;
     facingY: number;
     invulnerable: number;
-    attack: number;
-    attackCooldown: number;
-    dash: number;
-    dashCooldown: number;
+    fireCooldown: number;
+    ward: number;
+    wardCooldown: number;
   };
   maze: boolean[][];
   revealed: Set<string>;
   guardians: Guardian[];
   traps: Trap[];
+  bolts: PlayerBolt[];
   particles: Particle[];
   treasure: boolean;
   score: number;
   combo: number;
   comboTimer: number;
   time: number;
+  elapsed: number;
   shake: number;
   status: GameStatus;
 };
+
+export const DRAGONFIRE_TUNING = {
+  wardDuration: 5,
+  wardCooldown: 10,
+  timeLimit: 150,
+  boltSpeed: 560,
+  guardianCount: 6,
+  trapCount: 6,
+  revealRadius: 3,
+} as const;
 
 const columns = 15;
 const rows = 9;
@@ -67,15 +98,22 @@ export function mountDragonfireDescent(canvas: HTMLCanvasElement, options: GameM
   const context = prepareCanvas(canvas);
   const input = new InputState();
   const sound = new ArcadeSfx(options.soundEnabled);
-  const backdrop = loadGameBackdrop("dragonfire-backdrop-v2.webp");
+  const backdrop = loadGameBackdrop("dragonfire-descent-backdrop-v3.webp");
   let state = createState();
   let lastHud = "";
 
   const emitHud = (): void => {
+    const wardMessage = state.player.ward > 0
+      ? `ward ${state.player.ward.toFixed(1)}s`
+      : state.player.wardCooldown <= 0
+        ? "ward ready"
+        : `ward ${state.player.wardCooldown.toFixed(1)}s`;
     const hud: GameHud = {
       score: state.score,
       status: state.status,
-      message: state.status === "playing" ? `${state.treasure ? "hoard secured" : "find the hoard"} // ${state.player.health} light` : undefined,
+      message: state.status === "playing"
+        ? `${state.treasure ? "core secured // follow dawn" : "find the dragon core"} // ${state.player.health} light // ${wardMessage}`
+        : undefined,
     };
     const serialized = JSON.stringify(hud);
     if (serialized !== lastHud) {
@@ -98,54 +136,105 @@ export function mountDragonfireDescent(canvas: HTMLCanvasElement, options: GameM
   };
 
   const hurt = (x: number, y: number): void => {
-    if (state.player.invulnerable > 0) return;
+    if (state.player.invulnerable > 0 || state.player.ward > 0) {
+      if (state.player.ward > 0) {
+        state.score += 25;
+        burst(state.particles, state.player.x + 14, state.player.y + 14, "#52e7ef", 9, 150);
+        sound.play(610, 0.08, "sine", 0.04, 820);
+      }
+      return;
+    }
     state.player.health -= 1;
-    state.player.invulnerable = 1.1;
-    state.shake = 10;
+    state.player.invulnerable = 1.5;
+    state.shake = 9;
     const angle = Math.atan2(state.player.y - y, state.player.x - x);
-    movePlayer(state, Math.cos(angle) * 32, Math.sin(angle) * 32);
+    movePlayer(state, Math.cos(angle) * 26, Math.sin(angle) * 26);
     burst(state.particles, state.player.x + 14, state.player.y + 14, "#ff6f61", 22, 230);
     sound.noise(0.13, 0.075);
     sound.play(72, 0.22, "sawtooth", 0.09, 38);
   };
 
-  const attack = (): void => {
-    state.player.attack = 0.16;
-    state.player.attackCooldown = 0.28;
+  const fireBolt = (): void => {
     const centerX = state.player.x + state.player.width / 2;
     const centerY = state.player.y + state.player.height / 2;
-    const strike = {
-      x: centerX + state.player.facingX * 38 - 30,
-      y: centerY + state.player.facingY * 38 - 30,
-      width: 60,
-      height: 60,
-    };
-    let hit = false;
-    for (const guardian of state.guardians) {
-      if (guardian.health <= 0 || !intersects(strike, guardian)) continue;
-      guardian.health -= state.player.dash > 0 ? 3 : 1;
-      guardian.flash = 0.12;
-      state.combo += 1;
-      state.comboTimer = 1.5;
-      state.score += guardian.health <= 0 ? 500 * Math.max(1, state.combo) : 90 * Math.max(1, state.combo);
-      state.shake = guardian.kind === "knight" ? 8 : 4;
-      burst(state.particles, guardian.x + guardian.width / 2, guardian.y + guardian.height / 2, guardian.kind === "knight" ? "#ff6f61" : "#ef78ff", 18, 220);
-      hit = true;
+    const magnitude = Math.hypot(state.player.facingX, state.player.facingY) || 1;
+    const directionX = state.player.facingX / magnitude;
+    const directionY = state.player.facingY / magnitude;
+    const x = centerX + directionX * 24;
+    const y = centerY + directionY * 24;
+    state.player.fireCooldown = 0.2;
+    state.bolts.push({
+      x,
+      y,
+      previousX: centerX,
+      previousY: centerY,
+      vx: directionX * DRAGONFIRE_TUNING.boltSpeed,
+      vy: directionY * DRAGONFIRE_TUNING.boltSpeed,
+      life: 1,
+    });
+    sound.play(330, 0.1, "sawtooth", 0.045, 690);
+  };
+
+  const activateWard = (): void => {
+    state.player.ward = DRAGONFIRE_TUNING.wardDuration;
+    state.player.wardCooldown = DRAGONFIRE_TUNING.wardCooldown;
+    state.player.invulnerable = Math.max(state.player.invulnerable, DRAGONFIRE_TUNING.wardDuration);
+    burst(state.particles, state.player.x + 14, state.player.y + 14, "#52e7ef", 34, 245);
+    sound.chord([196, 293.66, 440, 587.33], 0.35, "sine", 0.05);
+  };
+
+  const hitGuardian = (guardian: Guardian, bolt: PlayerBolt): void => {
+    guardian.health -= 1;
+    guardian.flash = 0.16;
+    guardian.recoilX = bolt.vx * 0.055;
+    guardian.recoilY = bolt.vy * 0.055;
+    state.combo += 1;
+    state.comboTimer = 1.8;
+    state.score += guardian.health <= 0 ? 650 * Math.max(1, state.combo) : 125 * Math.max(1, state.combo);
+    state.shake = guardian.kind === "knight" ? 6 : 3;
+    burst(
+      state.particles,
+      guardian.x + guardian.width / 2,
+      guardian.y + guardian.height / 2,
+      guardian.kind === "knight" ? "#ff6f61" : "#ef78ff",
+      guardian.health <= 0 ? 28 : 15,
+      guardian.health <= 0 ? 280 : 190,
+    );
+    sound.play(guardian.health <= 0 ? 98 : 145, 0.14, "square", 0.065, 62);
+  };
+
+  const updateBolts = (delta: number): void => {
+    for (const bolt of state.bolts) {
+      bolt.previousX = bolt.x;
+      bolt.previousY = bolt.y;
+      bolt.x += bolt.vx * delta;
+      bolt.y += bolt.vy * delta;
+      bolt.life -= delta;
+      const cell = cellAt(bolt.x, bolt.y);
+      if (state.maze[cell.row]?.[cell.column]) {
+        bolt.life = 0;
+        burst(state.particles, bolt.x, bolt.y, "#52e7ef", 8, 110);
+        sound.play(760, 0.05, "triangle", 0.025, 420);
+        continue;
+      }
+      for (const guardian of state.guardians) {
+        if (guardian.health <= 0 || !intersects({ x: bolt.x - 7, y: bolt.y - 7, width: 14, height: 14 }, guardian)) continue;
+        hitGuardian(guardian, bolt);
+        bolt.life = 0;
+        break;
+      }
     }
-    if (hit) {
-      sound.noise(0.07, 0.04);
-      sound.play(118, 0.15, "square", 0.075, 68);
-    } else sound.play(280, 0.06, "triangle", 0.03, 210);
+    state.bolts = state.bolts.filter((bolt) => bolt.life > 0);
   };
 
   const update = (delta: number): void => {
     if (state.status !== "playing") return;
+    state.elapsed += delta;
     state.time = Math.max(0, state.time - delta);
     state.player.invulnerable = Math.max(0, state.player.invulnerable - delta);
-    state.player.attack = Math.max(0, state.player.attack - delta);
-    state.player.attackCooldown = Math.max(0, state.player.attackCooldown - delta);
-    state.player.dash = Math.max(0, state.player.dash - delta);
-    state.player.dashCooldown = Math.max(0, state.player.dashCooldown - delta);
+    state.player.fireCooldown = Math.max(0, state.player.fireCooldown - delta);
+    state.player.ward = Math.max(0, state.player.ward - delta);
+    state.player.wardCooldown = Math.max(0, state.player.wardCooldown - delta);
     state.comboTimer = Math.max(0, state.comboTimer - delta);
     state.shake = Math.max(0, state.shake - delta * 20);
     if (state.comboTimer <= 0) state.combo = 0;
@@ -157,25 +246,21 @@ export function mountDragonfireDescent(canvas: HTMLCanvasElement, options: GameM
       state.player.facingX = horizontal / magnitude;
       state.player.facingY = vertical / magnitude;
     }
-    if (input.take("space", "z") && state.player.attackCooldown <= 0) attack();
-    if (input.take("shift", "x") && state.player.dashCooldown <= 0 && (horizontal || vertical)) {
-      state.player.dash = 0.16;
-      state.player.dashCooldown = 1;
-      state.player.invulnerable = Math.max(state.player.invulnerable, 0.22);
-      sound.play(360, 0.12, "sawtooth", 0.05, 540);
-    }
+    if (input.down("space", "z") && state.player.fireCooldown <= 0) fireBolt();
+    if (input.take("shift", "x") && state.player.wardCooldown <= 0) activateWard();
 
     const magnitude = Math.hypot(horizontal, vertical) || 1;
-    const speed = state.player.dash > 0 ? 620 : 205;
-    movePlayer(state, (horizontal / magnitude) * speed * delta, (vertical / magnitude) * speed * delta);
+    const wardBoost = state.player.ward > 0 ? 1.16 : 1;
+    movePlayer(state, (horizontal / magnitude) * 218 * wardBoost * delta, (vertical / magnitude) * 218 * wardBoost * delta);
     revealAroundPlayer(state);
+    updateBolts(delta);
 
     const playerCell = cellAt(state.player.x + state.player.width / 2, state.player.y + state.player.height / 2);
     for (const trap of state.traps) {
       trap.cooldown = Math.max(0, trap.cooldown - delta);
       if (trap.column === playerCell.column && trap.row === playerCell.row && trap.cooldown <= 0) {
         trap.triggered = true;
-        trap.cooldown = 1.5;
+        trap.cooldown = 2.2;
         hurt(trap.column * tile + tile / 2, trap.row * tile + tile / 2);
       }
     }
@@ -183,13 +268,18 @@ export function mountDragonfireDescent(canvas: HTMLCanvasElement, options: GameM
     for (const guardian of state.guardians) {
       if (guardian.health <= 0) continue;
       guardian.flash = Math.max(0, guardian.flash - delta);
+      if (Math.abs(guardian.recoilX) > 0.5 || Math.abs(guardian.recoilY) > 0.5) {
+        moveGuardian(state, guardian, guardian.recoilX * delta, guardian.recoilY * delta);
+        guardian.recoilX *= Math.pow(0.001, delta);
+        guardian.recoilY *= Math.pow(0.001, delta);
+      }
       const guardianCell = cellAt(guardian.x + guardian.width / 2, guardian.y + guardian.height / 2);
       if (!state.revealed.has(keyOf(guardianCell))) continue;
       const dx = state.player.x - guardian.x;
       const dy = state.player.y - guardian.y;
       const distance = Math.hypot(dx, dy) || 1;
-      if (distance < 250) {
-        const speedMultiplier = state.treasure ? 1.35 : 1;
+      if (distance < 235) {
+        const speedMultiplier = state.treasure ? 1.12 : 1;
         moveGuardian(state, guardian, (dx / distance) * guardian.speed * speedMultiplier * delta, (dy / distance) * guardian.speed * speedMultiplier * delta);
       }
       if (intersects(state.player, guardian)) hurt(guardian.x + guardian.width / 2, guardian.y + guardian.height / 2);
@@ -198,15 +288,14 @@ export function mountDragonfireDescent(canvas: HTMLCanvasElement, options: GameM
 
     if (!state.treasure && playerCell.column === hoardCell.column && playerCell.row === hoardCell.row) {
       state.treasure = true;
-      state.score += 2500;
-      state.time += 22;
-      burst(state.particles, state.player.x + 14, state.player.y + 14, "#ffbf57", 46, 300);
-      sound.chord([196, 246.94, 293.66, 392], 0.4, "square", 0.055);
-      for (const guardian of state.guardians) guardian.speed *= 1.15;
+      state.score += 3000;
+      state.time += 18;
+      burst(state.particles, state.player.x + 14, state.player.y + 14, "#ffbf57", 52, 310);
+      sound.chord([196, 246.94, 293.66, 392], 0.48, "square", 0.055);
     }
 
     if (state.treasure && playerCell.column === exitCell.column && playerCell.row === exitCell.row) {
-      state.score += Math.ceil(state.time) * 40 + state.player.health * 600;
+      state.score += Math.ceil(state.time) * 40 + state.player.health * 700;
       state.status = "won";
       sound.chord([261.63, 329.63, 392, 523.25], 0.55, "square", 0.06);
     } else if (state.player.health <= 0 || state.time <= 0) {
@@ -221,31 +310,40 @@ export function mountDragonfireDescent(canvas: HTMLCanvasElement, options: GameM
   const render = (): void => {
     context.save();
     if (state.shake) context.translate((Math.random() - 0.5) * state.shake, (Math.random() - 0.5) * state.shake);
-    drawBackdrop(context, state.time, backdrop);
+    drawBackdrop(context, state, backdrop);
     context.save();
     context.translate(mapX, mapY);
     drawMaze(context, state);
     for (const trap of state.traps) drawTrap(context, trap, state.revealed);
-    if (!state.treasure) drawHoard(context, state.revealed);
-    drawExit(context, state.treasure, state.revealed);
+    if (!state.treasure) drawHoard(context, state.revealed, state.elapsed);
+    drawExit(context, state.treasure, state.revealed, state.elapsed);
     for (const guardian of state.guardians) drawGuardian(context, guardian, state.revealed);
+    drawBolts(context, state.bolts);
     drawPlayer(context, state);
-    drawFog(context, state.revealed);
+    if (state.treasure) drawHomeCompass(context, state);
+    drawFog(context, state);
     drawParticles(context, state.particles);
     context.restore();
     context.restore();
     drawScreenFinish(context, "#ff6f61");
 
-    context.fillStyle = "rgba(2,7,11,0.82)";
-    context.fillRect(18, 18, 924, 54);
+    context.fillStyle = "rgba(2,7,11,0.78)";
+    context.fillRect(18, 18, 924, 58);
     drawPixelText(context, `SCORE ${String(state.score).padStart(6, "0")}`, 34, 33, 17, "#ffbf57");
-    drawPixelText(context, state.treasure ? "RETURN TO DAWN GATE" : "FIND THE DRAGON CORE", 480, 33, 16, state.treasure ? "#8be58e" : "#ff6f61", "center");
-    drawPixelText(context, `SUNSET ${Math.ceil(state.time)}`, 900, 33, 17, "#52e7ef", "right");
-    if (state.combo > 1 && state.comboTimer > 0) drawPixelText(context, `${state.combo}X GUARDIAN CHAIN`, 480, 78, 14, "#ef78ff", "center");
+    drawPixelText(context, state.treasure ? "FOLLOW THE DAWN SIGNAL" : "FIND THE DRAGON CORE", 480, 33, 16, state.treasure ? "#8be58e" : "#ff6f61", "center");
+    drawPixelText(context, `TIME ${Math.ceil(state.time)}`, 900, 33, 17, "#52e7ef", "right");
+    const wardCopy = state.player.ward > 0
+      ? `WARD ACTIVE ${state.player.ward.toFixed(1)}S`
+      : state.player.wardCooldown <= 0
+        ? "WARD READY // SHIFT"
+        : `WARD RECHARGE ${state.player.wardCooldown.toFixed(1)}S`;
+    drawPixelText(context, wardCopy, 34, 82, 13, state.player.ward > 0 ? "#eaf6f2" : state.player.wardCooldown <= 0 ? "#52e7ef" : "#708990");
+    drawPixelText(context, `LIGHT ${"<".repeat(state.player.health)}${".".repeat(5 - state.player.health)}`, 900, 82, 13, state.player.health > 2 ? "#8be58e" : "#ff6f61", "right");
+    if (state.combo > 1 && state.comboTimer > 0) drawPixelText(context, `${state.combo}X BOLT CHAIN`, 480, 82, 14, "#ef78ff", "center");
 
-    if (state.status === "paused") drawOverlay(context, "PAUSED", "THE CASTLE STILL BREATHES", "#52e7ef");
-    if (state.status === "won") drawOverlay(context, "ESCAPED WITH THE HOARD", `FINAL SCORE ${state.score}`, "#ffbf57");
-    if (state.status === "lost") drawOverlay(context, "THE SUN IS DOWN", state.treasure ? "THE EXIT WAS TOO FAR" : "THE HOARD REMAINS", "#ff6f61");
+    if (state.status === "paused") drawOverlay(context, "PAUSED", "THE CITADEL IS HOLDING ITS BREATH", "#52e7ef");
+    if (state.status === "won") drawOverlay(context, "CORE RETURNED TO DAWN", `FINAL SCORE ${state.score}`, "#ffbf57");
+    if (state.status === "lost") drawOverlay(context, "THE LIGHT WENT OUT", state.treasure ? "THE DAWN GATE WAS CLOSE" : "THE CORE STILL BURNS", "#ff6f61");
   };
 
   const loop = new FrameLoop((delta) => {
@@ -276,28 +374,58 @@ function createState(): DescentState {
   const openCells: Cell[] = [];
   for (let row = 1; row < rows - 1; row += 1) {
     for (let column = 1; column < columns - 1; column += 1) {
-      if (!maze[row][column] && !(column === exitCell.column && row === exitCell.row) && !(column === hoardCell.column && row === hoardCell.row)) openCells.push({ column, row });
+      const distanceFromStart = Math.abs(column - exitCell.column) + Math.abs(row - exitCell.row);
+      if (
+        !maze[row][column]
+        && distanceFromStart > 3
+        && !(column === hoardCell.column && row === hoardCell.row)
+      ) openCells.push({ column, row });
     }
   }
-  const guardianCells = openCells.filter((_, index) => index % 7 === 3).slice(0, 9);
-  const trapCells = openCells.filter((_, index) => index % 6 === 2).slice(0, 10);
+  const guardianCells = openCells.filter((_, index) => index % 8 === 3).slice(0, DRAGONFIRE_TUNING.guardianCount);
+  const trapCells = openCells.filter((_, index) => index % 9 === 5).slice(0, DRAGONFIRE_TUNING.trapCount);
   const start = centerOf(exitCell);
   const state: DescentState = {
-    player: { x: start.x - 14, y: start.y - 14, width: 28, height: 28, health: 4, facingX: 1, facingY: 0, invulnerable: 0, attack: 0, attackCooldown: 0, dash: 0, dashCooldown: 0 },
+    player: {
+      x: start.x - 14,
+      y: start.y - 14,
+      width: 28,
+      height: 28,
+      health: 5,
+      facingX: 1,
+      facingY: 0,
+      invulnerable: 0,
+      fireCooldown: 0,
+      ward: 0,
+      wardCooldown: 0,
+    },
     maze,
     revealed: new Set<string>(),
     guardians: guardianCells.map((cell, index) => {
       const center = centerOf(cell);
       const kind = index % 3 === 2 ? "knight" : "shade";
-      return { x: center.x - (kind === "knight" ? 18 : 14), y: center.y - (kind === "knight" ? 18 : 14), width: kind === "knight" ? 36 : 28, height: kind === "knight" ? 36 : 28, health: kind === "knight" ? 4 : 2, speed: kind === "knight" ? 62 : 88, flash: 0, kind };
+      return {
+        x: center.x - (kind === "knight" ? 18 : 14),
+        y: center.y - (kind === "knight" ? 18 : 14),
+        width: kind === "knight" ? 36 : 28,
+        height: kind === "knight" ? 36 : 28,
+        health: kind === "knight" ? 3 : 2,
+        speed: kind === "knight" ? 50 : 68,
+        flash: 0,
+        recoilX: 0,
+        recoilY: 0,
+        kind,
+      };
     }),
     traps: trapCells.map((cell) => ({ ...cell, triggered: false, cooldown: 0 })),
+    bolts: [],
     particles: [],
     treasure: false,
     score: 0,
     combo: 0,
     comboTimer: 0,
-    time: 102,
+    time: DRAGONFIRE_TUNING.timeLimit,
+    elapsed: 0,
     shake: 0,
     status: "playing",
   };
@@ -332,7 +460,7 @@ function generateMaze(): boolean[][] {
     stack.push(next);
   }
   maze[hoardCell.row][hoardCell.column] = false;
-  for (let attempt = 0; attempt < 8; attempt += 1) {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
     const column = 2 + Math.floor(random() * (columns - 4));
     const row = 2 + Math.floor(random() * (rows - 4));
     if ((column + row) % 2 === 1) maze[row][column] = false;
@@ -362,8 +490,8 @@ function collidesWithMaze(maze: boolean[][], x: number, y: number, width: number
 
 function revealAroundPlayer(state: DescentState): void {
   const center = cellAt(state.player.x + state.player.width / 2, state.player.y + state.player.height / 2);
-  for (let row = center.row - 2; row <= center.row + 2; row += 1) {
-    for (let column = center.column - 2; column <= center.column + 2; column += 1) {
+  for (let row = center.row - DRAGONFIRE_TUNING.revealRadius; row <= center.row + DRAGONFIRE_TUNING.revealRadius; row += 1) {
+    for (let column = center.column - DRAGONFIRE_TUNING.revealRadius; column <= center.column + DRAGONFIRE_TUNING.revealRadius; column += 1) {
       if (row >= 0 && row < rows && column >= 0 && column < columns) state.revealed.add(keyOf({ column, row }));
     }
   }
@@ -381,29 +509,60 @@ function keyOf(cell: Cell): string {
   return `${cell.column}:${cell.row}`;
 }
 
-function drawBackdrop(context: CanvasRenderingContext2D, time: number, backdrop: HTMLImageElement): void {
-  const danger = clamp(1 - time / 102, 0, 1);
+function drawBackdrop(context: CanvasRenderingContext2D, state: DescentState, backdrop: HTMLImageElement): void {
+  const danger = clamp(1 - state.time / DRAGONFIRE_TUNING.timeLimit, 0, 1);
   const gradient = context.createRadialGradient(480, 285, 60, 480, 285, 540);
-  gradient.addColorStop(0, `rgb(${Math.round(13 + danger * 35)}, 24, 39)`);
+  gradient.addColorStop(0, `rgb(${Math.round(10 + danger * 28)}, 20, 33)`);
   gradient.addColorStop(1, "#020408");
   context.fillStyle = gradient;
   context.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-  drawGameBackdrop(context, backdrop, 0.52, danger * 0.25);
-  context.fillStyle = `rgba(255, 67, 47, ${danger * 0.08})`;
+  const drift = Math.sin(state.elapsed * 0.08) * 0.28;
+  drawGameBackdrop(context, backdrop, 0.86, drift);
+  const atmosphere = context.createLinearGradient(0, 0, GAME_WIDTH, 0);
+  atmosphere.addColorStop(0, `rgba(82,231,239,${0.08 + Math.sin(state.elapsed * 0.9) * 0.018})`);
+  atmosphere.addColorStop(0.46, "rgba(2,4,8,0.08)");
+  atmosphere.addColorStop(1, `rgba(255,74,42,${0.08 + danger * 0.1})`);
+  context.fillStyle = atmosphere;
   context.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+  context.fillStyle = "rgba(255, 151, 73, 0.55)";
+  for (let index = 0; index < 24; index += 1) {
+    const x = (index * 97 + state.elapsed * (7 + index % 4)) % GAME_WIDTH;
+    const y = 95 + ((index * 67 - state.elapsed * (11 + index % 5)) % 390 + 390) % 390;
+    const size = 1 + (index % 3);
+    context.globalAlpha = 0.22 + (index % 4) * 0.08;
+    context.fillRect(x, y, size, size);
+  }
+  context.globalAlpha = 1;
 }
 
 function drawMaze(context: CanvasRenderingContext2D, state: DescentState): void {
+  context.fillStyle = "rgba(3, 8, 12, 0.16)";
+  context.fillRect(0, 0, columns * tile, rows * tile);
   for (let row = 0; row < rows; row += 1) {
     for (let column = 0; column < columns; column += 1) {
-      const wall = state.maze[row][column];
-      context.fillStyle = wall ? "rgba(19, 33, 42, 0.94)" : "rgba(7, 16, 24, 0.72)";
-      context.fillRect(column * tile, row * tile, tile, tile);
-      context.strokeStyle = wall ? "#263842" : "rgba(255,191,87,0.12)";
-      context.strokeRect(column * tile + 1, row * tile + 1, tile - 2, tile - 2);
-      if (wall) {
-        context.fillStyle = "rgba(82,231,239,0.04)";
-        context.fillRect(column * tile + 7, row * tile + 7, tile - 14, tile - 14);
+      if (!state.maze[row][column]) continue;
+      const x = column * tile;
+      const y = row * tile;
+      const northOpen = row > 0 && !state.maze[row - 1][column];
+      const westOpen = column > 0 && !state.maze[row][column - 1];
+      context.fillStyle = "rgba(10, 20, 27, 0.72)";
+      context.fillRect(x - 1, y - 1, tile + 2, tile + 2);
+      if (northOpen) {
+        context.fillStyle = "rgba(82, 231, 239, 0.14)";
+        context.fillRect(x + 5, y, tile - 10, 3);
+      }
+      if (westOpen) {
+        context.fillStyle = "rgba(255, 111, 97, 0.1)";
+        context.fillRect(x, y + 5, 3, tile - 10);
+      }
+      if ((row * 7 + column * 11) % 5 === 0) {
+        context.strokeStyle = "rgba(180, 205, 207, 0.09)";
+        context.lineWidth = 1;
+        context.beginPath();
+        context.moveTo(x + 9, y + 13);
+        context.lineTo(x + 19, y + 22);
+        context.lineTo(x + 13, y + 34);
+        context.stroke();
       }
     }
   }
@@ -413,78 +572,165 @@ function drawTrap(context: CanvasRenderingContext2D, trap: Trap, revealed: Set<s
   if (!revealed.has(keyOf(trap))) return;
   const x = trap.column * tile;
   const y = trap.row * tile;
-  context.fillStyle = trap.triggered ? "#ff6f61" : "#39272f";
+  context.fillStyle = trap.triggered ? "#ff6f61" : "rgba(107, 61, 66, 0.72)";
   for (let offset = 8; offset < tile - 5; offset += 10) {
     context.beginPath();
     context.moveTo(x + offset, y + tile - 7);
-    context.lineTo(x + offset + 5, y + (trap.triggered ? 7 : 28));
+    context.lineTo(x + offset + 5, y + (trap.triggered ? 7 : 29));
     context.lineTo(x + offset + 10, y + tile - 7);
     context.fill();
   }
 }
 
-function drawHoard(context: CanvasRenderingContext2D, revealed: Set<string>): void {
+function drawHoard(context: CanvasRenderingContext2D, revealed: Set<string>, elapsed: number): void {
   if (!revealed.has(keyOf(hoardCell))) return;
   const center = centerOf(hoardCell);
-  context.fillStyle = "rgba(255,191,87,0.22)";
+  const pulse = 30 + Math.sin(elapsed * 4) * 6;
+  const glow = context.createRadialGradient(center.x, center.y, 2, center.x, center.y, pulse);
+  glow.addColorStop(0, "rgba(255, 238, 174, 0.96)");
+  glow.addColorStop(0.28, "rgba(255, 191, 87, 0.72)");
+  glow.addColorStop(1, "rgba(255, 111, 97, 0)");
+  context.fillStyle = glow;
   context.beginPath();
-  context.arc(center.x, center.y, 27, 0, Math.PI * 2);
+  context.arc(center.x, center.y, pulse, 0, Math.PI * 2);
   context.fill();
+  context.save();
+  context.translate(center.x, center.y);
+  context.rotate(elapsed * 0.7);
   context.fillStyle = "#ffbf57";
-  context.fillRect(center.x - 13, center.y - 13, 26, 26);
+  context.beginPath();
+  context.moveTo(0, -15);
+  context.lineTo(12, 0);
+  context.lineTo(0, 15);
+  context.lineTo(-12, 0);
+  context.closePath();
+  context.fill();
   context.fillStyle = "#ff6f61";
-  context.fillRect(center.x - 6, center.y - 6, 12, 12);
+  context.fillRect(-5, -5, 10, 10);
+  context.restore();
 }
 
-function drawExit(context: CanvasRenderingContext2D, treasure: boolean, revealed: Set<string>): void {
+function drawExit(context: CanvasRenderingContext2D, treasure: boolean, revealed: Set<string>, elapsed: number): void {
   if (!revealed.has(keyOf(exitCell))) return;
   const center = centerOf(exitCell);
+  const radius = 19 + Math.sin(elapsed * 3.2) * 3;
   context.strokeStyle = treasure ? "#8be58e" : "#52e7ef";
-  context.lineWidth = 4;
-  context.strokeRect(center.x - 17, center.y - 17, 34, 34);
-  context.fillStyle = treasure ? "rgba(139,229,142,0.25)" : "rgba(82,231,239,0.12)";
-  context.fillRect(center.x - 12, center.y - 12, 24, 24);
+  context.lineWidth = treasure ? 5 : 3;
+  context.beginPath();
+  context.arc(center.x, center.y, radius, -Math.PI * 0.85, Math.PI * 0.85);
+  context.stroke();
+  context.fillStyle = treasure ? "rgba(139,229,142,0.28)" : "rgba(82,231,239,0.12)";
+  context.beginPath();
+  context.arc(center.x, center.y, 13, 0, Math.PI * 2);
+  context.fill();
 }
 
 function drawGuardian(context: CanvasRenderingContext2D, guardian: Guardian, revealed: Set<string>): void {
   const cell = cellAt(guardian.x + guardian.width / 2, guardian.y + guardian.height / 2);
   if (!revealed.has(keyOf(cell))) return;
   const tone = guardian.kind === "knight" ? "#ff6f61" : "#ef78ff";
-  context.fillStyle = guardian.flash > 0 ? "#eaf6f2" : "#0b1119";
-  context.fillRect(guardian.x, guardian.y, guardian.width, guardian.height);
+  context.fillStyle = guardian.flash > 0 ? "#eaf6f2" : "rgba(4, 9, 14, 0.94)";
+  context.beginPath();
+  context.roundRect(guardian.x, guardian.y, guardian.width, guardian.height, guardian.kind === "knight" ? 4 : 12);
+  context.fill();
   context.strokeStyle = tone;
   context.lineWidth = guardian.kind === "knight" ? 4 : 2;
-  context.strokeRect(guardian.x + 3, guardian.y + 3, guardian.width - 6, guardian.height - 6);
+  context.stroke();
   context.fillStyle = tone;
-  context.fillRect(guardian.x + guardian.width / 2 - 5, guardian.y + guardian.height / 2 - 5, 10, 10);
+  context.beginPath();
+  context.arc(guardian.x + guardian.width / 2, guardian.y + guardian.height / 2, 5, 0, Math.PI * 2);
+  context.fill();
+  context.fillStyle = "rgba(234,246,242,0.8)";
+  for (let pip = 0; pip < guardian.health; pip += 1) context.fillRect(guardian.x + 5 + pip * 7, guardian.y - 7, 4, 3);
+}
+
+function drawBolts(context: CanvasRenderingContext2D, bolts: PlayerBolt[]): void {
+  context.save();
+  context.globalCompositeOperation = "lighter";
+  for (const bolt of bolts) {
+    const gradient = context.createLinearGradient(bolt.previousX, bolt.previousY, bolt.x, bolt.y);
+    gradient.addColorStop(0, "rgba(82, 231, 239, 0)");
+    gradient.addColorStop(1, "rgba(234, 246, 242, 0.96)");
+    context.strokeStyle = gradient;
+    context.lineWidth = 9;
+    context.lineCap = "round";
+    context.beginPath();
+    context.moveTo(bolt.previousX, bolt.previousY);
+    context.lineTo(bolt.x, bolt.y);
+    context.stroke();
+    context.fillStyle = "#eaf6f2";
+    context.beginPath();
+    context.arc(bolt.x, bolt.y, 5, 0, Math.PI * 2);
+    context.fill();
+  }
+  context.restore();
 }
 
 function drawPlayer(context: CanvasRenderingContext2D, state: DescentState): void {
   const player = state.player;
-  if (player.invulnerable > 0 && Math.floor(player.invulnerable * 14) % 2 === 0) context.globalAlpha = 0.3;
+  const centerX = player.x + player.width / 2;
+  const centerY = player.y + player.height / 2;
+  if (player.ward > 0) {
+    const pulse = 29 + Math.sin(state.elapsed * 7) * 4;
+    const ward = context.createRadialGradient(centerX, centerY, 9, centerX, centerY, pulse);
+    ward.addColorStop(0, "rgba(82,231,239,0.08)");
+    ward.addColorStop(0.72, "rgba(82,231,239,0.18)");
+    ward.addColorStop(1, "rgba(234,246,242,0)");
+    context.fillStyle = ward;
+    context.beginPath();
+    context.arc(centerX, centerY, pulse, 0, Math.PI * 2);
+    context.fill();
+    context.strokeStyle = "rgba(234,246,242,0.8)";
+    context.lineWidth = 2;
+    context.beginPath();
+    context.arc(centerX, centerY, pulse - 3, 0, Math.PI * 2);
+    context.stroke();
+  }
+  if (player.ward <= 0 && player.invulnerable > 0 && Math.floor(player.invulnerable * 14) % 2 === 0) context.globalAlpha = 0.34;
   context.fillStyle = state.treasure ? "#ffbf57" : "#52e7ef";
-  context.fillRect(player.x, player.y, player.width, player.height);
+  context.beginPath();
+  context.roundRect(player.x, player.y, player.width, player.height, 7);
+  context.fill();
   context.fillStyle = "#07131f";
   context.fillRect(player.x + 6, player.y + 7, 5, 5);
   context.fillRect(player.x + 17, player.y + 7, 5, 5);
-  if (player.attack > 0) {
-    const centerX = player.x + player.width / 2 + player.facingX * 38;
-    const centerY = player.y + player.height / 2 + player.facingY * 38;
-    context.strokeStyle = "#eaf6f2";
-    context.lineWidth = 7;
-    context.beginPath();
-    context.arc(centerX, centerY, 22, 0, Math.PI * 2);
-    context.stroke();
-  }
+  context.strokeStyle = "#eaf6f2";
+  context.lineWidth = 3;
+  context.beginPath();
+  context.moveTo(centerX, centerY);
+  context.lineTo(centerX + player.facingX * 24, centerY + player.facingY * 24);
+  context.stroke();
   context.globalAlpha = 1;
 }
 
-function drawFog(context: CanvasRenderingContext2D, revealed: Set<string>): void {
-  for (let row = 0; row < rows; row += 1) {
-    for (let column = 0; column < columns; column += 1) {
-      if (revealed.has(keyOf({ column, row }))) continue;
-      context.fillStyle = "rgba(0,0,0,0.94)";
-      context.fillRect(column * tile, row * tile, tile + 1, tile + 1);
-    }
-  }
+function drawHomeCompass(context: CanvasRenderingContext2D, state: DescentState): void {
+  const playerX = state.player.x + state.player.width / 2;
+  const playerY = state.player.y + state.player.height / 2;
+  const exit = centerOf(exitCell);
+  const angle = Math.atan2(exit.y - playerY, exit.x - playerX);
+  context.save();
+  context.translate(playerX, playerY);
+  context.rotate(angle);
+  context.translate(43 + Math.sin(state.elapsed * 4) * 4, 0);
+  context.fillStyle = "rgba(139,229,142,0.92)";
+  context.beginPath();
+  context.moveTo(12, 0);
+  context.lineTo(-8, -8);
+  context.lineTo(-4, 0);
+  context.lineTo(-8, 8);
+  context.closePath();
+  context.fill();
+  context.restore();
+}
+
+function drawFog(context: CanvasRenderingContext2D, state: DescentState): void {
+  const centerX = state.player.x + state.player.width / 2;
+  const centerY = state.player.y + state.player.height / 2;
+  const radius = state.player.ward > 0 ? 205 : 170;
+  const light = context.createRadialGradient(centerX, centerY, 45, centerX, centerY, radius);
+  light.addColorStop(0, "rgba(0,0,0,0)");
+  light.addColorStop(0.52, "rgba(0,0,0,0.04)");
+  light.addColorStop(1, "rgba(0,0,0,0.72)");
+  context.fillStyle = light;
+  context.fillRect(0, 0, columns * tile, rows * tile);
 }

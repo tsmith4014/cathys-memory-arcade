@@ -253,9 +253,9 @@ export function drawScreenFinish(context: CanvasRenderingContext2D, accent: stri
   vignette.addColorStop(1, "rgba(0, 0, 0, 0.58)");
   context.fillStyle = vignette;
   context.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-  context.globalAlpha = 0.035;
+  context.globalAlpha = 0.012;
   context.fillStyle = accent;
-  for (let y = 1; y < GAME_HEIGHT; y += 4) context.fillRect(0, y, GAME_WIDTH, 1);
+  for (let y = 1; y < GAME_HEIGHT; y += 6) context.fillRect(0, y, GAME_WIDTH, 1);
   context.globalAlpha = 0.13;
   const glow = context.createLinearGradient(0, 0, GAME_WIDTH, 0);
   glow.addColorStop(0, "rgba(0, 0, 0, 0)");

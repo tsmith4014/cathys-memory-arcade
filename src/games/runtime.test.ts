@@ -1,4 +1,5 @@
 import { clamp, InputState, intersects } from "./runtime";
+import { DRAGONFIRE_TUNING } from "./dragonfireDescent";
 
 describe("arcade runtime", () => {
   it("normalizes held and one-shot controls", () => {
@@ -27,5 +28,13 @@ describe("arcade runtime", () => {
     expect(clamp(-4, 0, 10)).toBe(0);
     expect(clamp(14, 0, 10)).toBe(10);
     expect(clamp(7, 0, 10)).toBe(7);
+  });
+
+  it("keeps the Dragonfire ward and route tuning explicit", () => {
+    expect(DRAGONFIRE_TUNING.wardDuration).toBe(5);
+    expect(DRAGONFIRE_TUNING.wardCooldown).toBe(10);
+    expect(DRAGONFIRE_TUNING.boltSpeed).toBeGreaterThan(500);
+    expect(DRAGONFIRE_TUNING.guardianCount).toBeLessThan(9);
+    expect(DRAGONFIRE_TUNING.timeLimit).toBeGreaterThanOrEqual(150);
   });
 });

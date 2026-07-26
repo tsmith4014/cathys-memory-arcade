@@ -89,7 +89,7 @@ export function mountSunsetRun(canvas: HTMLCanvasElement, options: GameMountOpti
   const context = prepareCanvas(canvas);
   const input = new InputState();
   const sound = new ArcadeSfx(options.soundEnabled);
-  const backdrop = loadGameBackdrop("sunset-run-backdrop-v2.webp");
+  const backdrop = loadGameBackdrop("sunset-run-backdrop-v3.webp");
   let state = createState();
   let lastHud = "";
 
@@ -125,7 +125,7 @@ export function mountSunsetRun(canvas: HTMLCanvasElement, options: GameMountOpti
     state.player.y = 390;
     state.player.vx = 0;
     state.player.vy = 0;
-    state.player.invulnerable = 1.5;
+    state.player.invulnerable = 1.8;
     state.camera = clamp(state.player.checkpoint - 220, 0, worldWidth - GAME_WIDTH);
   };
 
@@ -337,7 +337,7 @@ function createState(): SunsetState {
     [3520, 320], [3800, 240], [3850, 440], [4120, 310], [4400, 245], [4520, 430],
   ];
   return {
-    player: { x: 45, y: 390, previousY: 390, vx: 0, vy: 0, width: 36, height: 48, health: 3, invulnerable: 0, coyote: 0, jumpBuffer: 0, facing: 1, checkpoint: 45 },
+    player: { x: 45, y: 390, previousY: 390, vx: 0, vy: 0, width: 36, height: 48, health: 4, invulnerable: 0, coyote: 0, jumpBuffer: 0, facing: 1, checkpoint: 45 },
     lifts: [
       { x: 650, y: 410, width: 85, height: 16, tone: "#52e7ef", minY: 290, maxY: 430, vy: -72 },
       { x: 2610, y: 410, width: 100, height: 16, tone: "#ffbf57", minY: 255, maxY: 430, vy: -84 },
@@ -369,7 +369,7 @@ function createState(): SunsetState {
     camera: 0,
     score: 0,
     collected: 0,
-    time: 165,
+    time: 185,
     status: "playing",
   };
 }

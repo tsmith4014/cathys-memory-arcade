@@ -48,7 +48,7 @@ export function mountDungeonCircuit(canvas: HTMLCanvasElement, options: GameMoun
   const context = prepareCanvas(canvas);
   const input = new InputState();
   const sound = new ArcadeSfx(options.soundEnabled);
-  const backdrop = loadGameBackdrop("dragonfire-backdrop-v2.webp");
+  const backdrop = loadGameBackdrop("dungeon-circuit-backdrop-v3.webp");
   let state = createState();
   let lastHud = "";
 
@@ -97,7 +97,7 @@ export function mountDungeonCircuit(canvas: HTMLCanvasElement, options: GameMoun
       state.player.facingX = horizontal / magnitude;
       state.player.facingY = vertical / magnitude;
     }
-    if (input.take("space", "z") && state.player.attackCooldown <= 0) attack();
+    if (input.down("space", "z") && state.player.attackCooldown <= 0) attack();
     if (input.take("shift", "x") && state.player.dashCooldown <= 0 && (horizontal || vertical)) {
       state.player.dash = 0.16;
       state.player.dashCooldown = 0.9;
@@ -191,7 +191,7 @@ export function mountDungeonCircuit(canvas: HTMLCanvasElement, options: GameMoun
     context.fillStyle = "rgba(2, 7, 11, 0.78)";
     context.fillRect(18, 18, 924, 54);
     drawPixelText(context, `SCORE ${String(state.score).padStart(6, "0")}`, 34, 33, 17, "#ffbf57");
-    drawPixelText(context, `CHARGE ${"+".repeat(state.player.health)}${".".repeat(5 - state.player.health)}`, 335, 33, 17, state.player.health > 1 ? "#8be58e" : "#ff6f61");
+    drawPixelText(context, `CHARGE ${"+".repeat(state.player.health)}${".".repeat(6 - state.player.health)}`, 335, 33, 17, state.player.health > 1 ? "#8be58e" : "#ff6f61");
     drawPixelText(context, `ROOM ${state.room + 1}/3`, 900, 33, 17, "#52e7ef", "right");
     if (state.combo > 1) drawPixelText(context, `CIRCUIT CHAIN x${state.combo}`, 480, 112, 17, "#ef78ff", "center");
     if (state.roomBanner > 0) drawPixelText(context, roomName(state.room), 480, 94, 24, "#eaf6f2", "center");
@@ -226,7 +226,7 @@ export function mountDungeonCircuit(canvas: HTMLCanvasElement, options: GameMoun
 
 function createState(): DungeonState {
   const state: DungeonState = {
-    player: { x: 70, y: 248, width: 34, height: 34, health: 5, vx: 0, vy: 0, facingX: 1, facingY: 0, invulnerable: 0, attack: 0, attackCooldown: 0, dash: 0, dashCooldown: 0 },
+    player: { x: 70, y: 248, width: 34, height: 34, health: 6, vx: 0, vy: 0, facingX: 1, facingY: 0, invulnerable: 0, attack: 0, attackCooldown: 0, dash: 0, dashCooldown: 0 },
     room: 0,
     enemies: [],
     projectiles: [],
@@ -251,7 +251,7 @@ function loadRoom(state: DungeonState, room: number): void {
   state.player.y = 248;
   state.player.vx = 0;
   state.player.vy = 0;
-  state.player.invulnerable = 1;
+  state.player.invulnerable = 1.3;
   state.projectiles = [];
   state.particles = [];
   state.keyReady = false;
@@ -276,9 +276,9 @@ function loadRoom(state: DungeonState, room: number): void {
 }
 
 function enemy(x: number, y: number, kind: EnemyKind): Enemy {
-  if (kind === "warden") return { x, y, width: 72, height: 72, health: 12, maxHealth: 12, speed: 78, kind, cooldown: 0.8, flash: 0 };
+  if (kind === "warden") return { x, y, width: 72, height: 72, health: 10, maxHealth: 10, speed: 70, kind, cooldown: 0.8, flash: 0 };
   if (kind === "sentinel") return { x, y, width: 42, height: 42, health: 3, maxHealth: 3, speed: 48, kind, cooldown: 1.2 + Math.random(), flash: 0 };
-  return { x, y, width: 38, height: 38, health: 2, maxHealth: 2, speed: 105, kind, cooldown: 0, flash: 0 };
+  return { x, y, width: 38, height: 38, health: 2, maxHealth: 2, speed: 94, kind, cooldown: 0, flash: 0 };
 }
 
 function movePlayer(state: DungeonState, delta: number): void {
@@ -332,7 +332,7 @@ function updateProjectiles(state: DungeonState, delta: number, sound: ArcadeSfx)
 
 function hurtPlayer(state: DungeonState, sound: ArcadeSfx, x: number, y: number): void {
   state.player.health -= 1;
-  state.player.invulnerable = 1.1;
+  state.player.invulnerable = 1.4;
   state.shake = 9;
   const angle = Math.atan2(state.player.y - y, state.player.x - x);
   state.player.x = clamp(state.player.x + Math.cos(angle) * 35, 30, GAME_WIDTH - 65);
@@ -347,22 +347,23 @@ function drawDungeon(context: CanvasRenderingContext2D, room: number, obstacles:
   context.fillStyle = "#03080d";
   context.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
   drawGameBackdrop(context, backdrop, 0.46, room * 0.15 - 0.15);
-  context.fillStyle = "rgba(7, 19, 31, 0.74)";
+  context.fillStyle = "rgba(7, 19, 31, 0.58)";
   context.fillRect(24, 82, GAME_WIDTH - 48, GAME_HEIGHT - 106);
-  context.strokeStyle = `${tone}33`;
-  context.lineWidth = 1;
-  for (let x = 24; x <= GAME_WIDTH - 24; x += 42) {
-    context.beginPath();
-    context.moveTo(x, 82);
-    context.lineTo(x, GAME_HEIGHT - 24);
-    context.stroke();
-  }
-  for (let y = 82; y <= GAME_HEIGHT - 24; y += 42) {
-    context.beginPath();
-    context.moveTo(24, y);
-    context.lineTo(GAME_WIDTH - 24, y);
-    context.stroke();
-  }
+  const floorGlow = context.createRadialGradient(480, 300, 30, 480, 300, 390);
+  floorGlow.addColorStop(0, `${tone}18`);
+  floorGlow.addColorStop(0.58, `${tone}08`);
+  floorGlow.addColorStop(1, "rgba(3,8,13,0)");
+  context.fillStyle = floorGlow;
+  context.fillRect(24, 82, GAME_WIDTH - 48, GAME_HEIGHT - 106);
+  context.strokeStyle = `${tone}26`;
+  context.lineWidth = 2;
+  context.beginPath();
+  context.arc(480, 304, 118 + room * 22, 0.18, Math.PI * 1.82);
+  context.stroke();
+  context.beginPath();
+  context.moveTo(80, 445);
+  context.bezierCurveTo(255, 365, 705, 410, 880, 118);
+  context.stroke();
   context.strokeStyle = tone;
   context.lineWidth = 4;
   context.strokeRect(24, 82, GAME_WIDTH - 48, GAME_HEIGHT - 106);

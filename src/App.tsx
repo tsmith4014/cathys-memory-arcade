@@ -1,5 +1,6 @@
 import { startTransition, useEffect, useRef, useState } from "react";
 import { GameArcade } from "./components/GameArcade";
+import { StoryArcade } from "./components/StoryArcade";
 import { lifeDetails, memorialCopy, rememberedGames, terminalPrompts } from "./data/content";
 import { ArcadeSoundscape, JUKEBOX_TRACKS, type JukeboxTrackId } from "./lib/audio";
 import { formatDollars, shareOfPay, valueIn2026 } from "./lib/currency";
@@ -105,6 +106,7 @@ function App() {
         </a>
         <nav aria-label="Primary navigation">
           <a href="#lobby">Games</a>
+          <a href="#story-arcade">Stories</a>
           <a href="#memory-route">Route</a>
           <a href="#jukebox">Jukebox</a>
           <a href="#memory-core">Memory</a>
@@ -138,6 +140,8 @@ function App() {
         </section>
 
         <GameArcade soundEnabled={soundOn} onActiveChange={(active) => soundscape.current?.setDucked(active)} />
+
+        <StoryArcade />
 
         <Jukebox
           activeTrack={jukeboxTrack}
@@ -328,9 +332,10 @@ function Jukebox({
         <div className="jukebox-copy">
           <p className="kicker">Jukebox J-86 // adaptive browser score</p>
           <h2 id="jukebox-title">The room has a pulse now.</h2>
-          <p>Five arrangements build and break down in real time with drums, bass, pads, lead voices, tape echo, generated reverb, and a low arcade-room hum. Four are original compositions; Mountain King '86 reimagines a public-domain Grieg melody. No streams, samples, trackers, or borrowed game audio.</p>
+          <p>Six arrangements build and break down in real time with drums, bass, pads, lead voices, tape echo, generated reverb, and a low arcade-room hum. Five are original compositions; Mountain King '86 reimagines a public-domain Grieg melody. Free Play Forever adds a deliberately synthetic formant voice without using a singer or sample. No streams, trackers, or borrowed game audio.</p>
           <div className="mix-notes" aria-label="Soundtrack behavior">
-            <span>8-bar evolving forms</span>
+            <span>Forms up to 24 bars</span>
+            <span>20-second rave build</span>
             <span>Cabinet auto-ducking</span>
             <span>Zero audio downloads</span>
           </div>

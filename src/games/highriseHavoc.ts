@@ -66,7 +66,7 @@ export function mountHighriseHavoc(canvas: HTMLCanvasElement, options: GameMount
   const context = prepareCanvas(canvas);
   const input = new InputState();
   const sound = new ArcadeSfx(options.soundEnabled);
-  const backdrop = loadGameBackdrop("highrise-havoc-backdrop-v2.webp");
+  const backdrop = loadGameBackdrop("highrise-havoc-backdrop-v3.webp");
   let state = createState();
   let lastHud = "";
 
@@ -99,7 +99,7 @@ export function mountHighriseHavoc(canvas: HTMLCanvasElement, options: GameMount
   const hurt = (x: number, y: number): void => {
     if (state.player.invulnerable > 0) return;
     state.player.health -= 1;
-    state.player.invulnerable = 1.2;
+    state.player.invulnerable = 1.45;
     state.player.climbing = null;
     state.player.vx = state.player.x < x ? -260 : 260;
     state.player.vy = -240;
@@ -189,7 +189,7 @@ export function mountHighriseHavoc(canvas: HTMLCanvasElement, options: GameMount
     const vertical = Number(input.down("arrowdown", "s")) - Number(input.down("arrowup", "w"));
     if (horizontal) state.player.facing = horizontal;
 
-    if (input.take("space", "z") && state.player.attackCooldown <= 0) attack();
+    if (input.down("space", "z") && state.player.attackCooldown <= 0) attack();
 
     if (state.player.climbing !== null) {
       const tower = state.towers[state.player.climbing];
@@ -244,7 +244,7 @@ export function mountHighriseHavoc(canvas: HTMLCanvasElement, options: GameMount
       if (craft.cooldown <= 0) {
         const angle = Math.atan2(state.player.y - craft.y, state.player.x - craft.x);
         state.shells.push({ x: craft.x + 26, y: craft.y + 18, vx: Math.cos(angle) * 205, vy: Math.sin(angle) * 205, life: 5 });
-        craft.cooldown = 1.4 + Math.random() * 1.5;
+        craft.cooldown = 1.75 + Math.random() * 1.65;
         sound.play(520, 0.05, "sawtooth", 0.025, 390);
       }
     }
@@ -347,7 +347,7 @@ function createState(): HavocState {
     windows: Array.from({ length: floors * 3 }, (_, index) => ({ row: Math.floor(index / 3), column: index % 3, intact: true })),
   }));
   return {
-    player: { x: 12, y: ground - 54, previousY: ground - 54, vx: 0, vy: 0, width: 42, height: 54, facing: 1, health: 5, invulnerable: 0, climbing: null, attack: 0, attackCooldown: 0, leapCooldown: 0 },
+    player: { x: 12, y: ground - 54, previousY: ground - 54, vx: 0, vy: 0, width: 42, height: 54, facing: 1, health: 6, invulnerable: 0, climbing: null, attack: 0, attackCooldown: 0, leapCooldown: 0 },
     towers,
     crafts: [
       { x: 130, y: 105, vx: 78, cooldown: 1.1, health: 2 },
@@ -360,7 +360,7 @@ function createState(): HavocState {
     combo: 0,
     comboTimer: 0,
     broken: 0,
-    time: 115,
+    time: 135,
     shake: 0,
     status: "playing",
   };

@@ -14,6 +14,8 @@ test("enters the arcade and exposes six playable cabinets", async ({ page }) => 
   await expect(page.getByRole("button", { name: /play highrise havoc/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /play sunset run/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /play dragonfire descent/i })).toBeVisible();
+  const backdropSources = await page.locator(".attract-backdrop").evaluateAll((images) => images.map((image) => (image as HTMLImageElement).src));
+  expect(new Set(backdropSources).size).toBe(6);
 });
 
 test("launches, pauses, and exits every game cabinet", async ({ page }) => {
@@ -42,8 +44,24 @@ test("shows the corrected admission timeline and jukebox credits", async ({ page
   await expect(page.locator(".ledger-display").first()).toContainText("$5");
   await expect(page.locator(".ledger-prototype")).toContainText("1986 // $2.50 // two hours");
   await expect(page.getByText(/Edvard Grieg composition/i)).toBeVisible();
-  await expect(page.locator(".jukebox-tracks button")).toHaveCount(5);
-  await expect(page.getByText(/five arrangements build and break down/i)).toBeVisible();
+  await expect(page.locator(".jukebox-tracks button")).toHaveCount(6);
+  await expect(page.getByRole("button", { name: /free play forever/i })).toBeVisible();
+  await expect(page.getByText(/six arrangements build and break down/i)).toBeVisible();
+  await expect(page.getByText(/forms up to 24 bars/i)).toBeVisible();
+});
+
+test("plays and restores a branching story file", async ({ page }) => {
+  await page.goto("./#story-arcade");
+  const horrorCard = page.locator(".story-card").filter({ hasText: "The Last Token" });
+  await horrorCard.getByRole("button", { name: /enter story/i }).click();
+  await expect(page.getByRole("heading", { name: /something finishes booting in the dark/i })).toBeVisible();
+  await page.getByRole("button", { name: /walk straight to the cabinet/i }).click();
+  await expect(page.getByRole("heading", { name: /attract screen knows there should be two players/i })).toBeVisible();
+  await page.reload();
+  const resumeCard = page.locator(".story-card").filter({ hasText: "The Last Token" });
+  await expect(resumeCard).toContainText("save detected");
+  await resumeCard.getByRole("button", { name: /resume story/i }).click();
+  await expect(page.getByRole("heading", { name: /attract screen knows there should be two players/i })).toBeVisible();
 });
 
 test("opens a shared game URL directly in its cabinet", async ({ page }) => {
@@ -93,6 +111,11 @@ test("has no automatically detectable accessibility violations", async ({ page }
   await page.getByRole("button", { name: /begin chapter/i }).click();
   const playingResults = await new AxeBuilder({ page }).analyze();
   expect(playingResults.violations).toEqual([]);
+  await page.getByRole("button", { name: "Close Dungeon Circuit" }).click();
+  const horrorCard = page.locator(".story-card").filter({ hasText: "The Last Token" });
+  await horrorCard.getByRole("button", { name: /enter story/i }).click();
+  const storyResults = await new AxeBuilder({ page }).analyze();
+  expect(storyResults.violations).toEqual([]);
 });
 
 test("renders the mobile entrance without horizontal overflow", async ({ page, isMobile }) => {

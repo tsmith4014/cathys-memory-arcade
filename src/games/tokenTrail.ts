@@ -137,7 +137,7 @@ export function mountTokenTrail(canvas: HTMLCanvasElement, options: GameMountOpt
     const direction = Number(input.down("arrowright", "d")) - Number(input.down("arrowleft", "a"));
     const onGround = isStanding(state.player);
     if (onGround) {
-      state.player.coyote = 0.11;
+      state.player.coyote = 0.15;
       state.player.airDashReady = true;
     } else state.player.coyote = Math.max(0, state.player.coyote - delta);
 
@@ -152,7 +152,7 @@ export function mountTokenTrail(canvas: HTMLCanvasElement, options: GameMountOpt
     if (dashPressed && state.player.dashCooldown <= 0 && (onGround || state.player.airDashReady)) {
       const dashDirection = direction || Math.sign(state.player.vx) || 1;
       state.player.dash = 0.18;
-      state.player.dashCooldown = 0.85;
+      state.player.dashCooldown = 0.72;
       state.player.airDashReady = onGround;
       state.player.vx = dashDirection * 610;
       if (!onGround) state.player.vy = Math.min(0, state.player.vy * 0.25);
@@ -296,7 +296,7 @@ function createState(): TrailState {
     [2835, 325], [2940, 425], [3100, 255], [3200, 425], [3290, 400], [3350, 365], [3410, 330], [3450, 290],
   ];
   return {
-    player: { x: 45, y: 390, previousY: 390, vx: 0, vy: 0, width: 36, height: 48, health: 3, invulnerable: 0, dash: 0, dashCooldown: 0, coyote: 0.11, jumpBuffer: 0, airDashReady: true },
+    player: { x: 45, y: 390, previousY: 390, vx: 0, vy: 0, width: 36, height: 48, health: 4, invulnerable: 0, dash: 0, dashCooldown: 0, coyote: 0.15, jumpBuffer: 0, airDashReady: true },
     tokens: tokenPositions.map(([x, y], index) => ({ x, y, taken: false, phase: index * 0.5 })),
     enemies: [
       { x: 720, y: 446, minX: 680, maxX: 1040, vx: 70, alive: true },
@@ -310,7 +310,7 @@ function createState(): TrailState {
     collected: 0,
     checkpoint: 45,
     camera: 0,
-    time: 120,
+    time: 135,
     stompChain: 0,
     stompTimer: 0,
     status: "playing",
@@ -348,8 +348,11 @@ function drawTrailBackground(context: CanvasRenderingContext2D, camera: number, 
     context.lineTo(1400, GAME_HEIGHT);
     context.fill();
   }
-  context.fillStyle = "rgba(82, 231, 239, 0.08)";
-  for (let x = -(camera * 0.35) % 80; x < GAME_WIDTH; x += 80) context.fillRect(x, 0, 1, GAME_HEIGHT);
+  const haze = context.createLinearGradient(0, 280, 0, GAME_HEIGHT);
+  haze.addColorStop(0, "rgba(82, 231, 239, 0)");
+  haze.addColorStop(1, "rgba(82, 231, 239, 0.06)");
+  context.fillStyle = haze;
+  context.fillRect(0, 280, GAME_WIDTH, GAME_HEIGHT - 280);
 }
 
 function drawPlatform(context: CanvasRenderingContext2D, platform: Platform): void {

@@ -8,7 +8,8 @@ export type JukeboxTrackId =
   | "moxies-midnight-run"
   | "garden-static"
   | "open-road-86"
-  | "mountain-king-86";
+  | "mountain-king-86"
+  | "free-play-forever";
 
 export type JukeboxTrack = {
   id: JukeboxTrackId;
@@ -32,6 +33,9 @@ type Arrangement = {
   hats: number[];
   wave: OscillatorType;
   leadCutoff: number;
+  leadGain?: number;
+  leadLift?: boolean;
+  formBars?: number;
 };
 
 export const JUKEBOX_TRACKS: JukeboxTrack[] = [
@@ -47,11 +51,11 @@ export const JUKEBOX_TRACKS: JukeboxTrack[] = [
   {
     id: "moxies-midnight-run",
     title: "Moxie's Midnight Run",
-    style: "Fast arpeggio chase",
+    style: "Long-build mountain rave",
     credit: "Original procedural composition",
     bpm: 142,
-    mood: "Restless / playful",
-    layers: ["running bass", "square arpeggio", "claps", "tape echo"],
+    mood: "Patient fuse / heavy drop",
+    layers: ["slow-bloom pads", "rising pulse", "sub-bass drop", "warehouse hats"],
   },
   {
     id: "garden-static",
@@ -80,6 +84,15 @@ export const JUKEBOX_TRACKS: JukeboxTrack[] = [
     mood: "Dungeon / rising danger",
     layers: ["pizzicato pulse", "8-bit melody", "march drums", "stone reverb"],
   },
+  {
+    id: "free-play-forever",
+    title: "Free Play Forever",
+    style: "Formant-voice after-hours rave",
+    credit: "Original procedural composition and synthetic voice",
+    bpm: 132,
+    mood: "Club lights / one more continue",
+    layers: ["acid pulse", "formant voice", "sub pressure", "laser percussion"],
+  },
 ];
 
 const trackById = new Map(JUKEBOX_TRACKS.map((track) => [track.id, track]));
@@ -88,13 +101,15 @@ const arrangements: Record<JukeboxTrackId, Arrangement> = {
   "fillmore-drive": {
     swing: 0.08,
     bass: [40, null, 40, null, 43, null, 47, null, 40, null, 40, 43, 38, null, 35, null, 40, null, 47, null, 48, null, 47, null, 43, null, 40, 38, 35, null, 38, null],
-    lead: [64, null, 67, null, 71, null, 69, null, 67, null, 64, null, 62, null, 59, null, 64, null, 67, 69, 71, null, 74, null, 71, null, 69, 67, 64, null, 62, null],
+    lead: [59, null, null, null, 62, null, null, null, 64, null, null, 62, null, null, 57, null, null, null, 59, null, null, null, 64, null, 62, null, null, null, 57, null, null, null],
     chords: [[52, 55, 59], [55, 59, 62], [48, 52, 55], [50, 54, 57]],
     kick: [0, 8, 14, 16, 24, 30],
     snare: [4, 12, 20, 28],
     hats: [2, 6, 10, 14, 18, 22, 26, 30],
-    wave: "square",
-    leadCutoff: 2200,
+    wave: "triangle",
+    leadCutoff: 1450,
+    leadGain: 0.044,
+    leadLift: false,
   },
   "moxies-midnight-run": {
     swing: 0.13,
@@ -106,6 +121,8 @@ const arrangements: Record<JukeboxTrackId, Arrangement> = {
     hats: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30],
     wave: "square",
     leadCutoff: 3600,
+    leadGain: 0.062,
+    formBars: 24,
   },
   "garden-static": {
     swing: 0.04,
@@ -139,6 +156,19 @@ const arrangements: Record<JukeboxTrackId, Arrangement> = {
     hats: [2, 6, 10, 14, 18, 22, 26, 30],
     wave: "square",
     leadCutoff: 3000,
+  },
+  "free-play-forever": {
+    swing: 0.035,
+    bass: [36, null, 36, 43, 36, null, 48, null, 34, null, 34, 41, 34, null, 46, null, 36, null, 43, 48, 36, null, 48, 51, 34, null, 41, 46, 34, 36, 41, 43],
+    lead: [72, null, 75, null, 79, null, 82, null, 70, null, 74, null, 77, null, 81, null, 84, 82, 79, 75, 82, 79, 75, 72, 81, 77, 74, 70, 75, null, 79, null],
+    chords: [[48, 51, 55, 58], [46, 50, 53, 58], [43, 46, 51, 55], [41, 46, 50, 53]],
+    kick: [0, 4, 8, 12, 16, 20, 24, 28],
+    snare: [4, 12, 20, 28],
+    hats: [2, 6, 10, 14, 18, 22, 26, 30],
+    wave: "sawtooth",
+    leadCutoff: 3100,
+    leadGain: 0.052,
+    formBars: 16,
   },
 };
 
@@ -281,8 +311,16 @@ export class ArcadeSoundscape {
   }
 
   private scheduleStep(when: number, absoluteStep: number, arrangement: Arrangement, stepDuration: number): void {
+    if (this.trackId === "moxies-midnight-run") {
+      this.scheduleMoxieStep(when, absoluteStep, arrangement, stepDuration);
+      return;
+    }
+    if (this.trackId === "free-play-forever") {
+      this.scheduleFreePlayStep(when, absoluteStep, arrangement, stepDuration);
+      return;
+    }
     const patternStep = absoluteStep % 32;
-    const bar = Math.floor(absoluteStep / 16) % 8;
+    const bar = Math.floor(absoluteStep / 16) % (arrangement.formBars ?? 8);
     const phraseBuild = bar >= 2;
     const fullBand = bar >= 4;
     const breakdown = bar === 6;
@@ -295,13 +333,199 @@ export class ArcadeSoundscape {
     }
     if (bassNote !== null && !breakdown) this.playBass(bassNote, when, stepDuration * 1.7);
     if (leadNote !== null && phraseBuild && (!breakdown || patternStep % 4 === 0)) {
-      this.playLead(leadNote + (fullBand && patternStep % 8 === 6 ? 12 : 0), when, stepDuration * 0.86, arrangement);
+      const lift = arrangement.leadLift !== false && fullBand && patternStep % 8 === 6 ? 12 : 0;
+      this.playLead(leadNote + lift, when, stepDuration * 0.86, arrangement);
     }
-    if (fullBand && patternStep % 16 === 15) this.playLead(arrangement.lead[(patternStep + 1) % 32] ?? 72, when, stepDuration * 1.8, arrangement, -0.35);
+    if (arrangement.leadLift !== false && fullBand && patternStep % 16 === 15) {
+      this.playLead(arrangement.lead[(patternStep + 1) % 32] ?? 72, when, stepDuration * 1.8, arrangement, -0.35);
+    }
     if (arrangement.kick.includes(patternStep) && !breakdown) this.kick(when, fullBand ? 0.19 : 0.15);
     if (arrangement.snare.includes(patternStep) && phraseBuild) this.snare(when, fullBand ? 0.1 : 0.075);
     if (arrangement.hats.includes(patternStep) && (bar > 0 || patternStep % 4 === 2)) this.hat(when, fullBand ? 0.038 : 0.027, patternStep % 8 === 6);
     if (bar === 7 && patternStep >= 28) this.tom(when, 62 - (patternStep - 28) * 7, 0.07);
+  }
+
+  private scheduleMoxieStep(when: number, absoluteStep: number, arrangement: Arrangement, stepDuration: number): void {
+    const patternStep = absoluteStep % 32;
+    const stepInBar = absoluteStep % 16;
+    const bar = Math.floor(absoluteStep / 16) % 24;
+    const bassNote = arrangement.bass[patternStep];
+    const leadNote = arrangement.lead[patternStep];
+    const chord = arrangement.chords[bar % arrangement.chords.length];
+
+    if (stepInBar === 0) {
+      const chordVolume = bar < 3 ? 0.034 : bar < 9 ? 0.026 : bar < 12 ? 0.022 : bar < 20 ? 0.038 : 0.032;
+      this.playChord(chord, when, stepDuration * 15, chordVolume);
+    }
+
+    if (bar < 3) {
+      if (stepInBar === 0) this.playBass((bassNote ?? 45) - 12, when, stepDuration * 5);
+      if (bar === 2 && stepInBar === 12) this.hat(when, 0.018, true);
+      return;
+    }
+
+    if (bar < 6) {
+      if (bassNote !== null && stepInBar % 4 === 0) this.playBass(bassNote - 12, when, stepDuration * 2.8);
+      if (stepInBar === 0 || stepInBar === 8) this.kick(when, 0.1 + (bar - 3) * 0.015);
+      if (bar === 5 && stepInBar % 4 === 2) this.hat(when, 0.019, false);
+      return;
+    }
+
+    if (bar < 9) {
+      if (bassNote !== null && patternStep % 2 === 0) this.playBass(bassNote - (bar === 6 ? 12 : 0), when, stepDuration * 1.8);
+      if ([0, 8].includes(stepInBar)) this.kick(when, 0.145);
+      if ([4, 12].includes(stepInBar)) this.snare(when, 0.065);
+      if (stepInBar % 2 === 0) this.hat(when, 0.023, stepInBar === 14);
+      return;
+    }
+
+    if (bar < 12) {
+      if (stepInBar === 0) this.playRiser(when, stepDuration * 15, (bar - 8) / 3);
+      if (bassNote !== null && stepInBar % 2 === 0) this.playBass(bassNote, when, stepDuration * 1.3);
+      if ([0, 6, 8, 14].includes(stepInBar)) this.kick(when, 0.16 + (bar - 9) * 0.012);
+      if ([4, 12].includes(stepInBar)) this.snare(when, 0.078);
+      if (stepInBar % 2 === 0) this.hat(when, 0.028 + (bar - 9) * 0.004, stepInBar === 14);
+      if (bar === 11 && stepInBar >= 12) this.tom(when, 105 - (stepInBar - 12) * 16, 0.08);
+      return;
+    }
+
+    if (bar < 20) {
+      if (bassNote !== null) this.playBass(bassNote, when, stepDuration * 1.55);
+      if (leadNote !== null && (stepInBar % 2 === 0 || bar % 2 === 1)) this.playLead(leadNote, when, stepDuration * 0.78, arrangement, bar % 2 ? 0.28 : -0.28);
+      if (stepInBar % 4 === 0) this.kick(when, 0.24);
+      if (stepInBar === 0 || stepInBar === 8) this.subImpact(when, 0.18);
+      if ([4, 12].includes(stepInBar)) this.snare(when, 0.11);
+      if (stepInBar % 2 === 0) this.hat(when, 0.042, stepInBar === 14);
+      if (bar % 4 === 3 && stepInBar >= 12) this.tom(when, 88 - (stepInBar - 12) * 12, 0.075);
+      return;
+    }
+
+    if (bar < 22) {
+      if (stepInBar === 0) this.playBass((bassNote ?? 41) - 12, when, stepDuration * 5);
+      if (bar === 21 && stepInBar >= 8 && stepInBar % 2 === 0) this.hat(when, 0.02 + (stepInBar - 8) * 0.003, false);
+      return;
+    }
+
+    if (bassNote !== null && stepInBar % 2 === 0) this.playBass(bassNote, when, stepDuration * 1.45);
+    if ([0, 8, 12].includes(stepInBar)) this.kick(when, 0.17);
+    if ([4, 12].includes(stepInBar)) this.snare(when, 0.082);
+    if (stepInBar % 2 === 0) this.hat(when, 0.032, stepInBar === 14);
+    if (bar === 23 && stepInBar === 0) this.playRiser(when, stepDuration * 15, 1);
+  }
+
+  private scheduleFreePlayStep(when: number, absoluteStep: number, arrangement: Arrangement, stepDuration: number): void {
+    const patternStep = absoluteStep % 32;
+    const stepInBar = absoluteStep % 16;
+    const bar = Math.floor(absoluteStep / 16) % 16;
+    const bassNote = arrangement.bass[patternStep];
+    const leadNote = arrangement.lead[patternStep];
+    const fullDrop = bar >= 8 && bar < 14;
+
+    if (stepInBar === 0) {
+      const chord = arrangement.chords[bar % arrangement.chords.length];
+      this.playChord(chord, when, stepDuration * 14, bar < 2 || bar === 14 ? 0.032 : 0.026);
+    }
+    if (bar >= 2 && bar !== 14 && bassNote !== null && (fullDrop || patternStep % 2 === 0)) {
+      this.playBass(bassNote, when, stepDuration * (fullDrop ? 1.45 : 1.8));
+    }
+    if (bar >= 4 && bar !== 14 && stepInBar % 4 === 0) this.kick(when, fullDrop ? 0.23 : 0.15);
+    if (bar >= 4 && bar !== 14 && [4, 12].includes(stepInBar)) this.snare(when, fullDrop ? 0.105 : 0.074);
+    if (bar >= 3 && bar !== 14 && stepInBar % 2 === 0) this.hat(when, fullDrop ? 0.04 : 0.026, stepInBar === 14);
+    if (fullDrop && leadNote !== null && stepInBar % 2 === 0) this.playLead(leadNote, when, stepDuration * 0.72, arrangement, stepInBar < 8 ? -0.32 : 0.32);
+    if (fullDrop && (stepInBar === 0 || stepInBar === 8)) this.subImpact(when, 0.16);
+    if ([4, 7, 8, 11, 13, 15].includes(bar) && (stepInBar === 0 || stepInBar === 8)) {
+      const vowel = (bar + stepInBar) % 3 === 0 ? "ah" : (bar + stepInBar) % 3 === 1 ? "oh" : "ee";
+      this.playFormantVoice(when, vowel, stepDuration * (stepInBar === 0 ? 5.6 : 3.2), 0.07 + (fullDrop ? 0.018 : 0));
+    }
+    if ((bar === 7 || bar === 15) && stepInBar === 0) this.playRiser(when, stepDuration * 15, 1);
+  }
+
+  private playRiser(when: number, duration: number, intensity: number): void {
+    if (!this.context || !this.music || !this.noiseBuffer) return;
+    const source = this.context.createBufferSource();
+    const filter = this.context.createBiquadFilter();
+    const envelope = this.context.createGain();
+    const end = when + duration;
+    source.buffer = this.noiseBuffer;
+    source.loop = true;
+    filter.type = "bandpass";
+    filter.frequency.setValueAtTime(280 + intensity * 180, when);
+    filter.frequency.exponentialRampToValueAtTime(4200 + intensity * 2600, end);
+    filter.Q.setValueAtTime(0.7, when);
+    filter.Q.linearRampToValueAtTime(4.2, end);
+    envelope.gain.setValueAtTime(0.0001, when);
+    envelope.gain.exponentialRampToValueAtTime(0.026 + intensity * 0.03, when + duration * 0.72);
+    envelope.gain.exponentialRampToValueAtTime(0.0001, end);
+    source.connect(filter);
+    filter.connect(envelope);
+    envelope.connect(this.music);
+    if (this.reverb) envelope.connect(this.reverb);
+    source.start(when, Math.random());
+    source.stop(end + 0.02);
+  }
+
+  private subImpact(when: number, volume: number): void {
+    if (!this.context || !this.music) return;
+    const oscillator = this.context.createOscillator();
+    const envelope = this.context.createGain();
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(72, when);
+    oscillator.frequency.exponentialRampToValueAtTime(28, when + 0.42);
+    envelope.gain.setValueAtTime(volume, when);
+    envelope.gain.exponentialRampToValueAtTime(0.0001, when + 0.52);
+    oscillator.connect(envelope);
+    envelope.connect(this.music);
+    oscillator.start(when);
+    oscillator.stop(when + 0.54);
+  }
+
+  private playFormantVoice(when: number, vowel: "ah" | "oh" | "ee", duration: number, volume: number): void {
+    if (!this.context || !this.music) return;
+    const formants = {
+      ah: [760, 1160, 2850],
+      oh: [480, 820, 2550],
+      ee: [310, 2250, 3020],
+    }[vowel];
+    const oscillator = this.context.createOscillator();
+    const vibrato = this.context.createOscillator();
+    const vibratoDepth = this.context.createGain();
+    const envelope = this.context.createGain();
+    const panner = this.context.createStereoPanner();
+    const end = when + Math.max(0.18, duration);
+
+    oscillator.type = "sawtooth";
+    oscillator.frequency.setValueAtTime(vowel === "oh" ? 92.5 : 110, when);
+    oscillator.frequency.linearRampToValueAtTime(vowel === "ee" ? 123.47 : 104, end);
+    vibrato.type = "sine";
+    vibrato.frequency.value = 5.2;
+    vibratoDepth.gain.value = 4.8;
+    vibrato.connect(vibratoDepth);
+    vibratoDepth.connect(oscillator.frequency);
+    envelope.gain.setValueAtTime(0.0001, when);
+    envelope.gain.exponentialRampToValueAtTime(volume, when + Math.min(0.08, duration * 0.18));
+    envelope.gain.setValueAtTime(volume * 0.72, when + duration * 0.58);
+    envelope.gain.exponentialRampToValueAtTime(0.0001, end);
+    panner.pan.setValueAtTime(vowel === "ah" ? -0.18 : vowel === "ee" ? 0.2 : 0, when);
+
+    formants.forEach((frequency, index) => {
+      const filter = this.context!.createBiquadFilter();
+      const bandGain = this.context!.createGain();
+      filter.type = "bandpass";
+      filter.frequency.value = frequency;
+      filter.Q.value = 7 + index * 2;
+      bandGain.gain.value = [0.95, 0.5, 0.22][index];
+      oscillator.connect(filter);
+      filter.connect(bandGain);
+      bandGain.connect(envelope);
+    });
+    envelope.connect(panner);
+    panner.connect(this.music);
+    if (this.delay) panner.connect(this.delay);
+    if (this.reverb) panner.connect(this.reverb);
+    oscillator.start(when);
+    vibrato.start(when);
+    oscillator.stop(end + 0.03);
+    vibrato.stop(end + 0.03);
   }
 
   private startAmbience(): void {
@@ -335,7 +559,7 @@ export class ArcadeSoundscape {
   }
 
   private playLead(note: number, when: number, duration: number, arrangement: Arrangement, pan = 0.2): void {
-    this.synthNote(note, when, duration, arrangement.wave, 0.075, arrangement.leadCutoff, pan, 5, true);
+    this.synthNote(note, when, duration, arrangement.wave, arrangement.leadGain ?? 0.075, arrangement.leadCutoff, pan, 5, true);
   }
 
   private playBass(note: number, when: number, duration: number): void {
