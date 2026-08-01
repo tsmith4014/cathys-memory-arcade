@@ -1,4 +1,10 @@
 import { useEffect, useRef, useState } from "react";
+import {
+  FloorMap,
+  MobileFloorNav,
+  useFloorPosition,
+  useRevealMotion,
+} from "./components/FloorNavigation";
 import { GameArcade } from "./components/GameArcade";
 import { StoryArcade } from "./components/StoryArcade";
 import { lifeDetails, memorialCopy, rememberedGames, terminalPrompts } from "./data/content";
@@ -73,8 +79,11 @@ function App() {
   const [jukeboxTrack, setJukeboxTrack] = useState<JukeboxTrackId>("fillmore-drive");
   const [signals, setSignals] = useState<SignalPayload>(fallbackSignals);
   const [terminalIndex, setTerminalIndex] = useState(0);
+  const [floorMapOpen, setFloorMapOpen] = useState(false);
   const soundscape = useRef<ArcadeSoundscape | null>(null);
   const entryTimers = useRef<number[]>([]);
+  const activeFloor = useFloorPosition();
+  useRevealMotion();
 
   useEffect(() => {
     let active = true;
@@ -157,24 +166,35 @@ function App() {
   const creditReadout = entryPhase === "idle" ? "00" : entryPhase === "token-one" ? "01" : entryPhase === "token-two" ? "02" : "FREE PLAY";
 
   return (
-    <div className={`site entry-${entryPhase}`}>
+    <div className={`site entry-${entryPhase}`} data-active-floor={activeFloor}>
       <header className="topbar">
-        <a className="wordmark" href="#top" aria-label="Cathy's Memory Arcade home">
+        <a className="wordmark" href="#top" aria-label="Cathy's Memory Arcade home" aria-current={activeFloor === "top" ? "location" : undefined}>
           <span className="wordmark-mark" aria-hidden="true">C</span>
           <span>Cathy's Memory Arcade</span>
         </a>
         <nav aria-label="Primary navigation">
-          <a href="#lobby">Games</a>
-          <a href="#story-arcade">Stories</a>
-          <a href="#memory-route">Route</a>
-          <a href="#jukebox">Jukebox</a>
-          <a href="#memory-core">Memory</a>
+          <a href="#lobby" aria-current={activeFloor === "lobby" ? "location" : undefined}>Games</a>
+          <a href="#memory-route" aria-current={activeFloor === "memory-route" ? "location" : undefined}>Route</a>
+          <a href="#story-arcade" aria-current={activeFloor === "story-arcade" ? "location" : undefined}>Stories</a>
+          <a href="#jukebox" aria-current={activeFloor === "jukebox" ? "location" : undefined}>Jukebox</a>
+          <a href="#memory-core" aria-current={activeFloor === "memory-core" || activeFloor === "origin-terminal" ? "location" : undefined}>Memory</a>
+          <a href="#signal-machine" aria-current={activeFloor === "signal-machine" ? "location" : undefined}>Signals</a>
         </nav>
-        <button className="sound-button" type="button" aria-pressed={soundOn} onClick={toggleSound}>
-          <span className="sound-bars" aria-hidden="true"><i /><i /><i /></span>
-          Jukebox {soundOn ? "on" : "off"}
-        </button>
+        <div className="topbar-actions">
+          <button className="floor-map-trigger" type="button" onClick={() => setFloorMapOpen(true)}>
+            <span className="map-grid-icon" aria-hidden="true"><i /><i /><i /><i /></span>
+            Floor map
+          </button>
+          <button className="sound-button" type="button" aria-pressed={soundOn} onClick={toggleSound}>
+            <span className="sound-bars" aria-hidden="true"><i /><i /><i /></span>
+            Jukebox {soundOn ? "on" : "off"}
+          </button>
+        </div>
+        <span className="topbar-progress" aria-hidden="true"><i /></span>
       </header>
+
+      <MobileFloorNav activeId={activeFloor} onOpenMap={() => setFloorMapOpen(true)} />
+      <FloorMap open={floorMapOpen} activeId={activeFloor} onClose={() => setFloorMapOpen(false)} />
 
       <main id="top">
         <section className={`hero hero-${entryPhase}`} aria-labelledby="hero-title">

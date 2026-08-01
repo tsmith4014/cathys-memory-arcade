@@ -142,6 +142,31 @@ test("restores direct section links after the React page mounts", async ({ page 
   expect(top).toBeGreaterThanOrEqual(60);
 });
 
+test("uses the floor map as a keyboard-safe route through the arcade", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem("cathy-arcade:skyline-smash:complete", "true");
+    window.localStorage.setItem("cathy-arcade:story:horror", JSON.stringify({ nodeId: "h1" }));
+  });
+  await page.goto("./#lobby");
+  const trigger = page.getByRole("button", { name: "Floor map", exact: true });
+
+  await trigger.click();
+  const map = page.getByRole("dialog", { name: /choose your next room/i });
+  await expect(map).toBeVisible();
+  await expect(map.getByRole("button", { name: /close map/i })).toBeFocused();
+  await expect(map).toContainText("1 chapter kept // 1 story file open");
+
+  await page.keyboard.press("Escape");
+  await expect(map).toBeHidden();
+  await expect(trigger).toBeFocused();
+
+  await trigger.click();
+  await map.getByRole("link", { name: /after closing/i }).click();
+  await expect(map).toBeHidden();
+  await expect(page).toHaveURL(/#story-arcade$/);
+  await expect(page.locator("#story-arcade")).toBeInViewport();
+});
+
 test("finishes the token ceremony quickly for reduced-motion visitors", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("./");
@@ -191,6 +216,10 @@ test("has no automatically detectable accessibility violations", async ({ page }
   await page.goto("./");
   const pageResults = await new AxeBuilder({ page }).analyze();
   expect(pageResults.violations).toEqual([]);
+  await page.getByRole("button", { name: "Floor map", exact: true }).click();
+  const mapResults = await new AxeBuilder({ page }).analyze();
+  expect(mapResults.violations).toEqual([]);
+  await page.keyboard.press("Escape");
   await page.getByRole("button", { name: /play dungeon circuit/i }).click();
   const briefingResults = await new AxeBuilder({ page }).analyze();
   expect(briefingResults.violations).toEqual([]);
@@ -219,4 +248,23 @@ test("renders the mobile entrance without horizontal overflow", async ({ page, i
     const sectionDimensions = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
     expect(sectionDimensions.scroll).toBeLessThanOrEqual(sectionDimensions.client);
   }
+});
+
+test("keeps the mobile floor controls visible and room-aware", async ({ page, isMobile }) => {
+  test.skip(!isMobile, "mobile project only");
+  await page.goto("./");
+  const floorNav = page.getByRole("navigation", { name: /mobile arcade navigation/i });
+  await expect(floorNav).toBeVisible();
+
+  const read = floorNav.getByRole("link", { name: "Read", exact: true });
+  await read.click();
+  await expect(page.locator("#story-arcade")).toBeInViewport();
+  await expect(read).toHaveAttribute("aria-current", "location");
+
+  await floorNav.getByRole("button", { name: /open mobile floor map/i }).click();
+  const map = page.getByRole("dialog", { name: /choose your next room/i });
+  await expect(map).toBeVisible();
+  await expect(map.getByRole("link")).toHaveCount(8);
+  await page.keyboard.press("Escape");
+  await expect(map).toBeHidden();
 });

@@ -70,6 +70,32 @@ describe("Cathy's Memory Arcade", () => {
     expect(screen.queryByText(/the work that keeps the lights on/i)).not.toBeInTheDocument();
   });
 
+  it("opens an accessible floor map and closes it with Escape", () => {
+    render(<App />);
+    const trigger = screen.getByRole("button", { name: "Floor map" });
+    trigger.focus();
+    fireEvent.click(trigger);
+
+    const dialog = screen.getByRole("dialog", { name: /choose your next room/i });
+    expect(within(dialog).getByRole("link", { name: /six working cabinets/i })).toHaveAttribute("href", "#lobby");
+    expect(within(dialog).getByRole("link", { name: /after closing/i })).toHaveAttribute("href", "#story-arcade");
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: /choose your next room/i })).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+
+  it("shows locally saved game and story progress in the floor map", () => {
+    window.localStorage.setItem("cathy-arcade:skyline-smash:complete", "true");
+    window.localStorage.setItem("cathy-arcade:story:horror", JSON.stringify({ nodeId: "h1" }));
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Floor map" }));
+
+    expect(screen.getByText("1 chapter kept // 1 story file open")).toBeInTheDocument();
+    expect(screen.getAllByText("1/6 chapters kept")).toHaveLength(2);
+    expect(screen.getByText("1/3 files opened")).toBeInTheDocument();
+  });
+
   it("documents the five-dollar unlimited-play timeline and exposes the jukebox", () => {
     render(<App />);
     expect(screen.getByRole("heading", { name: /five dollars was not pocket change/i })).toBeInTheDocument();

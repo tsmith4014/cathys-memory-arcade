@@ -106,7 +106,11 @@ function GameCard({ game, onLaunch }: { game: GameDefinition; onLaunch: () => vo
           <p className="game-subtitle">{game.subtitle}</p>
           <p>{game.description}</p>
           <div className="game-theme"><span>{game.theme}</span><small>{game.keepsake}</small></div>
-          <div className="game-scoreline"><span>Local best</span><strong>{String(highScore).padStart(6, "0")}</strong></div>
+          <div className="game-scoreline">
+            <span>Local best</span>
+            <strong>{String(highScore).padStart(6, "0")}</strong>
+            <span className="game-card-action">Play now <i aria-hidden="true">-&gt;</i></span>
+          </div>
         </div>
       </button>
     </article>
