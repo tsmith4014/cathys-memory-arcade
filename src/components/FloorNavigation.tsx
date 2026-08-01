@@ -23,7 +23,7 @@ type LocalProgress = {
   savedStories: number;
 };
 
-export const FLOOR_STOPS: FloorStop[] = [
+const FLOOR_STOPS: FloorStop[] = [
   { id: "top", code: "00", label: "Entrance", title: "Two tokens in", description: "Start with the coin drop and wake the whole floor." },
   { id: "lobby", code: "01", label: "Games", title: "Six working cabinets", description: "Quick rounds, longer chapters, local scores, and real endings." },
   { id: "memory-route", code: "02", label: "Route 86", title: "Carry six chapters home", description: "A local save route that changes as each cabinet is cleared." },
