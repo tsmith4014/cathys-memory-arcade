@@ -91,17 +91,48 @@ test("plays and restores a branching story file", async ({ page }) => {
   await page.goto("./#story-arcade");
   const horrorCard = page.locator(".story-card").filter({ hasText: "The Last Token" });
   await horrorCard.getByRole("button", { name: /enter story/i }).click();
-  await expect(page.locator(".story-copy")).toBeFocused();
-  await expect(page.getByRole("heading", { name: /something finishes booting in the dark/i })).toBeVisible();
+  await expect(page.locator(".story-stage")).toBeFocused();
+  await expect(page.locator(".story-stage")).toHaveAttribute("data-scene-art", "world");
+  await expect(page.getByRole("heading", { name: /one cabinet stays on/i })).toBeVisible();
+  await expect(page.locator(".story-scene-beat")).toContainText(/warm token dated tomorrow/i);
   await page.getByRole("button", { name: /walk straight to the cabinet/i }).click();
-  await expect(page.getByRole("heading", { name: /attract screen knows there should be two players/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /player two is late/i })).toBeVisible();
   await page.reload();
   const resumeCard = page.locator(".story-card").filter({ hasText: "The Last Token" });
   await expect(resumeCard).toContainText("save detected");
   await resumeCard.getByRole("button", { name: /resume story/i }).click();
-  await expect(page.getByRole("heading", { name: /attract screen knows there should be two players/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /player two is late/i })).toBeVisible();
   await page.getByRole("button", { name: /story shelf/i }).click();
   await expect(resumeCard.getByRole("button", { name: /resume story/i })).toBeFocused();
+});
+
+test("keeps story art in front while the narrative changes scenes", async ({ page, isMobile }) => {
+  await page.goto("./#story-arcade");
+  const actionCard = page.locator(".story-card").filter({ hasText: "Neon Runner 1986" });
+  await actionCard.getByRole("button", { name: /enter story/i }).click();
+
+  const stage = page.locator(".story-stage");
+  const art = page.locator(".story-stage-art");
+  await expect(stage).toHaveAttribute("data-scene-art", "world");
+  await expect(art).toHaveAttribute("src", /story-action-neon-runner\.webp$/);
+  await expect.poll(() => art.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(1000);
+
+  const openingBeat = (await page.locator(".story-scene-beat").textContent()) ?? "";
+  const openingWords = openingBeat.trim().split(/\s+/).length;
+  expect(openingWords).toBeGreaterThanOrEqual(20);
+  expect(openingWords).toBeLessThanOrEqual(45);
+  await expect(page.locator(".story-drawer[open]")).toHaveCount(0);
+
+  await page.getByRole("button", { name: /take the rooftops/i }).click();
+  await page.getByRole("button", { name: /hack the billboard/i }).click();
+  await expect(stage).toHaveAttribute("data-scene-art", "cast");
+  await expect(art).toHaveAttribute("src", /story-action-cast-v2\.webp$/);
+  await expect(page.getByRole("heading", { name: /eight stolen seconds/i })).toBeVisible();
+
+  if (isMobile) {
+    const focalPoint = await art.evaluate((image) => getComputedStyle(image).objectPosition);
+    expect(focalPoint).not.toBe("50% 50%");
+  }
 });
 
 test("restores direct section links after the React page mounts", async ({ page }) => {

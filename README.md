@@ -10,7 +10,7 @@ This is a living 1986-meets-AI memorial for Cathy and a real browser arcade. It 
 - A two-token entrance ceremony with original coin, relay, marquee, and cabinet-wake sound design
 - Six original, full-canvas games with enemies, scoring systems, win/loss states, keyboard controls, and mobile controls
 - A six-chapter memory route with distinct save-slot art, metaphorical story keepsakes, local completion saves, and an unlockable epilogue
-- A separate illustrated branching-fiction cabinet with recurring casts, persistent decisions, conditional callbacks, relationship state, inventory, page rewind, local saves, and multiple endings
+- A separate cinematic branching-fiction cabinet with full-bleed environment and cast art, concise scene cuts, optional long reads at pivotal moments, persistent decisions, conditional callbacks, relationship state, inventory, page rewind, local saves, and multiple endings
 - Local high scores and story progress that never leave the visitor's browser
 - A memory core that separates personal recollection from sourced historical context
 - The real Cathy-and-Chad photo-booth portraits and a life file sourced from her family-authorized program

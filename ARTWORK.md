@@ -35,6 +35,8 @@ Three wide cast paintings add recurring fictional characters and props without r
 - `public/art/story-action-cast-v2.webp`: Rook crossing a blackout service road with Switch on the wrist radio and the battered K-86 patrol drone, Bucket, running beside him. Neighborhood candlelight and the mountain route provide depth without a neon grid.
 - `public/art/story-mystery-cast-v2.webp`: Mara Ibarra examining a brass half-token and reel-to-reel tape, Eli Cho on the old intercom, and the ambiguous previous investigator, Six, caught in layered archive reflections.
 
+The reader alternates between each story's environment and cast painting as the action changes. Every scene has an explicit art choice and mobile focal point; concise text is placed in the lower third, while the original long prose remains available only at selected turning points. This keeps the illustration dominant without discarding the deeper version of the scene.
+
 These cast images were generated with the built-in OpenAI image-generation tool as landscape late-1980s gamebook paintings with modern cinematic depth, darker lower thirds for readable choices, and explicit constraints against text, logos, commercial characters, family likenesses, scanlines, or visible grids. The story art depicts original fiction. It does not depict Cathy, Chad, or additional biographical events.
 
 ## Family photographs

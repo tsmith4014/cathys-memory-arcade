@@ -11,6 +11,7 @@ import {
   type StoryGenre,
   type StoryStateView,
 } from "../data/stories";
+import { getStoryScene } from "../data/storyScenes";
 import "../story.css";
 
 type StoryHistory = {
@@ -102,6 +103,7 @@ export function StoryArcade() {
 
   const callbacks = story && session && node ? visibleStoryCallbacks(node.callbacks, session) : [];
   const choices = story && session && node ? availableStoryChoices(node.choices, session) : [];
+  const scene = story && node ? getStoryScene(story.id, node.id) : null;
 
   return (
     <section className="story-arcade section-shell" id="story-arcade" aria-labelledby="story-arcade-title">
@@ -114,7 +116,7 @@ export function StoryArcade() {
       </div>
       <p className="story-disclaimer">Everything in After Closing is original fiction. These characters and events are separate from Cathy's life and from the documented history of the Fillmore arcade.</p>
 
-      {!story || !session || !node ? (
+      {!story || !session || !node || !scene ? (
         <StoryShelf onEnter={enterStory} />
       ) : (
         <article
@@ -122,91 +124,124 @@ export function StoryArcade() {
           id="story-stage"
           style={{ "--story-accent": story.accent } as CSSProperties}
           data-ending={node.ending?.rank}
+          data-scene-art={scene.art}
+          data-text-side={scene.side ?? "left"}
+          tabIndex={-1}
         >
-          <img className="story-stage-art" src={`${import.meta.env.BASE_URL}art/${story.image}`} alt="" />
+          <img
+            className="story-stage-art"
+            src={`${import.meta.env.BASE_URL}art/${scene.art === "cast" ? story.castImage : story.image}`}
+            alt={scene.art === "cast" ? story.castAlt : story.imageAlt}
+            key={`${story.id}-${node.id}-${scene.art}`}
+          />
           <span className="story-stage-atmosphere" aria-hidden="true" />
           <StoryWorldmark genre={story.id} />
 
-          <header className="story-stage-header">
-            <div>
-              <span>{story.shelfCode} // page {String(session.history.length + 1).padStart(2, "0")}</span>
-              <h3>{story.title}</h3>
+          <div className="story-scene">
+            <header className="story-stage-header">
+              <div>
+                <span>{story.shelfCode} // scene {String(session.history.length + 1).padStart(2, "0")}</span>
+                <h3>{story.title}</h3>
+              </div>
+              <div
+                className="story-page-meter"
+                role="progressbar"
+                aria-label="Story decisions"
+                aria-valuemin={0}
+                aria-valuemax={12}
+                aria-valuenow={Math.min(session.history.length, 12)}
+                aria-valuetext={`${session.history.length} decisions made`}
+              >
+                {Array.from({ length: 12 }, (_, index) => <i className={index < session.history.length ? "read" : ""} key={index} />)}
+              </div>
+              <div className="story-stage-actions">
+                <button type="button" onClick={returnToShelf}>Story shelf</button>
+                <button type="button" onClick={turnBack} disabled={!session.history.at(-1)?.snapshot} aria-label="Turn back one page">Turn back</button>
+                <button type="button" onClick={restartStory}>Start over</button>
+              </div>
+            </header>
+
+            <div className="story-scene-content">
+              <p className="story-art-caption">
+                {scene.art === "cast"
+                  ? `Fictional cast // ${story.cast.map((character) => character.name).join(" // ")}`
+                  : `${story.shelfCode} // original scene artwork`}
+              </p>
+              <div className="story-copy" aria-live="polite">
+                <span>{node.chapter}</span>
+                <h4>{scene.title}</h4>
+                <p className="story-scene-beat">{scene.text}</p>
+
+                {scene.expanded ? (
+                  <details className="story-long-read">
+                    <summary>Open the full scene</summary>
+                    <div>{node.body.map((paragraph, index) => <p key={`${node.id}-body-${index}`}>{paragraph}</p>)}</div>
+                  </details>
+                ) : null}
+
+                {node.ending ? (
+                  <div className={`story-ending rank-${node.ending.rank}`}>
+                    <span>{story.ui.endingTitle}</span>
+                    <strong>{node.ending.label}</strong>
+                    <button type="button" onClick={returnToShelf}>Choose another story</button>
+                    <button type="button" onClick={restartStory}>Read this one again</button>
+                  </div>
+                ) : (
+                  <div className="story-choices" aria-label="Story choices">
+                    {choices.map((choice, index) => (
+                      <button type="button" onClick={() => choose(choice)} key={`${node.id}-${choice.label}`}>
+                        <span>{String(index + 1).padStart(2, "0")}</span>
+                        <strong>{choice.label}</strong>
+                        <small>{choice.consequence}</small>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-            <div
-              className="story-page-meter"
-              role="progressbar"
-              aria-label="Story decisions"
-              aria-valuemin={0}
-              aria-valuemax={12}
-              aria-valuenow={Math.min(session.history.length, 12)}
-              aria-valuetext={`${session.history.length} decisions made`}
-            >
-              {Array.from({ length: 12 }, (_, index) => <i className={index < session.history.length ? "read" : ""} key={index} />)}
-            </div>
-            <div className="story-stage-actions">
-              <button type="button" onClick={returnToShelf}>Story shelf</button>
-              <button type="button" onClick={turnBack} disabled={!session.history.at(-1)?.snapshot}>Turn back one page</button>
-              <button type="button" onClick={restartStory}>Start over</button>
-            </div>
-          </header>
-
-          <figure className="story-cast-scene">
-            <img src={`${import.meta.env.BASE_URL}art/${story.castImage}`} alt={story.castAlt} />
-            <figcaption>
-              <span>Original fictional cast // not family biography</span>
-              <strong>{story.cast.map((character) => character.name).join(" // ")}</strong>
-            </figcaption>
-          </figure>
-
-          <div className="story-reading-room">
-            <div className="story-copy" tabIndex={-1} aria-live="polite">
-              <span>{node.chapter}</span>
-              <h4>{node.title}</h4>
-              {node.body.map((paragraph, index) => <p key={`${node.id}-body-${index}`}>{paragraph}</p>)}
-
-              {callbacks.map((callback, callbackIndex) => (
-                <aside className="story-callback" key={`${node.id}-${callback.label}-${callbackIndex}`} aria-label="An earlier choice returns">
-                  <span>Earlier // {callback.label}</span>
-                  {callback.body.map((paragraph, index) => <p key={`${callback.label}-${index}`}>{paragraph}</p>)}
-                </aside>
-              ))}
-
-              {node.ending ? (
-                <div className={`story-ending rank-${node.ending.rank}`}>
-                  <span>{story.ui.endingTitle}</span>
-                  <strong>{node.ending.label}</strong>
-                  <button type="button" onClick={returnToShelf}>Choose another story</button>
-                  <button type="button" onClick={restartStory}>Read this one again</button>
-                </div>
-              ) : (
-                <div className="story-choices" aria-label="Story choices">
-                  {choices.map((choice, index) => (
-                    <button type="button" onClick={() => choose(choice)} key={`${node.id}-${choice.label}`}>
-                      <span>{String(index + 1).padStart(2, "0")}</span>
-                      <strong>{choice.label}</strong>
-                      <small>{choice.consequence}</small>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <StoryState story={story} session={session} />
           </div>
 
-          <footer className="story-trace">
-            <span>{story.ui.trailTitle} // saved on this browser</span>
-            <div>
-              {session.history.length
-                ? session.history.map((entry, index) => (
-                    <p key={`${entry.nodeId}-${index}`}>
-                      <i>{String(index + 1).padStart(2, "0")}</i>
-                      {entry.choice}
-                    </p>
-                  ))
-                : <p><i>00</i>The first choice is yours.</p>}
-            </div>
-          </footer>
+          <div className="story-drawers">
+            {callbacks.length ? (
+              <details className="story-drawer story-echo-drawer">
+                <summary>
+                  <span>Earlier choices</span>
+                  <strong>{callbacks.length} {callbacks.length === 1 ? "consequence" : "consequences"} in motion</strong>
+                </summary>
+                <div className="story-echo-list">
+                  {callbacks.map((callback, callbackIndex) => (
+                    <aside className="story-callback" key={`${node.id}-${callback.label}-${callbackIndex}`} aria-label="An earlier choice returns">
+                      <span>Earlier // {callback.label}</span>
+                      {callback.body.map((paragraph, index) => <p key={`${callback.label}-${index}`}>{paragraph}</p>)}
+                    </aside>
+                  ))}
+                </div>
+              </details>
+            ) : null}
+            <details className="story-drawer">
+              <summary>
+                <span>Story state</span>
+                <strong>{session.inventory.length} carried // {session.flags.length} remembered</strong>
+              </summary>
+              <StoryState story={story} session={session} />
+            </details>
+            <details className="story-drawer story-trace">
+              <summary>
+                <span>{story.ui.trailTitle}</span>
+                <strong>{session.history.length} decisions // saved here</strong>
+              </summary>
+              <div>
+                {session.history.length
+                  ? session.history.map((entry, index) => (
+                      <p key={`${entry.nodeId}-${index}`}>
+                        <i>{String(index + 1).padStart(2, "0")}</i>
+                        {entry.choice}
+                      </p>
+                    ))
+                  : <p><i>00</i>The first choice is yours.</p>}
+              </div>
+            </details>
+          </div>
         </article>
       )}
     </section>
@@ -378,9 +413,9 @@ function humanize(value: string): string {
 
 function focusStoryPage(delay = 30): void {
   window.setTimeout(() => {
-    const storyCopy = document.querySelector<HTMLElement>(".story-copy");
-    storyCopy?.focus({ preventScroll: true });
-    storyCopy?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+    const storyStage = document.querySelector<HTMLElement>(".story-stage");
+    storyStage?.focus({ preventScroll: true });
+    storyStage?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
   }, delay);
 }
 

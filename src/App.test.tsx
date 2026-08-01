@@ -102,13 +102,15 @@ describe("Cathy's Memory Arcade", () => {
     const horrorCard = screen.getByRole("heading", { name: "The Last Token" }).closest("article");
     expect(horrorCard).not.toBeNull();
     fireEvent.click(within(horrorCard!).getByRole("button", { name: /enter story/i }));
-    expect(screen.getByRole("heading", { name: /something finishes booting in the dark/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /one cabinet stays on/i })).toBeInTheDocument();
+    expect(document.querySelector(".story-stage")).toHaveAttribute("data-scene-art", "world");
+    expect(document.querySelector(".story-scene-beat")).toHaveTextContent(/warm token dated tomorrow/i);
     expect(screen.getByRole("button", { name: /turn back one page/i })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: /walk straight to the cabinet/i }));
-    expect(screen.getByRole("heading", { name: /attract screen knows there should be two players/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /player two is late/i })).toBeInTheDocument();
     expect(window.localStorage.getItem("cathy-arcade:story:horror")).toContain("\"nodeId\":\"h1\"");
     fireEvent.click(screen.getByRole("button", { name: /turn back one page/i }));
-    expect(screen.getByRole("heading", { name: /something finishes booting in the dark/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /one cabinet stays on/i })).toBeInTheDocument();
     expect(screen.getByText(/tomorrow-dated token/i)).toBeInTheDocument();
   });
 

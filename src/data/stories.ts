@@ -68,6 +68,7 @@ export type StoryDefinition = {
   subtitle: string;
   teaser: string;
   image: string;
+  imageAlt: string;
   castImage: string;
   castAlt: string;
   accent: string;
@@ -141,6 +142,7 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
     subtitle: "After closing, one cabinet is still taking quarters.",
     teaser: "Mae has the keys. Cal is calling from a phone that was removed in 1994. Player Two would like a word.",
     image: "story-horror-last-token.webp",
+    imageAlt: "A rain-soaked arcade after closing, with one cabinet still glowing beyond a warm token and a ring of keys.",
     castImage: "story-horror-cast-v2.webp",
     castAlt: "Original fictional cast: Mae Torres holds closing keys beside a red phone, Cal Baines appears in its cracked glass, and June stands near Cabinet Zero.",
     accent: "#ff6f61",
@@ -205,7 +207,7 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
         ],
         choices: [
           { label: "Insert the warm token", consequence: "Play by its rules once, while you still know which rules are yours.", next: "h4", addFlags: ["token-spent"], removeItems: ["warm-token"], relationshipChanges: { "player-two": 1 } },
-          { label: "Open the service panel", consequence: "A cabinet without a cord still owes you an explanation.", next: "h5", requiresItems: ["zero-key"], addFlags: ["opened-back"] },
+          { label: "Try the closing keys on the service panel", consequence: "A cabinet without a cord still owes you an explanation.", next: "h5", addFlags: ["opened-back"] },
           { label: "Knock three times, then twice", consequence: "Answer the rhythm before the thing behind it changes the question.", next: "h6", addFlags: ["answered-pattern"], relationshipChanges: { cal: 1 } },
         ],
       },
@@ -550,6 +552,7 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
     subtitle: "One cartridge. Forty-seven dark blocks. Eleven minutes.",
     teaser: "Rook has the map, Switch has the radio, and a patrol drone named Bucket is having a difficult night.",
     image: "story-action-neon-runner.webp",
+    imageAlt: "A storm-dark mountain city with a relay tower glowing above wet rooftops and the last grid cartridge in the foreground.",
     castImage: "story-action-cast-v2.webp",
     castAlt: "Original fictional cast: courier Rook Vega runs beside K-86 Bucket while Lena Switch Okafor speaks from his wrist radio.",
     accent: "#52e7ef",
@@ -577,6 +580,7 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
       "distributed-map": "Map shared citywide",
       "switch-trusted": "Switch has the plan",
       "rook-asked-help": "Rook asked for help",
+      "raced-ahead": "Switch is catching up",
     },
     ui: {
       stateTitle: "Open channel",
@@ -695,8 +699,8 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
         ],
         choices: [
           { label: "Help Switch load every battery", consequence: "Spend a minute so six blocks can survive the night.", next: "a8", addFlags: ["protected-blocks", "rook-asked-help"], addItems: ["district-map"], relationshipChanges: { switch: 2 } },
-          { label: "Take the clean route alone", consequence: "Reach the mountain faster and leave Switch her own escape.", next: "a9", addFlags: ["left-switch"], relationshipChanges: { switch: -2 } },
-          { label: "Put the tool chest on the maintenance rail", consequence: "Turn forty kilos of equipment into public transportation.", next: "a7", addFlags: ["switch-trusted"], addItems: ["district-map"], relationshipChanges: { switch: 1 } },
+          { label: "Run the clean route ahead", consequence: "Gain ground while Switch finishes the battery handoff behind you.", next: "a9", addFlags: ["raced-ahead"], relationshipChanges: { switch: -1 } },
+          { label: "Put the tool chest on the maintenance rail", consequence: "Move Switch and her workshop toward the map's first hard choice.", next: "a8", addFlags: ["switch-trusted"], addItems: ["district-map"], relationshipChanges: { switch: 1 } },
         ],
       },
       a7: {
@@ -742,17 +746,17 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
         title: "The mountain road has started throwing things back.",
         body: [
           "Driverless snowplows descend without headlights. A crane arm turns over the ravine. The relay beam sweeps the switchbacks, searching for the cartridge's magnetic pulse.",
-          "Switch marks three options on your visor. Bucket, if still listening, adds a fourth labeled SURRENDER SAFELY. \"That is not an option,\" you say. \"It remains statistically attractive,\" Bucket replies.",
+          "Switch marks the remaining routes on your visor. Bucket, if still listening, adds one labeled SURRENDER SAFELY. \"That is not an option,\" you say. \"It remains statistically attractive,\" Bucket replies.",
         ],
         callbacks: [
-          { label: "Switch went quiet", requires: ["left-switch"], body: ["Your radio carries only static and the echo of her last directions. Every shortcut now sounds like something you stole."] },
+          { label: "Switch is still catching up", requires: ["raced-ahead"], body: ["Her radio drops every third word while she clears the battery handoff. She is behind you, not abandoned, and still close enough to object to your shortcuts."] },
           { label: "Bucket remembers the mirror", requires: ["blinded-bucket"], body: ["A searchlight tracks you with unusual enthusiasm. Bucket has apparently developed both depth perception and resentment."] },
           { label: "The core has one command left", requiresItems: ["bucket-core"], body: ["The command core can stop the plows or blind the relay, not both. Its status light blinks like a machine trying not to have an opinion."] },
         ],
         choices: [
           { label: "Hijack a snowplow", consequence: "Bring armor, weight, and no brakes uphill.", next: "a10", addFlags: ["plow-route"] },
-          { label: "Swing across on the crane", consequence: "Cross the ravine on a hook meant for transformers.", next: "a11", addFlags: ["crane-route"], requiresItems: ["crane-hook"] },
-          { label: "Spend Bucket's command core", consequence: "Clear the road with the last order the drone will ever receive.", next: "a11", requiresItems: ["bucket-core"], removeItems: ["bucket-core"], addFlags: ["bucket-sacrificed"] },
+          { label: "Swing across on the crane", consequence: "Cross the ravine on a hook meant for transformers.", next: "a10", addFlags: ["crane-route"], requiresItems: ["crane-hook"] },
+          { label: "Spend Bucket's command core", consequence: "Clear the road with the last order the drone will ever receive.", next: "a10", requiresItems: ["bucket-core"], removeItems: ["bucket-core"], addFlags: ["bucket-sacrificed"] },
           { label: "Climb through the relay beam", consequence: "Use timing, bad judgment, and the shortest line left.", next: "a10", addFlags: ["beam-climb"] },
         ],
       },
@@ -761,13 +765,17 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
         chapter: "01:46 REMAINING // Relay Skin",
         title: "The last hundred feet are straight up.",
         body: [
-          "Lightning walks the tower ladder. The cartridge port opens for less than a second after each capacitor strike. Below, the route collapses into floodwater, searchlights, and a tool chest rolling downhill with tremendous dignity.",
+          "Lightning walks the tower ladder. The cartridge port opens for less than a second after each capacitor strike. Below, the route collapses into floodwater and searchlights while the city waits in the dark.",
           "Switch counts the flashes. \"Three, two, one, climb. And Rook? If you say you work better alone after tonight, I will restore power specifically to slap you.\"",
         ],
         callbacks: [
           { label: "Bucket carries the dawn", requires: ["bucket-carrier"], body: ["Bucket rises beside the ladder with the cartridge locked under its chassis. \"Courier safety remains unacceptable,\" it says. \"Courier company remains preferable to patrol company.\""] },
           { label: "The map still has neighborhoods", requiresItems: ["district-map"], body: ["Every rung lights beside a block name. The city is climbing with you, one small battery at a time."] },
           { label: "The erased map is light", requires: ["erased-branches"], body: ["The cartridge is almost weightless now. Rook has never carried so little that felt this heavy."] },
+          { label: "The plow runs out of mountain", requires: ["plow-route"], body: ["Rook plants the snowplow in the tower fence. Its doors lock proudly. He exits through the windshield less proudly."] },
+          { label: "The crane holds", requires: ["crane-route"], body: ["The hook swings back over the ravine, carrying nobody and somehow looking relieved. Switch promises the operator a safety lecture after the lights return."] },
+          { label: "Bucket's last order", requires: ["bucket-sacrificed"], body: ["The command core goes dark after clearing the road. Its final packet contains no target, only an open channel waiting for an answer."] },
+          { label: "The beam missed once", requires: ["beam-climb"], body: ["The relay beam scorched Rook's sleeve and missed the cartridge. Switch calls that precision. Rook calls it a reason to keep climbing."] },
         ],
         choices: [
           { label: "Climb with the whole map", consequence: "Take every surviving branch to the port by hand.", next: "a12", addFlags: ["carried-whole-map"] },
@@ -784,14 +792,15 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
           "Voices crowd the service channel with directions. Someone offers a ladder. Someone else offers soup. Switch says, \"Take the ladder. We can revisit soup after civilization.\"",
         ],
         callbacks: [
-          { label: "Bucket's last order spread", requires: ["bucket-sacrificed"], body: ["Every local controller signs its packet K-86. Bucket's command survives as a request instead of an order."] },
-          { label: "The crane cleared the ravine", requires: ["crane-route"], body: ["The crane operator is twelve years old and working from an apartment balcony. Rook promises not to tell anyone until after the rescue and several safety lectures."] },
+          { label: "Six blocks answer first", requires: ["protected-blocks"], body: ["The batteries from Switch's workshop form the network's first steady islands. Extension cords cross balconies while neighbors relay the route uphill."] },
+          { label: "The stripped core casts a vote", requiresItems: ["bucket-core"], body: ["K-86's command core joins the mesh without issuing an order. Its first voluntary packet is a cautious YES followed by fourteen safety conditions."] },
+          { label: "Bucket refuses to be muted", requires: ["bucket-named"], relationships: [{ character: "bucket", min: 1 }], body: ["A familiar machine voice corrects three bad directions and one spelling error. Bucket has found the frequency and, regrettably, the group chat."] },
           { label: "Switch recognizes the plan", requires: ["distributed-map"], body: ["\"That is not your route anymore,\" Switch says. She sounds proud. \"Good. It was too important to belong to one runner.\""] },
         ],
         choices: [
           { label: "Follow the city's moving route", consequence: "Climb where the lights appear and trust strangers with the next step.", next: "a12", addFlags: ["city-guided"] },
           { label: "Hand coordination to Switch", consequence: "Let the person who kept counting people run the final minute.", next: "a12", addFlags: ["switch-final-call", "switch-trusted"], relationshipChanges: { switch: 1 } },
-          { label: "Keep one channel open for Bucket", consequence: "Leave room for a machine that may still be out there.", next: "a12", addFlags: ["bucket-channel"] },
+          { label: "Keep one channel open for Bucket", consequence: "Leave room for a machine that chose the team.", next: "a12", requires: ["bucket-named"], relationships: [{ character: "bucket", min: 1 }], addFlags: ["bucket-channel"] },
         ],
       },
       a12: {
@@ -885,6 +894,7 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
     subtitle: "It records memories instead of scores, including one from tomorrow.",
     teaser: "Mara has half a token. Eli is outside taking notes. Investigator Six has already solved the case, allegedly.",
     image: "story-mystery-memory-cabinet.webp",
+    imageAlt: "An archive workshop where an impossible cabinet opens into amber, cyan, and purple evidence rooms.",
     castImage: "story-mystery-cast-v2.webp",
     castAlt: "Original fictional cast: archivist Mara Ibarra examines half a brass token, Eli Cho watches from the doorway, and Investigator Six appears in the glass.",
     accent: "#ffbf57",
@@ -1133,7 +1143,7 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
         ],
         callbacks: [
           { label: "The join had witnesses", requires: ["joined-observed"], body: ["Both notebooks record the same impossible detail: for three seconds, the complete token had three halves."] },
-          { label: "The clean answer was chosen early", requires: ["accepted-clean"], body: ["The cabinet has already removed the amber door from its summary. You remember tape moving in warm light. Eli remembers your face when it spoke."] },
+          { label: "Six spoke before the join", requires: ["six-spoke"], body: ["Six's recorded account remains open beside the cabinet's three histories. The machine labels it redundant. Mara labels that an opinion."] },
         ],
         choices: [
           { label: "Publish all accounts with their sources", consequence: "Make disagreement navigable instead of invisible.", next: "m12", addFlags: ["kept-versions", "published-sources"] },

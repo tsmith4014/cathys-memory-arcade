@@ -8,6 +8,7 @@ import {
   type StoryDefinition,
   type StoryStateView,
 } from "./stories";
+import { STORY_SCENES, getStoryScene } from "./storyScenes";
 
 type CompletedPath = {
   ending: string;
@@ -17,6 +18,28 @@ type CompletedPath = {
 };
 
 describe("branching story catalog", () => {
+  it("gives every node a concise, art-directed screen scene", () => {
+    for (const story of STORY_DEFINITIONS) {
+      expect(Object.keys(STORY_SCENES[story.id]).sort()).toEqual(Object.keys(story.nodes).sort());
+
+      const scenes = Object.keys(story.nodes).map((nodeId) => getStoryScene(story.id, nodeId));
+      for (const [nodeId, node] of Object.entries(story.nodes)) {
+        const scene = getStoryScene(story.id, nodeId);
+        const wordCount = scene.text.trim().split(/\s+/).length;
+
+        expect(scene.title.length, `${story.id}:${node.id} screen title is too long`).toBeLessThanOrEqual(28);
+        expect(wordCount, `${story.id}:${node.id} screen text is too thin`).toBeGreaterThanOrEqual(20);
+        expect(wordCount, `${story.id}:${node.id} screen text obscures the art`).toBeLessThanOrEqual(45);
+        expect(["world", "cast"]).toContain(scene.art);
+      }
+
+      expect(scenes.some((scene) => scene.art === "world")).toBe(true);
+      expect(scenes.some((scene) => scene.art === "cast")).toBe(true);
+      expect(scenes.filter((scene) => scene.expanded).length).toBeGreaterThanOrEqual(2);
+      expect(scenes.filter((scene) => scene.expanded).length).toBeLessThanOrEqual(3);
+    }
+  });
+
   it("keeps every story path connected to a real scene", () => {
     for (const story of STORY_DEFINITIONS) {
       expect(story.nodes[story.start]).toBeDefined();
@@ -115,6 +138,27 @@ describe("branching story catalog", () => {
     }
   });
 
+  it("keeps every authored choice and callback reachable in a real playthrough", () => {
+    for (const story of STORY_DEFINITIONS) {
+      const statesByNode = reachableStatesByNode(story);
+
+      for (const node of Object.values(story.nodes)) {
+        const states = statesByNode.get(node.id) ?? [];
+        expect(states.length, `${story.id}:${node.id} has no reachable state`).toBeGreaterThan(0);
+
+        for (const choice of node.choices) {
+          const reachable = states.some((state) => availableStoryChoices([choice], state).length === 1);
+          expect(reachable, `${story.id}:${node.id} choice \"${choice.label}\" is unreachable`).toBe(true);
+        }
+
+        for (const callback of node.callbacks ?? []) {
+          const reachable = states.some((state) => visibleStoryCallbacks([callback], state).length === 1);
+          expect(reachable, `${story.id}:${node.id} callback \"${callback.label}\" is unreachable`).toBe(true);
+        }
+      }
+    }
+  });
+
   it("delivers seven-decision runs with callbacks and reachable endings", () => {
     for (const story of STORY_DEFINITIONS) {
       const paths = exploreStory(story);
@@ -149,9 +193,16 @@ describe("branching story catalog", () => {
 
   it("keeps transitional scenes honest about what the player actually did", () => {
     const horror = STORY_DEFINITIONS[0];
+    const action = STORY_DEFINITIONS[1];
     const mystery = STORY_DEFINITIONS[2];
+    const railEntries = incomingChoices(action, "a7");
+    const broadcastEntries = incomingChoices(action, "a11");
 
     expect(horror.nodes.h7.choices.find((choice) => choice.label === "Promise to get him out")?.next).toBe("h10");
+    expect(railEntries.length).toBeGreaterThan(0);
+    expect(railEntries.every((choice) => choice.addFlags?.includes("bucket-named"))).toBe(true);
+    expect(broadcastEntries.length).toBeGreaterThan(0);
+    expect(broadcastEntries.every((choice) => choice.addFlags?.includes("distributed-map"))).toBe(true);
     expect(mystery.nodes.m8.choices.find((choice) => choice.label === "Accept the clean solution")?.next).toBe("m11_clean");
     expect(mystery.nodes.m9.body.join(" ")).toMatch(/tries to merge/i);
     expect(mystery.nodes.m11_clean.body.join(" ")).not.toMatch(/halves align/i);
@@ -227,4 +278,32 @@ function exploreStory(story: StoryDefinition): CompletedPath[] {
 function callbackLabels(story: StoryDefinition, nodeId: string, flags: string[], inventory: string[]): string[] {
   const state = { ...initialState(story), flags, inventory };
   return visibleStoryCallbacks(story.nodes[nodeId].callbacks, state).map((callback) => callback.label);
+}
+
+function incomingChoices(story: StoryDefinition, nodeId: string): StoryChoice[] {
+  return Object.values(story.nodes).flatMap((node) => node.choices.filter((choice) => choice.next === nodeId));
+}
+
+function reachableStatesByNode(story: StoryDefinition): Map<string, StoryStateView[]> {
+  const statesByNode = new Map<string, StoryStateView[]>();
+  const pending = [{ nodeId: story.start, state: initialState(story) }];
+  const seen = new Set<string>();
+
+  while (pending.length) {
+    const current = pending.pop();
+    if (!current) continue;
+    const key = `${current.nodeId}|${current.state.flags.slice().sort().join(",")}|${current.state.inventory.slice().sort().join(",")}|${Object.entries(current.state.relationships).sort().map(([id, value]) => `${id}:${value}`).join(",")}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    statesByNode.set(current.nodeId, [...(statesByNode.get(current.nodeId) ?? []), current.state]);
+    const node = story.nodes[current.nodeId];
+    if (node.ending) continue;
+
+    for (const choice of availableStoryChoices(node.choices, current.state)) {
+      pending.push({ nodeId: choice.next, state: applyStoryChoice(current.state, choice) });
+    }
+  }
+
+  return statesByNode;
 }
