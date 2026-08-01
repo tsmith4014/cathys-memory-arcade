@@ -21,9 +21,19 @@ import {
   type GameStatus,
   type Particle,
 } from "./runtime";
+import {
+  DRAGON_REQUIRED_DEFEATS,
+  dragonIntentFor,
+  nextGridStep,
+  registerWardBlock,
+  subdivideMovement,
+  type DragonIntent,
+} from "./gameplayRules";
 
 type Cell = { column: number; row: number };
 type Guardian = {
+  id: string;
+  index: number;
   x: number;
   y: number;
   width: number;
@@ -34,8 +44,17 @@ type Guardian = {
   recoilX: number;
   recoilY: number;
   kind: "shade" | "knight";
+  intent: DragonIntent | null;
+  intentTimer: number;
+  actionCooldown: number;
+  beat: number;
+  targetX: number;
+  targetY: number;
+  shield: number;
+  stunned: number;
+  engaged: boolean;
 };
-type Trap = { column: number; row: number; triggered: boolean; cooldown: number };
+type Trap = { id: string; column: number; row: number; triggered: boolean; cooldown: number };
 type PlayerBolt = {
   x: number;
   y: number;
@@ -67,6 +86,12 @@ type DescentState = {
   bolts: PlayerBolt[];
   particles: Particle[];
   treasure: boolean;
+  defeated: number;
+  blockedWardContacts: Set<string>;
+  dialogue: { speaker: string; text: string; timer: number } | null;
+  encounterBeatShown: boolean;
+  returnBeatShown: boolean;
+  coreDenied: number;
   score: number;
   combo: number;
   comboTimer: number;
@@ -79,12 +104,14 @@ type DescentState = {
 export const DRAGONFIRE_TUNING = {
   wardDuration: 5,
   wardCooldown: 10,
-  timeLimit: 150,
+  timeLimit: 180,
   boltSpeed: 560,
-  guardianCount: 6,
-  trapCount: 6,
-  revealRadius: 3,
+  guardianCount: DRAGON_REQUIRED_DEFEATS,
+  trapCount: 4,
+  revealRadius: 4,
 } as const;
+
+const maximumLight = 6;
 
 const columns = 15;
 const rows = 9;
@@ -112,7 +139,7 @@ export function mountDragonfireDescent(canvas: HTMLCanvasElement, options: GameM
       score: state.score,
       status: state.status,
       message: state.status === "playing"
-        ? `${state.treasure ? "core secured // follow dawn" : "find the dragon core"} // ${state.player.health} light // ${wardMessage}`
+        ? `${state.treasure ? "core secured // follow dawn" : state.defeated < DRAGON_REQUIRED_DEFEATS ? `${state.defeated}/${DRAGON_REQUIRED_DEFEATS} seals broken` : "the core is open"} // ${state.player.health} light // ${wardMessage}`
         : undefined,
     };
     const serialized = JSON.stringify(hud);
@@ -135,17 +162,18 @@ export function mountDragonfireDescent(canvas: HTMLCanvasElement, options: GameM
     emitHud();
   };
 
-  const hurt = (x: number, y: number): void => {
-    if (state.player.invulnerable > 0 || state.player.ward > 0) {
-      if (state.player.ward > 0) {
+  const hurt = (x: number, y: number, contactId: string): void => {
+    if (state.player.ward > 0) {
+      if (registerWardBlock(state.blockedWardContacts, contactId)) {
         state.score += 25;
         burst(state.particles, state.player.x + 14, state.player.y + 14, "#52e7ef", 9, 150);
         sound.play(610, 0.08, "sine", 0.04, 820);
       }
       return;
     }
+    if (state.player.invulnerable > 0) return;
     state.player.health -= 1;
-    state.player.invulnerable = 1.5;
+    state.player.invulnerable = 2.1;
     state.shake = 9;
     const angle = Math.atan2(state.player.y - y, state.player.x - x);
     movePlayer(state, Math.cos(angle) * 26, Math.sin(angle) * 26);
@@ -179,18 +207,52 @@ export function mountDragonfireDescent(canvas: HTMLCanvasElement, options: GameM
     state.player.ward = DRAGONFIRE_TUNING.wardDuration;
     state.player.wardCooldown = DRAGONFIRE_TUNING.wardCooldown;
     state.player.invulnerable = Math.max(state.player.invulnerable, DRAGONFIRE_TUNING.wardDuration);
+    state.blockedWardContacts.clear();
     burst(state.particles, state.player.x + 14, state.player.y + 14, "#52e7ef", 34, 245);
     sound.chord([196, 293.66, 440, 587.33], 0.35, "sine", 0.05);
   };
 
   const hitGuardian = (guardian: Guardian, bolt: PlayerBolt): void => {
-    guardian.health -= 1;
+    guardian.engaged = true;
+    if (guardian.beat === 0 && !guardian.intent) {
+      guardian.flash = 0.14;
+      guardian.actionCooldown = 0;
+      state.score += 10;
+      burst(state.particles, bolt.x, bolt.y, "#52e7ef", 8, 120);
+      sound.play(540, 0.07, "triangle", 0.035, 330);
+      return;
+    }
+    if (guardian.shield > 0 || (guardian.intent === "guard" && guardian.intentTimer > 0)) {
+      guardian.flash = 0.12;
+      guardian.actionCooldown = Math.max(guardian.actionCooldown, 0.45);
+      state.score += 20;
+      burst(state.particles, bolt.x, bolt.y, "#ffbf57", 10, 145);
+      sound.play(820, 0.07, "triangle", 0.035, 410);
+      return;
+    }
+    const interruptedCharge = guardian.intent === "charge" && guardian.intentTimer > 0;
+    guardian.health -= interruptedCharge ? 2 : 1;
     guardian.flash = 0.16;
     guardian.recoilX = bolt.vx * 0.055;
     guardian.recoilY = bolt.vy * 0.055;
     state.combo += 1;
     state.comboTimer = 1.8;
-    state.score += guardian.health <= 0 ? 650 * Math.max(1, state.combo) : 125 * Math.max(1, state.combo);
+    state.score += guardian.health <= 0 ? 650 * Math.max(1, state.combo) : (interruptedCharge ? 300 : 125) * Math.max(1, state.combo);
+    if (interruptedCharge) {
+      guardian.intent = null;
+      guardian.stunned = 0.8;
+      guardian.actionCooldown = 1.2;
+      speak(state, "ROOK", "Nice interruption. Even ancient knights dislike being cut off mid-speech.", 3.2);
+    }
+    if (guardian.health <= 0) {
+      state.defeated += 1;
+      state.player.health = Math.min(maximumLight, state.player.health + 1);
+      if (state.defeated === DRAGON_REQUIRED_DEFEATS) {
+        speak(state, "ROOK", "Three seals down. The lock has reconsidered its career choices.", 4.2);
+      } else {
+        speak(state, "ROOK", "Seal broken. Take the light it dropped; we have another bad idea ahead.", 3.5);
+      }
+    }
     state.shake = guardian.kind === "knight" ? 6 : 3;
     burst(
       state.particles,
@@ -201,6 +263,41 @@ export function mountDragonfireDescent(canvas: HTMLCanvasElement, options: GameM
       guardian.health <= 0 ? 280 : 190,
     );
     sound.play(guardian.health <= 0 ? 98 : 145, 0.14, "square", 0.065, 62);
+  };
+
+  const beginDragonBeat = (guardian: Guardian): void => {
+    guardian.intent = dragonIntentFor(guardian.index, guardian.beat);
+    guardian.beat += 1;
+    guardian.intentTimer = guardian.intent === "guard" ? 1.35 : 1.15;
+    guardian.targetX = state.player.x + state.player.width / 2;
+    guardian.targetY = state.player.y + state.player.height / 2;
+    guardian.actionCooldown = 1.3;
+    if (!state.encounterBeatShown) {
+      state.encounterBeatShown = true;
+      speak(state, "ROOK", "Red charge: shoot. Gold guard: wait. Cyan flank: move. Very sporting of it to announce everything.", 5.2);
+    }
+    sound.play(guardian.intent === "charge" ? 130 : guardian.intent === "guard" ? 240 : 360, 0.16, "sawtooth", 0.04, 92);
+  };
+
+  const resolveDragonBeat = (guardian: Guardian): void => {
+    if (guardian.intent === "charge") {
+      const dx = guardian.targetX - (guardian.x + guardian.width / 2);
+      const dy = guardian.targetY - (guardian.y + guardian.height / 2);
+      const magnitude = Math.hypot(dx, dy) || 1;
+      moveGuardian(state, guardian, (dx / magnitude) * 104, (dy / magnitude) * 104);
+      if (intersects(state.player, guardian)) hurt(guardian.x, guardian.y, `${guardian.id}:charge:${guardian.beat}`);
+    } else if (guardian.intent === "guard") {
+      guardian.shield = 1.25;
+    } else if (guardian.intent === "flank") {
+      const dx = state.player.x - guardian.x;
+      const dy = state.player.y - guardian.y;
+      const magnitude = Math.hypot(dx, dy) || 1;
+      const side = guardian.index % 2 ? 1 : -1;
+      moveGuardian(state, guardian, (-dy / magnitude) * 58 * side, (dx / magnitude) * 58 * side);
+    }
+    guardian.intent = null;
+    guardian.intentTimer = 0;
+    guardian.actionCooldown = Math.max(guardian.actionCooldown, 1.1);
   };
 
   const updateBolts = (delta: number): void => {
@@ -235,6 +332,11 @@ export function mountDragonfireDescent(canvas: HTMLCanvasElement, options: GameM
     state.player.fireCooldown = Math.max(0, state.player.fireCooldown - delta);
     state.player.ward = Math.max(0, state.player.ward - delta);
     state.player.wardCooldown = Math.max(0, state.player.wardCooldown - delta);
+    state.coreDenied = Math.max(0, state.coreDenied - delta);
+    if (state.dialogue) {
+      state.dialogue.timer -= delta;
+      if (state.dialogue.timer <= 0) state.dialogue = null;
+    }
     state.comboTimer = Math.max(0, state.comboTimer - delta);
     state.shake = Math.max(0, state.shake - delta * 20);
     if (state.comboTimer <= 0) state.combo = 0;
@@ -261,37 +363,58 @@ export function mountDragonfireDescent(canvas: HTMLCanvasElement, options: GameM
       if (trap.column === playerCell.column && trap.row === playerCell.row && trap.cooldown <= 0) {
         trap.triggered = true;
         trap.cooldown = 2.2;
-        hurt(trap.column * tile + tile / 2, trap.row * tile + tile / 2);
+        hurt(trap.column * tile + tile / 2, trap.row * tile + tile / 2, trap.id);
       }
     }
 
     for (const guardian of state.guardians) {
       if (guardian.health <= 0) continue;
       guardian.flash = Math.max(0, guardian.flash - delta);
+      guardian.shield = Math.max(0, guardian.shield - delta);
+      guardian.stunned = Math.max(0, guardian.stunned - delta);
+      guardian.actionCooldown = Math.max(0, guardian.actionCooldown - delta);
       if (Math.abs(guardian.recoilX) > 0.5 || Math.abs(guardian.recoilY) > 0.5) {
         moveGuardian(state, guardian, guardian.recoilX * delta, guardian.recoilY * delta);
         guardian.recoilX *= Math.pow(0.001, delta);
         guardian.recoilY *= Math.pow(0.001, delta);
       }
       const guardianCell = cellAt(guardian.x + guardian.width / 2, guardian.y + guardian.height / 2);
-      if (!state.revealed.has(keyOf(guardianCell))) continue;
       const dx = state.player.x - guardian.x;
       const dy = state.player.y - guardian.y;
       const distance = Math.hypot(dx, dy) || 1;
-      if (distance < 235) {
-        const speedMultiplier = state.treasure ? 1.12 : 1;
-        moveGuardian(state, guardian, (dx / distance) * guardian.speed * speedMultiplier * delta, (dy / distance) * guardian.speed * speedMultiplier * delta);
+      if (!guardian.engaged && state.revealed.has(keyOf(guardianCell)) && distance < 280) guardian.engaged = true;
+      if (!guardian.engaged || guardian.stunned > 0) continue;
+      if (guardian.intent) {
+        guardian.intentTimer = Math.max(0, guardian.intentTimer - delta);
+        if (guardian.intentTimer <= 0) resolveDragonBeat(guardian);
+      } else if (guardian.actionCooldown <= 0 && distance < 190) {
+        beginDragonBeat(guardian);
+      } else if (distance < 330) {
+        const speedMultiplier = state.treasure ? 1.1 : 1;
+        moveGuardianAlongMaze(state, guardian, guardian.speed * speedMultiplier * delta);
       }
-      if (intersects(state.player, guardian)) hurt(guardian.x + guardian.width / 2, guardian.y + guardian.height / 2);
+      if (intersects(state.player, guardian)) hurt(guardian.x + guardian.width / 2, guardian.y + guardian.height / 2, guardian.id);
     }
     state.guardians = state.guardians.filter((guardian) => guardian.health > 0);
 
     if (!state.treasure && playerCell.column === hoardCell.column && playerCell.row === hoardCell.row) {
-      state.treasure = true;
-      state.score += 3000;
-      state.time += 18;
-      burst(state.particles, state.player.x + 14, state.player.y + 14, "#ffbf57", 52, 310);
-      sound.chord([196, 246.94, 293.66, 392], 0.48, "square", 0.055);
+      if (state.defeated >= DRAGON_REQUIRED_DEFEATS) {
+        state.treasure = true;
+        state.score += 3000;
+        state.time += 18;
+        speak(state, "ROOK", "There it is: a sunrise with terrible indoor manners. Let us take it outside.", 5);
+        burst(state.particles, state.player.x + 14, state.player.y + 14, "#ffbf57", 52, 310);
+        sound.chord([196, 246.94, 293.66, 392], 0.48, "square", 0.055);
+      } else if (state.coreDenied <= 0) {
+        state.coreDenied = 2.5;
+        speak(state, "ROOK", `${DRAGON_REQUIRED_DEFEATS - state.defeated} seal${DRAGON_REQUIRED_DEFEATS - state.defeated === 1 ? "" : "s"} still lit. The core is stubborn, not subtle.`, 3.8);
+      }
+    }
+
+    const distanceHome = Math.abs(playerCell.column - exitCell.column) + Math.abs(playerCell.row - exitCell.row);
+    if (state.treasure && distanceHome <= 4 && !state.returnBeatShown) {
+      state.returnBeatShown = true;
+      speak(state, "ROOK", "Home is close. Naturally, this is when the floor gets opinions.", 4.2);
     }
 
     if (state.treasure && playerCell.column === exitCell.column && playerCell.row === exitCell.row) {
@@ -314,23 +437,29 @@ export function mountDragonfireDescent(canvas: HTMLCanvasElement, options: GameM
     context.save();
     context.translate(mapX, mapY);
     drawMaze(context, state);
+    drawFog(context, state);
     for (const trap of state.traps) drawTrap(context, trap, state.revealed);
-    if (!state.treasure) drawHoard(context, state.revealed, state.elapsed);
+    if (!state.treasure) drawHoard(context, state.revealed, state.elapsed, state.defeated);
     drawExit(context, state.treasure, state.revealed, state.elapsed);
     for (const guardian of state.guardians) drawGuardian(context, guardian, state.revealed);
     drawBolts(context, state.bolts);
     drawPlayer(context, state);
     if (state.treasure) drawHomeCompass(context, state);
-    drawFog(context, state);
     drawParticles(context, state.particles);
     context.restore();
     context.restore();
     drawScreenFinish(context, "#ff6f61");
+    if (state.dialogue) drawDialogue(context, state.dialogue);
 
     context.fillStyle = "rgba(2,7,11,0.78)";
     context.fillRect(18, 18, 924, 58);
     drawPixelText(context, `SCORE ${String(state.score).padStart(6, "0")}`, 34, 33, 17, "#ffbf57");
-    drawPixelText(context, state.treasure ? "FOLLOW THE DAWN SIGNAL" : "FIND THE DRAGON CORE", 480, 33, 16, state.treasure ? "#8be58e" : "#ff6f61", "center");
+    const mission = state.treasure
+      ? "FOLLOW THE DAWN SIGNAL"
+      : state.defeated < DRAGON_REQUIRED_DEFEATS
+        ? `BREAK THE CORE SEALS ${state.defeated}/${DRAGON_REQUIRED_DEFEATS}`
+        : "THE CORE CHAMBER IS OPEN";
+    drawPixelText(context, mission, 480, 33, 16, state.treasure ? "#8be58e" : state.defeated >= DRAGON_REQUIRED_DEFEATS ? "#ffbf57" : "#ff6f61", "center");
     drawPixelText(context, `TIME ${Math.ceil(state.time)}`, 900, 33, 17, "#52e7ef", "right");
     const wardCopy = state.player.ward > 0
       ? `WARD ACTIVE ${state.player.ward.toFixed(1)}S`
@@ -338,12 +467,13 @@ export function mountDragonfireDescent(canvas: HTMLCanvasElement, options: GameM
         ? "WARD READY // SHIFT"
         : `WARD RECHARGE ${state.player.wardCooldown.toFixed(1)}S`;
     drawPixelText(context, wardCopy, 34, 82, 13, state.player.ward > 0 ? "#eaf6f2" : state.player.wardCooldown <= 0 ? "#52e7ef" : "#708990");
-    drawPixelText(context, `LIGHT ${"<".repeat(state.player.health)}${".".repeat(5 - state.player.health)}`, 900, 82, 13, state.player.health > 2 ? "#8be58e" : "#ff6f61", "right");
+    drawPixelText(context, `LIGHT ${"<".repeat(state.player.health)}${".".repeat(maximumLight - state.player.health)}`, 900, 82, 13, state.player.health > 2 ? "#8be58e" : "#ff6f61", "right");
     if (state.combo > 1 && state.comboTimer > 0) drawPixelText(context, `${state.combo}X BOLT CHAIN`, 480, 82, 14, "#ef78ff", "center");
+    drawActiveDragonBeat(context, state.guardians);
 
     if (state.status === "paused") drawOverlay(context, "PAUSED", "THE CITADEL IS HOLDING ITS BREATH", "#52e7ef");
     if (state.status === "won") drawOverlay(context, "CORE RETURNED TO DAWN", `FINAL SCORE ${state.score}`, "#ffbf57");
-    if (state.status === "lost") drawOverlay(context, "THE LIGHT WENT OUT", state.treasure ? "THE DAWN GATE WAS CLOSE" : "THE CORE STILL BURNS", "#ff6f61");
+    if (state.status === "lost") drawOverlay(context, "THE LIGHT WENT OUT", state.treasure ? "THE DAWN GATE WAS CLOSE" : `${state.defeated}/${DRAGON_REQUIRED_DEFEATS} SEALS BROKEN`, "#ff6f61");
   };
 
   const loop = new FrameLoop((delta) => {
@@ -383,7 +513,12 @@ function createState(): DescentState {
     }
   }
   const guardianCells = openCells.filter((_, index) => index % 8 === 3).slice(0, DRAGONFIRE_TUNING.guardianCount);
-  const trapCells = openCells.filter((_, index) => index % 9 === 5).slice(0, DRAGONFIRE_TUNING.trapCount);
+  const occupied = new Set(guardianCells.map(keyOf));
+  const trapCells = openCells.filter((cell, index) => index % 9 === 5 && !occupied.has(keyOf(cell))).slice(0, DRAGONFIRE_TUNING.trapCount);
+  for (const cell of openCells) {
+    if (trapCells.length >= DRAGONFIRE_TUNING.trapCount) break;
+    if (!occupied.has(keyOf(cell)) && !trapCells.some((trap) => keyOf(trap) === keyOf(cell))) trapCells.push(cell);
+  }
   const start = centerOf(exitCell);
   const state: DescentState = {
     player: {
@@ -391,7 +526,7 @@ function createState(): DescentState {
       y: start.y - 14,
       width: 28,
       height: 28,
-      health: 5,
+      health: maximumLight,
       facingX: 1,
       facingY: 0,
       invulnerable: 0,
@@ -405,6 +540,8 @@ function createState(): DescentState {
       const center = centerOf(cell);
       const kind = index % 3 === 2 ? "knight" : "shade";
       return {
+        id: `guardian-${index}`,
+        index,
         x: center.x - (kind === "knight" ? 18 : 14),
         y: center.y - (kind === "knight" ? 18 : 14),
         width: kind === "knight" ? 36 : 28,
@@ -415,12 +552,27 @@ function createState(): DescentState {
         recoilX: 0,
         recoilY: 0,
         kind,
+        intent: null,
+        intentTimer: 0,
+        actionCooldown: 1.35 + index * 0.2,
+        beat: 0,
+        targetX: center.x,
+        targetY: center.y,
+        shield: 0,
+        stunned: 0,
+        engaged: false,
       };
     }),
-    traps: trapCells.map((cell) => ({ ...cell, triggered: false, cooldown: 0 })),
+    traps: trapCells.map((cell) => ({ ...cell, id: `trap-${cell.column}:${cell.row}`, triggered: false, cooldown: 0 })),
     bolts: [],
     particles: [],
     treasure: false,
+    defeated: 0,
+    blockedWardContacts: new Set<string>(),
+    dialogue: { speaker: "ROOK", text: "Three guardians chained the dawn-core. They seemed very proud of the lock.", timer: 5 },
+    encounterBeatShown: false,
+    returnBeatShown: false,
+    coreDenied: 0,
     score: 0,
     combo: 0,
     comboTimer: 0,
@@ -476,8 +628,25 @@ function movePlayer(state: DescentState, dx: number, dy: number): void {
 }
 
 function moveGuardian(state: DescentState, guardian: Guardian, dx: number, dy: number): void {
-  if (!collidesWithMaze(state.maze, guardian.x + dx, guardian.y, guardian.width, guardian.height)) guardian.x += dx;
-  if (!collidesWithMaze(state.maze, guardian.x, guardian.y + dy, guardian.width, guardian.height)) guardian.y += dy;
+  for (const step of subdivideMovement(dx, dy, tile / 4)) {
+    if (!collidesWithMaze(state.maze, guardian.x + step.x, guardian.y, guardian.width, guardian.height)) guardian.x += step.x;
+    if (!collidesWithMaze(state.maze, guardian.x, guardian.y + step.y, guardian.width, guardian.height)) guardian.y += step.y;
+  }
+}
+
+function moveGuardianAlongMaze(state: DescentState, guardian: Guardian, distance: number): void {
+  const current = cellAt(guardian.x + guardian.width / 2, guardian.y + guardian.height / 2);
+  const target = cellAt(state.player.x + state.player.width / 2, state.player.y + state.player.height / 2);
+  const step = nextGridStep(state.maze, current, target);
+  const destination = centerOf(step);
+  const dx = destination.x - (guardian.x + guardian.width / 2);
+  const dy = destination.y - (guardian.y + guardian.height / 2);
+  const magnitude = Math.hypot(dx, dy) || 1;
+  moveGuardian(state, guardian, (dx / magnitude) * distance, (dy / magnitude) * distance);
+}
+
+function speak(state: DescentState, speaker: string, text: string, timer: number): void {
+  state.dialogue = { speaker, text, timer };
 }
 
 function collidesWithMaze(maze: boolean[][], x: number, y: number, width: number, height: number): boolean {
@@ -492,7 +661,10 @@ function revealAroundPlayer(state: DescentState): void {
   const center = cellAt(state.player.x + state.player.width / 2, state.player.y + state.player.height / 2);
   for (let row = center.row - DRAGONFIRE_TUNING.revealRadius; row <= center.row + DRAGONFIRE_TUNING.revealRadius; row += 1) {
     for (let column = center.column - DRAGONFIRE_TUNING.revealRadius; column <= center.column + DRAGONFIRE_TUNING.revealRadius; column += 1) {
-      if (row >= 0 && row < rows && column >= 0 && column < columns) state.revealed.add(keyOf({ column, row }));
+      const distance = Math.abs(column - center.column) + Math.abs(row - center.row);
+      if (distance <= DRAGONFIRE_TUNING.revealRadius && row >= 0 && row < rows && column >= 0 && column < columns) {
+        state.revealed.add(keyOf({ column, row }));
+      }
     }
   }
 }
@@ -517,7 +689,7 @@ function drawBackdrop(context: CanvasRenderingContext2D, state: DescentState, ba
   context.fillStyle = gradient;
   context.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
   const drift = Math.sin(state.elapsed * 0.08) * 0.28;
-  drawGameBackdrop(context, backdrop, 0.86, drift);
+  drawGameBackdrop(context, backdrop, 0.92, drift);
   const atmosphere = context.createLinearGradient(0, 0, GAME_WIDTH, 0);
   atmosphere.addColorStop(0, `rgba(82,231,239,${0.08 + Math.sin(state.elapsed * 0.9) * 0.018})`);
   atmosphere.addColorStop(0.46, "rgba(2,4,8,0.08)");
@@ -533,20 +705,62 @@ function drawBackdrop(context: CanvasRenderingContext2D, state: DescentState, ba
     context.fillRect(x, y, size, size);
   }
   context.globalAlpha = 1;
+  const floorLight = context.createLinearGradient(0, 300, 0, GAME_HEIGHT);
+  floorLight.addColorStop(0, "rgba(255,151,73,0)");
+  floorLight.addColorStop(1, "rgba(255,151,73,0.12)");
+  context.fillStyle = floorLight;
+  context.beginPath();
+  context.moveTo(360, 285);
+  context.lineTo(600, 285);
+  context.lineTo(820, GAME_HEIGHT);
+  context.lineTo(140, GAME_HEIGHT);
+  context.closePath();
+  context.fill();
+  for (const side of [-1, 1]) {
+    const x = side < 0 ? 68 : GAME_WIDTH - 102;
+    context.fillStyle = "rgba(3,8,13,0.72)";
+    context.fillRect(x, 88, 34, 388);
+    context.fillStyle = side < 0 ? "rgba(82,231,239,0.1)" : "rgba(255,111,97,0.11)";
+    context.fillRect(x + (side < 0 ? 26 : 0), 88, 8, 388);
+  }
 }
 
 function drawMaze(context: CanvasRenderingContext2D, state: DescentState): void {
-  context.fillStyle = "rgba(3, 8, 12, 0.16)";
+  context.fillStyle = "rgba(3, 8, 12, 0.07)";
   context.fillRect(0, 0, columns * tile, rows * tile);
   for (let row = 0; row < rows; row += 1) {
     for (let column = 0; column < columns; column += 1) {
       if (!state.maze[row][column]) continue;
+      const visible = [
+        { column, row },
+        { column: column + 1, row },
+        { column: column - 1, row },
+        { column, row: row + 1 },
+        { column, row: row - 1 },
+      ].some((cell) => state.revealed.has(keyOf(cell)));
+      if (!visible) continue;
       const x = column * tile;
       const y = row * tile;
       const northOpen = row > 0 && !state.maze[row - 1][column];
       const westOpen = column > 0 && !state.maze[row][column - 1];
-      context.fillStyle = "rgba(10, 20, 27, 0.72)";
-      context.fillRect(x - 1, y - 1, tile + 2, tile + 2);
+      context.fillStyle = "rgba(8, 17, 23, 0.58)";
+      context.fillRect(x + 3, y + 7, tile - 5, tile - 7);
+      context.fillStyle = "rgba(38, 54, 59, 0.58)";
+      context.beginPath();
+      context.moveTo(x + 3, y + 7);
+      context.lineTo(x + 10, y);
+      context.lineTo(x + tile, y);
+      context.lineTo(x + tile - 2, y + 7);
+      context.closePath();
+      context.fill();
+      context.fillStyle = "rgba(1, 5, 8, 0.52)";
+      context.beginPath();
+      context.moveTo(x + tile - 2, y + 7);
+      context.lineTo(x + tile, y);
+      context.lineTo(x + tile, y + tile - 8);
+      context.lineTo(x + tile - 2, y + tile);
+      context.closePath();
+      context.fill();
       if (northOpen) {
         context.fillStyle = "rgba(82, 231, 239, 0.14)";
         context.fillRect(x + 5, y, tile - 10, 3);
@@ -572,7 +786,7 @@ function drawTrap(context: CanvasRenderingContext2D, trap: Trap, revealed: Set<s
   if (!revealed.has(keyOf(trap))) return;
   const x = trap.column * tile;
   const y = trap.row * tile;
-  context.fillStyle = trap.triggered ? "#ff6f61" : "rgba(107, 61, 66, 0.72)";
+  context.fillStyle = trap.triggered && trap.cooldown > 1.45 ? "#ff6f61" : "rgba(107, 61, 66, 0.62)";
   for (let offset = 8; offset < tile - 5; offset += 10) {
     context.beginPath();
     context.moveTo(x + offset, y + tile - 7);
@@ -582,7 +796,7 @@ function drawTrap(context: CanvasRenderingContext2D, trap: Trap, revealed: Set<s
   }
 }
 
-function drawHoard(context: CanvasRenderingContext2D, revealed: Set<string>, elapsed: number): void {
+function drawHoard(context: CanvasRenderingContext2D, revealed: Set<string>, elapsed: number, defeated: number): void {
   if (!revealed.has(keyOf(hoardCell))) return;
   const center = centerOf(hoardCell);
   const pulse = 30 + Math.sin(elapsed * 4) * 6;
@@ -607,6 +821,15 @@ function drawHoard(context: CanvasRenderingContext2D, revealed: Set<string>, ela
   context.fill();
   context.fillStyle = "#ff6f61";
   context.fillRect(-5, -5, 10, 10);
+  if (defeated < DRAGON_REQUIRED_DEFEATS) {
+    context.strokeStyle = "rgba(255,111,97,0.88)";
+    context.lineWidth = 3;
+    for (let seal = 0; seal < DRAGON_REQUIRED_DEFEATS - defeated; seal += 1) {
+      context.beginPath();
+      context.arc(0, 0, 24 + seal * 7, elapsed * 0.4 + seal, Math.PI * 1.35 + elapsed * 0.4 + seal);
+      context.stroke();
+    }
+  }
   context.restore();
 }
 
@@ -629,6 +852,17 @@ function drawGuardian(context: CanvasRenderingContext2D, guardian: Guardian, rev
   const cell = cellAt(guardian.x + guardian.width / 2, guardian.y + guardian.height / 2);
   if (!revealed.has(keyOf(cell))) return;
   const tone = guardian.kind === "knight" ? "#ff6f61" : "#ef78ff";
+  context.fillStyle = "rgba(0,0,0,0.42)";
+  context.beginPath();
+  context.ellipse(guardian.x + guardian.width / 2 + 5, guardian.y + guardian.height + 7, guardian.width * 0.62, 8, 0, 0, Math.PI * 2);
+  context.fill();
+  if (guardian.shield > 0 || guardian.intent === "guard") {
+    context.strokeStyle = "rgba(255,191,87,0.8)";
+    context.lineWidth = 3;
+    context.beginPath();
+    context.arc(guardian.x + guardian.width / 2, guardian.y + guardian.height / 2, guardian.width * 0.76, 0, Math.PI * 2);
+    context.stroke();
+  }
   context.fillStyle = guardian.flash > 0 ? "#eaf6f2" : "rgba(4, 9, 14, 0.94)";
   context.beginPath();
   context.roundRect(guardian.x, guardian.y, guardian.width, guardian.height, guardian.kind === "knight" ? 4 : 12);
@@ -642,12 +876,51 @@ function drawGuardian(context: CanvasRenderingContext2D, guardian: Guardian, rev
   context.fill();
   context.fillStyle = "rgba(234,246,242,0.8)";
   for (let pip = 0; pip < guardian.health; pip += 1) context.fillRect(guardian.x + 5 + pip * 7, guardian.y - 7, 4, 3);
+  if (guardian.intent) {
+    const intentTone = guardian.intent === "charge" ? "#ff6f61" : guardian.intent === "guard" ? "#ffbf57" : "#52e7ef";
+    const targetAngle = Math.atan2(guardian.targetY - (guardian.y + guardian.height / 2), guardian.targetX - (guardian.x + guardian.width / 2));
+    context.save();
+    context.setLineDash([6, 6]);
+    context.strokeStyle = intentTone;
+    context.globalAlpha = 0.48 + Math.sin(guardian.intentTimer * 18) * 0.16;
+    context.beginPath();
+    context.moveTo(guardian.x + guardian.width / 2, guardian.y + guardian.height / 2);
+    context.lineTo(
+      guardian.x + guardian.width / 2 + Math.cos(targetAngle) * 78,
+      guardian.y + guardian.height / 2 + Math.sin(targetAngle) * 78,
+    );
+    context.stroke();
+    context.restore();
+    const response = guardian.intent === "charge" ? "BOLT" : guardian.intent === "guard" ? "WAIT" : "MOVE";
+    drawPixelText(context, `${guardian.intent.toUpperCase()} > ${response}`, guardian.x + guardian.width / 2, guardian.y - 25, 10, intentTone, "center");
+  }
+}
+
+function drawActiveDragonBeat(context: CanvasRenderingContext2D, guardians: Guardian[]): void {
+  const guardian = guardians.find((candidate) => candidate.intent && candidate.intentTimer > 0);
+  if (!guardian?.intent) return;
+  const tone = guardian.intent === "charge" ? "#ff6f61" : guardian.intent === "guard" ? "#ffbf57" : "#52e7ef";
+  const response = guardian.intent === "charge" ? "FIRE NOW" : guardian.intent === "guard" ? "HOLD FIRE" : "KEEP MOVING";
+  context.fillStyle = "rgba(2,7,11,0.88)";
+  context.fillRect(332, 101, 296, 44);
+  context.strokeStyle = tone;
+  context.lineWidth = 2;
+  context.strokeRect(332, 101, 296, 44);
+  drawPixelText(context, `DRAGON BEAT // ${response}`, 480, 114, 14, tone, "center");
 }
 
 function drawBolts(context: CanvasRenderingContext2D, bolts: PlayerBolt[]): void {
   context.save();
   context.globalCompositeOperation = "lighter";
   for (const bolt of bolts) {
+    const light = context.createRadialGradient(bolt.x, bolt.y, 2, bolt.x, bolt.y, 42);
+    light.addColorStop(0, "rgba(234,246,242,0.44)");
+    light.addColorStop(0.35, "rgba(82,231,239,0.2)");
+    light.addColorStop(1, "rgba(82,231,239,0)");
+    context.fillStyle = light;
+    context.beginPath();
+    context.arc(bolt.x, bolt.y, 42, 0, Math.PI * 2);
+    context.fill();
     const gradient = context.createLinearGradient(bolt.previousX, bolt.previousY, bolt.x, bolt.y);
     gradient.addColorStop(0, "rgba(82, 231, 239, 0)");
     gradient.addColorStop(1, "rgba(234, 246, 242, 0.96)");
@@ -729,8 +1002,37 @@ function drawFog(context: CanvasRenderingContext2D, state: DescentState): void {
   const radius = state.player.ward > 0 ? 205 : 170;
   const light = context.createRadialGradient(centerX, centerY, 45, centerX, centerY, radius);
   light.addColorStop(0, "rgba(0,0,0,0)");
-  light.addColorStop(0.52, "rgba(0,0,0,0.04)");
-  light.addColorStop(1, "rgba(0,0,0,0.72)");
+  light.addColorStop(0.48, "rgba(0,0,0,0.01)");
+  light.addColorStop(1, "rgba(0,0,0,0.52)");
   context.fillStyle = light;
   context.fillRect(0, 0, columns * tile, rows * tile);
+}
+
+function drawDialogue(context: CanvasRenderingContext2D, dialogue: NonNullable<DescentState["dialogue"]>): void {
+  context.fillStyle = "rgba(2,7,11,0.91)";
+  context.fillRect(172, 424, 616, 82);
+  context.strokeStyle = "rgba(255,191,87,0.58)";
+  context.lineWidth = 2;
+  context.strokeRect(172, 424, 616, 82);
+  drawPixelText(context, dialogue.speaker, 192, 442, 13, "#ffbf57");
+  const lines = wrapDialogue(context, dialogue.text, 560);
+  lines.slice(0, 2).forEach((line, index) => drawPixelText(context, line, 192, 464 + index * 17, 12, "#eaf6f2"));
+}
+
+function wrapDialogue(context: CanvasRenderingContext2D, copy: string, width: number): string[] {
+  context.save();
+  context.font = "700 12px ui-monospace, SFMono-Regular, Menlo, monospace";
+  const lines: string[] = [];
+  let line = "";
+  for (const word of copy.split(" ")) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (context.measureText(candidate).width <= width) line = candidate;
+    else {
+      lines.push(line);
+      line = word;
+    }
+  }
+  if (line) lines.push(line);
+  context.restore();
+  return lines;
 }

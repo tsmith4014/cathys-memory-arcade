@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { vi } from "vitest";
 import App from "./App";
 
 describe("Cathy's Memory Arcade", () => {
@@ -8,7 +9,51 @@ describe("Cathy's Memory Arcade", () => {
     render(<App />);
     expect(screen.getByRole("heading", { name: /cathy's memory arcade/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /insert two tokens/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /sound off/i })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: /jukebox off/i })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("turns two tokens into a full entrance ceremony before moving focus", () => {
+    vi.useFakeTimers();
+    const { container } = render(<App />);
+    const site = container.firstElementChild;
+    const entranceStatus = container.querySelector(".entry-status");
+    const tokenButton = screen.getByRole("button", { name: /insert two tokens/i });
+
+    fireEvent.click(tokenButton);
+    expect(site).toHaveClass("entry-token-one");
+    expect(tokenButton).toBeDisabled();
+    expect(entranceStatus).toHaveTextContent(/first token drops/i);
+
+    act(() => vi.advanceTimersByTime(620));
+    expect(site).toHaveClass("entry-token-two");
+    expect(entranceStatus).toHaveTextContent(/second token drops/i);
+
+    act(() => vi.advanceTimersByTime(540));
+    expect(site).toHaveClass("entry-free-play");
+    expect(entranceStatus).toHaveTextContent(/every cabinet is awake/i);
+
+    act(() => vi.advanceTimersByTime(940));
+    expect(site).toHaveClass("entry-complete");
+    expect(screen.getByRole("button", { name: /free play unlocked/i })).toBeEnabled();
+
+    act(() => vi.advanceTimersByTime(620));
+    expect(document.getElementById("lobby")).toHaveFocus();
+    vi.useRealTimers();
+  });
+
+  it("shortens the entrance ceremony when reduced motion is requested", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true }));
+    const { container } = render(<App />);
+
+    fireEvent.click(screen.getByRole("button", { name: /insert two tokens/i }));
+    act(() => vi.advanceTimersByTime(520));
+    act(() => vi.advanceTimersByTime(1));
+
+    expect(container.firstElementChild).toHaveClass("entry-complete");
+    expect(document.getElementById("lobby")).toHaveFocus();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   it("offers six original playable cabinets and a connected memory route", () => {
@@ -27,16 +72,29 @@ describe("Cathy's Memory Arcade", () => {
 
   it("documents the five-dollar unlimited-play timeline and exposes the jukebox", () => {
     render(<App />);
-    expect(screen.getByText("$5", { selector: ".ledger-display strong" })).toBeInTheDocument();
-    expect(screen.getByText(/all-you-can-play admission/i)).toBeInTheDocument();
-    expect(screen.getByText(/1986 \/\/ \$2.50 \/\/ two hours/i)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /room has a pulse now/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /five dollars was not pocket change/i })).toBeInTheDocument();
+    expect(screen.getByText("$5", { selector: ".admission-timeline strong" })).toBeInTheDocument();
+    expect(screen.getByText("$2.50", { selector: ".admission-timeline strong" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /pick a song. let the room breathe/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /power up the jukebox/i })).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByRole("button", { name: /mountain king/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /garden static/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /free play forever/i })).toBeInTheDocument();
-    expect(screen.getByText(/six arrangements build and break down/i)).toBeInTheDocument();
-    expect(screen.getByText(/forms up to 24 bars/i)).toBeInTheDocument();
+    expect(screen.getByText(/six songs live inside this jukebox/i)).toBeInTheDocument();
+    expect(screen.getByText(/long-form arrangements/i)).toBeInTheDocument();
+  });
+
+  it("shows each record's form before the listener powers up the jukebox", () => {
+    render(<App />);
+    const fillmoreForm = screen.getByRole("list", { name: /fillmore after dark arrangement/i });
+    expect(within(fillmoreForm).getByText("Intro")).toBeInTheDocument();
+    expect(within(fillmoreForm).getByText("Last light")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /moxie's midnight run/i }));
+    const moxieForm = screen.getByRole("list", { name: /moxie's midnight run arrangement/i });
+    expect(within(moxieForm).getByText("Slow bloom")).toBeInTheDocument();
+    expect(within(moxieForm).getByText("Bass drop")).toBeInTheDocument();
+    expect(within(moxieForm).getByText("Return")).toBeInTheDocument();
   });
 
   it("enters a branching story and persists its decision locally", () => {
@@ -45,9 +103,13 @@ describe("Cathy's Memory Arcade", () => {
     expect(horrorCard).not.toBeNull();
     fireEvent.click(within(horrorCard!).getByRole("button", { name: /enter story/i }));
     expect(screen.getByRole("heading", { name: /something finishes booting in the dark/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /turn back one page/i })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: /walk straight to the cabinet/i }));
     expect(screen.getByRole("heading", { name: /attract screen knows there should be two players/i })).toBeInTheDocument();
     expect(window.localStorage.getItem("cathy-arcade:story:horror")).toContain("\"nodeId\":\"h1\"");
+    fireEvent.click(screen.getByRole("button", { name: /turn back one page/i }));
+    expect(screen.getByRole("heading", { name: /something finishes booting in the dark/i })).toBeInTheDocument();
+    expect(screen.getByText(/tomorrow-dated token/i)).toBeInTheDocument();
   });
 
   it("uses the authorized family photograph and Catherine's program details", () => {
@@ -61,6 +123,6 @@ describe("Cathy's Memory Arcade", () => {
   it("changes the memory terminal response without a network request", () => {
     render(<App />);
     fireEvent.click(screen.getByRole("button", { name: /why ai/i }));
-    expect(screen.getByRole("status")).toHaveTextContent(/first week at code platoon/i);
+    expect(screen.getByText(/first week at code platoon/i)).toBeInTheDocument();
   });
 });

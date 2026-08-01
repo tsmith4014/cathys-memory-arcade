@@ -5,7 +5,7 @@ test("enters the arcade and exposes six playable cabinets", async ({ page }) => 
   await page.goto("./");
   await expect(page).toHaveTitle(/Cathy's Memory Arcade/);
   await expect(page.getByRole("button", { name: /insert two tokens/i })).toBeVisible();
-  await expect(page.getByRole("button", { name: /sound off/i })).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByRole("button", { name: /jukebox off/i })).toHaveAttribute("aria-pressed", "false");
   await page.getByRole("button", { name: /insert two tokens/i }).click();
   await expect(page.locator("#lobby")).toBeInViewport();
   await expect(page.getByRole("button", { name: /play skyline smash/i })).toBeVisible();
@@ -23,7 +23,8 @@ test("launches, pauses, and exits every game cabinet", async ({ page }) => {
   page.on("pageerror", (error) => runtimeErrors.push(error.message));
   await page.goto("./#lobby");
   for (const game of ["Skyline Smash", "Token Trail", "Dungeon Circuit", "Highrise Havoc", "Sunset Run", "Dragonfire Descent"]) {
-    await page.getByRole("button", { name: `Play ${game}` }).click();
+    const trigger = page.getByRole("button", { name: `Play ${game}` });
+    await trigger.click();
     await expect(page.getByRole("dialog", { name: game })).toBeVisible();
     await expect(page.getByRole("button", { name: /begin chapter/i })).toBeFocused();
     await page.getByRole("button", { name: /begin chapter/i }).click();
@@ -34,26 +35,63 @@ test("launches, pauses, and exits every game cabinet", async ({ page }) => {
     await expect(page.getByRole("button", { name: /resume/i })).toBeVisible();
     await page.getByRole("button", { name: `Close ${game}` }).click();
     await expect(page.getByRole("dialog", { name: game })).toBeHidden();
+    await expect(trigger).toBeFocused();
   }
   expect(runtimeErrors).toEqual([]);
 });
 
+test("held keyboard attacks repeat and blur releases the control", async ({ page }) => {
+  await page.goto("./#lobby");
+  await page.getByRole("button", { name: /play skyline smash/i }).click();
+  await page.getByRole("button", { name: /begin chapter/i }).click();
+  const score = page.locator(".game-stage-score strong");
+
+  await page.keyboard.down("Space");
+  await expect.poll(async () => Number(await score.textContent())).toBeGreaterThan(100);
+  await page.evaluate(() => window.dispatchEvent(new Event("blur")));
+  await page.waitForTimeout(100);
+  const releasedScore = Number(await score.textContent());
+  await page.waitForTimeout(750);
+  expect(Number(await score.textContent())).toBe(releasedScore);
+  await page.keyboard.up("Space");
+});
+
+test("on-screen action control can hold a real arcade attack", async ({ page, isMobile }) => {
+  test.skip(!isMobile, "mobile project only");
+  await page.goto("./#lobby");
+  await page.getByRole("button", { name: /play skyline smash/i }).click();
+  await page.getByRole("button", { name: /begin chapter/i }).click();
+  const action = page.locator(".touch-actions .action-primary");
+  await expect(action).toBeVisible();
+  const box = await action.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(420);
+  await page.mouse.up();
+  await expect.poll(async () => Number(await page.locator(".game-stage-score strong").textContent())).toBeGreaterThan(0);
+});
+
 test("shows the corrected admission timeline and jukebox credits", async ({ page }) => {
   await page.goto("./#memory-core");
-  await expect(page.locator(".ledger-display").first()).toContainText("1987");
-  await expect(page.locator(".ledger-display").first()).toContainText("$5");
-  await expect(page.locator(".ledger-prototype")).toContainText("1986 // $2.50 // two hours");
+  const fillmore = page.locator("article").filter({ hasText: "1986 // Fillmore" });
+  const boardwalk = page.locator("article").filter({ hasText: "1987 // Boardwalk" });
+  await expect(fillmore).toContainText("$2.50");
+  await expect(fillmore).toContainText("Two hours");
+  await expect(boardwalk).toContainText("$5");
+  await expect(boardwalk).toContainText("free play");
   await expect(page.getByText(/Edvard Grieg composition/i)).toBeVisible();
   await expect(page.locator(".jukebox-tracks button")).toHaveCount(6);
   await expect(page.getByRole("button", { name: /free play forever/i })).toBeVisible();
-  await expect(page.getByText(/six arrangements build and break down/i)).toBeVisible();
-  await expect(page.getByText(/forms up to 24 bars/i)).toBeVisible();
+  await expect(page.getByText(/six songs live inside this jukebox/i)).toBeVisible();
+  await expect(page.getByText(/long-form arrangements/i)).toBeVisible();
 });
 
 test("plays and restores a branching story file", async ({ page }) => {
   await page.goto("./#story-arcade");
   const horrorCard = page.locator(".story-card").filter({ hasText: "The Last Token" });
   await horrorCard.getByRole("button", { name: /enter story/i }).click();
+  await expect(page.locator(".story-copy")).toBeFocused();
   await expect(page.getByRole("heading", { name: /something finishes booting in the dark/i })).toBeVisible();
   await page.getByRole("button", { name: /walk straight to the cabinet/i }).click();
   await expect(page.getByRole("heading", { name: /attract screen knows there should be two players/i })).toBeVisible();
@@ -62,6 +100,23 @@ test("plays and restores a branching story file", async ({ page }) => {
   await expect(resumeCard).toContainText("save detected");
   await resumeCard.getByRole("button", { name: /resume story/i }).click();
   await expect(page.getByRole("heading", { name: /attract screen knows there should be two players/i })).toBeVisible();
+  await page.getByRole("button", { name: /story shelf/i }).click();
+  await expect(resumeCard.getByRole("button", { name: /resume story/i })).toBeFocused();
+});
+
+test("restores direct section links after the React page mounts", async ({ page }) => {
+  await page.goto("./#memory-route");
+  await expect(page.locator("#memory-route")).toBeInViewport();
+  const top = await page.locator("#memory-route").evaluate((element) => element.getBoundingClientRect().top);
+  expect(top).toBeGreaterThanOrEqual(60);
+});
+
+test("finishes the token ceremony quickly for reduced-motion visitors", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("./");
+  await page.getByRole("button", { name: /insert two tokens/i }).click();
+  await expect(page.locator(".site")).toHaveClass(/entry-complete/, { timeout: 1500 });
+  await expect(page.locator("#lobby")).toBeFocused();
 });
 
 test("opens a shared game URL directly in its cabinet", async ({ page }) => {
@@ -87,7 +142,7 @@ test("restores the six-chapter local save and unlocks the epilogue", async ({ pa
 test("changes the origin terminal locally", async ({ page }) => {
   await page.goto("./#origin-terminal");
   await page.getByRole("button", { name: /why ai/i }).click();
-  await expect(page.getByRole("status")).toContainText("first week at Code Platoon");
+  await expect(page.getByRole("status").filter({ hasText: "first week at Code Platoon" })).toContainText("first week at Code Platoon");
 });
 
 test("renders the authorized photo-booth memory and sourced life details", async ({ page }) => {
@@ -116,6 +171,10 @@ test("has no automatically detectable accessibility violations", async ({ page }
   await horrorCard.getByRole("button", { name: /enter story/i }).click();
   const storyResults = await new AxeBuilder({ page }).analyze();
   expect(storyResults.violations).toEqual([]);
+
+  await page.goto("./credits.html");
+  const creditsResults = await new AxeBuilder({ page }).analyze();
+  expect(creditsResults.violations).toEqual([]);
 });
 
 test("renders the mobile entrance without horizontal overflow", async ({ page, isMobile }) => {
@@ -124,4 +183,9 @@ test("renders the mobile entrance without horizontal overflow", async ({ page, i
   const dimensions = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
   expect(dimensions.scroll).toBeLessThanOrEqual(dimensions.client);
   await expect(page.getByRole("heading", { name: /cathy's memory arcade/i })).toBeVisible();
+  for (const hash of ["#lobby", "#memory-route", "#story-arcade", "#jukebox", "#memory-core", "#origin-terminal"]) {
+    await page.goto(`./${hash}`);
+    const sectionDimensions = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+    expect(sectionDimensions.scroll).toBeLessThanOrEqual(sectionDimensions.client);
+  }
 });

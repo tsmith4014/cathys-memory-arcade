@@ -21,6 +21,7 @@ import {
   type GameStatus,
   type Particle,
 } from "./runtime";
+import { moveWithObstacles, restoreHealth } from "./gameplayRules";
 
 type EnemyKind = "crawler" | "sentinel" | "warden";
 type Enemy = { x: number; y: number; width: number; height: number; health: number; maxHealth: number; speed: number; kind: EnemyKind; cooldown: number; flash: number };
@@ -41,8 +42,11 @@ type DungeonState = {
   comboTimer: number;
   status: GameStatus;
   roomBanner: number;
+  elapsed: number;
   shake: number;
 };
+
+const maximumCharge = 6;
 
 export function mountDungeonCircuit(canvas: HTMLCanvasElement, options: GameMountOptions): GameController {
   const context = prepareCanvas(canvas);
@@ -86,6 +90,7 @@ export function mountDungeonCircuit(canvas: HTMLCanvasElement, options: GameMoun
     state.player.dash = Math.max(0, state.player.dash - delta);
     state.player.dashCooldown = Math.max(0, state.player.dashCooldown - delta);
     state.roomBanner = Math.max(0, state.roomBanner - delta);
+    state.elapsed += delta;
     state.shake = Math.max(0, state.shake - delta * 18);
     state.comboTimer = Math.max(0, state.comboTimer - delta);
     if (state.comboTimer <= 0) state.combo = 0;
@@ -110,6 +115,9 @@ export function mountDungeonCircuit(canvas: HTMLCanvasElement, options: GameMoun
     state.player.vx = (horizontal / magnitude) * speed;
     state.player.vy = (vertical / magnitude) * speed;
     movePlayer(state, delta);
+    if (state.room === 1 && Math.hypot(state.player.x + 17 - GAME_WIDTH / 2, state.player.y + 17 - GAME_HEIGHT / 2) < 128) {
+      state.player.dashCooldown = Math.max(0, state.player.dashCooldown - delta * 1.4);
+    }
 
     updateEnemies(state, delta, sound);
     updateProjectiles(state, delta, sound);
@@ -128,7 +136,7 @@ export function mountDungeonCircuit(canvas: HTMLCanvasElement, options: GameMoun
       state.keyReady = false;
       state.keyTaken = true;
       state.score += 300;
-      state.player.health = Math.min(5, state.player.health + 1);
+      state.player.health = restoreHealth(state.player.health, maximumCharge);
       sound.chord([660, 830, 990], 0.18, "square", 0.045);
     }
 
@@ -165,7 +173,7 @@ export function mountDungeonCircuit(canvas: HTMLCanvasElement, options: GameMoun
           state.combo += 1;
           state.comboTimer = 2.6;
           state.score += 350 * state.combo;
-          if (state.combo % 4 === 0) state.player.health = Math.min(5, state.player.health + 1);
+          if (state.combo % 4 === 0) state.player.health = restoreHealth(state.player.health, maximumCharge);
           sound.chord([210 + state.combo * 22, 315 + state.combo * 24], 0.12, "square", 0.05);
         } else state.score += 85;
         state.shake = enemy.kind === "warden" ? 8 : 4;
@@ -179,8 +187,9 @@ export function mountDungeonCircuit(canvas: HTMLCanvasElement, options: GameMoun
   const render = (): void => {
     context.save();
     if (state.shake) context.translate((Math.random() - 0.5) * state.shake, (Math.random() - 0.5) * state.shake);
-    drawDungeon(context, state.room, state.obstacles, state.keyTaken, backdrop);
+    drawDungeon(context, state.room, state.obstacles, state.keyTaken, state.elapsed, backdrop);
     if (state.keyReady) drawCircuitKey(context);
+    for (const enemy of state.enemies) drawEnemyTelegraph(context, enemy, state.player);
     for (const enemy of state.enemies) drawEnemy(context, enemy);
     for (const projectile of state.projectiles) drawProjectile(context, projectile);
     drawPlayer(context, state);
@@ -191,10 +200,13 @@ export function mountDungeonCircuit(canvas: HTMLCanvasElement, options: GameMoun
     context.fillStyle = "rgba(2, 7, 11, 0.78)";
     context.fillRect(18, 18, 924, 54);
     drawPixelText(context, `SCORE ${String(state.score).padStart(6, "0")}`, 34, 33, 17, "#ffbf57");
-    drawPixelText(context, `CHARGE ${"+".repeat(state.player.health)}${".".repeat(6 - state.player.health)}`, 335, 33, 17, state.player.health > 1 ? "#8be58e" : "#ff6f61");
+    drawPixelText(context, `CHARGE ${"+".repeat(state.player.health)}${".".repeat(maximumCharge - state.player.health)}`, 335, 33, 17, state.player.health > 1 ? "#8be58e" : "#ff6f61");
     drawPixelText(context, `ROOM ${state.room + 1}/3`, 900, 33, 17, "#52e7ef", "right");
     if (state.combo > 1) drawPixelText(context, `CIRCUIT CHAIN x${state.combo}`, 480, 112, 17, "#ef78ff", "center");
     if (state.roomBanner > 0) drawPixelText(context, roomName(state.room), 480, 94, 24, "#eaf6f2", "center");
+    context.fillStyle = "rgba(2,7,11,0.72)";
+    context.fillRect(238, 478, 484, 32);
+    drawPixelText(context, roomRule(state.room), 480, 487, 12, "rgba(234,246,242,0.88)", "center");
 
     if (state.status === "paused") drawOverlay(context, "PAUSED", "THE CIRCUIT IS HOLDING", "#52e7ef");
     if (state.status === "won") drawOverlay(context, "CIRCUIT BROKEN", `FINAL SCORE ${state.score}`, "#8be58e");
@@ -239,6 +251,7 @@ function createState(): DungeonState {
     comboTimer: 0,
     status: "playing",
     roomBanner: 2,
+    elapsed: 0,
     shake: 0,
   };
   loadRoom(state, 0);
@@ -301,8 +314,15 @@ function updateEnemies(state: DungeonState, delta: number, sound: ArcadeSfx): vo
     const angle = Math.atan2(playerCenterY - centerY, playerCenterX - centerX);
     if (enemy.kind === "crawler" || enemy.kind === "warden") {
       const speed = enemy.speed * (enemy.kind === "warden" && enemy.health < enemy.maxHealth / 2 ? 1.5 : 1);
-      enemy.x += Math.cos(angle) * speed * delta;
-      enemy.y += Math.sin(angle) * speed * delta;
+      const moved = moveWithObstacles(
+        enemy,
+        Math.cos(angle) * speed * delta,
+        Math.sin(angle) * speed * delta,
+        state.obstacles,
+        { left: 28, right: GAME_WIDTH - 28, top: 92, bottom: GAME_HEIGHT - 28 },
+      );
+      enemy.x = moved.x;
+      enemy.y = moved.y;
     }
     if ((enemy.kind === "sentinel" || enemy.kind === "warden") && enemy.cooldown <= 0) {
       const spread = enemy.kind === "warden" ? [-0.32, 0, 0.32] : [0];
@@ -335,13 +355,20 @@ function hurtPlayer(state: DungeonState, sound: ArcadeSfx, x: number, y: number)
   state.player.invulnerable = 1.4;
   state.shake = 9;
   const angle = Math.atan2(state.player.y - y, state.player.x - x);
-  state.player.x = clamp(state.player.x + Math.cos(angle) * 35, 30, GAME_WIDTH - 65);
-  state.player.y = clamp(state.player.y + Math.sin(angle) * 35, 95, GAME_HEIGHT - 65);
+  const moved = moveWithObstacles(
+    state.player,
+    Math.cos(angle) * 35,
+    Math.sin(angle) * 35,
+    state.obstacles,
+    { left: 28, right: GAME_WIDTH - 28, top: 92, bottom: GAME_HEIGHT - 28 },
+  );
+  state.player.x = moved.x;
+  state.player.y = moved.y;
   burst(state.particles, state.player.x + 17, state.player.y + 17, "#ff6f61", 22, 250);
   sound.play(72, 0.22, "sawtooth", 0.1);
 }
 
-function drawDungeon(context: CanvasRenderingContext2D, room: number, obstacles: Obstacle[], doorOpen: boolean, backdrop: HTMLImageElement): void {
+function drawDungeon(context: CanvasRenderingContext2D, room: number, obstacles: Obstacle[], doorOpen: boolean, elapsed: number, backdrop: HTMLImageElement): void {
   const tones = ["#52e7ef", "#ef78ff", "#ff6f61"];
   const tone = tones[room];
   context.fillStyle = "#03080d";
@@ -368,12 +395,36 @@ function drawDungeon(context: CanvasRenderingContext2D, room: number, obstacles:
   context.lineWidth = 4;
   context.strokeRect(24, 82, GAME_WIDTH - 48, GAME_HEIGHT - 106);
   for (const obstacle of obstacles) {
+    context.fillStyle = "rgba(0,0,0,0.34)";
+    context.beginPath();
+    context.moveTo(obstacle.x + 10, obstacle.y + obstacle.height);
+    context.lineTo(obstacle.x + obstacle.width + 18, obstacle.y + obstacle.height + 15);
+    context.lineTo(obstacle.x + obstacle.width + 18, obstacle.y + obstacle.height + 23);
+    context.lineTo(obstacle.x + 10, obstacle.y + obstacle.height + 8);
+    context.closePath();
+    context.fill();
     context.fillStyle = "#0c1c27";
     context.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
     context.strokeStyle = `${tone}99`;
     context.strokeRect(obstacle.x + 4, obstacle.y + 4, obstacle.width - 8, obstacle.height - 8);
     context.fillStyle = `${tone}22`;
     context.fillRect(obstacle.x + 12, obstacle.y + 12, obstacle.width - 24, obstacle.height - 24);
+    context.fillStyle = `${tone}18`;
+    context.beginPath();
+    context.moveTo(obstacle.x + obstacle.width, obstacle.y + 8);
+    context.lineTo(obstacle.x + obstacle.width + 10, obstacle.y + 18);
+    context.lineTo(obstacle.x + obstacle.width + 10, obstacle.y + obstacle.height + 8);
+    context.lineTo(obstacle.x + obstacle.width, obstacle.y + obstacle.height);
+    context.closePath();
+    context.fill();
+  }
+  if (room === 1) {
+    const pulse = 112 + Math.sin(elapsed * 4) * 10;
+    context.strokeStyle = "rgba(82,231,239,0.4)";
+    context.lineWidth = 4;
+    context.beginPath();
+    context.arc(GAME_WIDTH / 2, GAME_HEIGHT / 2, pulse, 0, Math.PI * 2);
+    context.stroke();
   }
   context.fillStyle = doorOpen ? "#8be58e" : "#261923";
   context.fillRect(918, 216, 22, 108);
@@ -416,6 +467,21 @@ function drawEnemy(context: CanvasRenderingContext2D, enemy: Enemy): void {
   context.fillRect(enemy.x, enemy.y - 10, enemy.width * (enemy.health / enemy.maxHealth), 5);
 }
 
+function drawEnemyTelegraph(context: CanvasRenderingContext2D, enemy: Enemy, player: DungeonState["player"]): void {
+  if ((enemy.kind !== "sentinel" && enemy.kind !== "warden") || enemy.cooldown > 0.48 || enemy.cooldown <= 0) return;
+  const centerX = enemy.x + enemy.width / 2;
+  const centerY = enemy.y + enemy.height / 2;
+  context.save();
+  context.setLineDash([8, 7]);
+  context.strokeStyle = enemy.kind === "warden" ? "rgba(255,111,97,0.7)" : "rgba(82,231,239,0.58)";
+  context.lineWidth = enemy.kind === "warden" ? 3 : 2;
+  context.beginPath();
+  context.moveTo(centerX, centerY);
+  context.lineTo(player.x + player.width / 2, player.y + player.height / 2);
+  context.stroke();
+  context.restore();
+}
+
 function drawProjectile(context: CanvasRenderingContext2D, projectile: Projectile): void {
   context.fillStyle = "#ff6f61";
   context.fillRect(projectile.x - 5, projectile.y - 5, 10, 10);
@@ -447,4 +513,8 @@ function drawPlayer(context: CanvasRenderingContext2D, state: DungeonState): voi
 
 function roomName(room: number): string {
   return ["ROOM 01 // STATIC VAULT", "ROOM 02 // FALSE EXIT", "ROOM 03 // THE WARDEN"][room];
+}
+
+function roomRule(room: number): string {
+  return ["DASH THROUGH A STRIKE FOR HEAVY DAMAGE", "THE CYAN RING RECHARGES YOUR DASH", "THE WARDEN TELEGRAPHS BEFORE THE VOLLEY"][room];
 }

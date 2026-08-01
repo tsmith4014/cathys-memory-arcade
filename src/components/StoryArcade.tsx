@@ -1,29 +1,33 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import {
   STORY_DEFINITIONS,
+  applyStoryChoice,
+  availableStoryChoices,
   getStory,
+  visibleStoryCallbacks,
+  type StoryCharacter,
   type StoryChoice,
   type StoryDefinition,
   type StoryGenre,
-  type StoryStat,
+  type StoryStateView,
 } from "../data/stories";
+import "../story.css";
 
 type StoryHistory = {
   nodeId: string;
   title: string;
   choice: string;
+  snapshot?: StoryStateView;
 };
 
-type StorySession = {
+type StorySession = StoryStateView & {
+  version: 3;
   storyId: StoryGenre;
   nodeId: string;
-  stats: Record<StoryStat, number>;
-  flags: string[];
   history: StoryHistory[];
 };
 
 const savePrefix = "cathy-arcade:story:";
-const initialStats: Record<StoryStat, number> = { nerve: 50, momentum: 50, insight: 50 };
 
 export function StoryArcade() {
   const [session, setSession] = useState<StorySession | null>(null);
@@ -42,7 +46,7 @@ export function StoryArcade() {
   const enterStory = (definition: StoryDefinition): void => {
     const saved = readSession(definition);
     setSession(saved ?? freshSession(definition));
-    window.setTimeout(() => document.getElementById("story-stage")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+    focusStoryPage(50);
   };
 
   const restartStory = (): void => {
@@ -54,60 +58,64 @@ export function StoryArcade() {
     } catch {
       // Restart remains available even when storage is unavailable.
     }
+    focusStoryPage();
+  };
+
+  const returnToShelf = (): void => {
+    const storyId = story?.id;
+    setSession(null);
+    window.setTimeout(() => {
+      if (!storyId) return;
+      document.querySelector<HTMLButtonElement>(`[data-story-id="${storyId}"] button`)?.focus();
+    }, 30);
+  };
+
+  const turnBack = (): void => {
+    if (!session?.history.length) return;
+    const previousPage = session.history.at(-1);
+    if (!previousPage?.snapshot) return;
+    setSession({
+      ...session,
+      ...cloneStoryState(previousPage.snapshot),
+      nodeId: previousPage.nodeId,
+      history: session.history.slice(0, -1),
+    });
+    focusStoryPage();
   };
 
   const choose = (choice: StoryChoice): void => {
     if (!session || !node) return;
-    const stats = { ...session.stats };
-    for (const stat of Object.keys(choice.stats ?? {}) as StoryStat[]) {
-      stats[stat] = clampStat(stats[stat] + (choice.stats?.[stat] ?? 0));
-    }
+    const nextState = applyStoryChoice(session, choice);
     setSession({
       ...session,
+      ...nextState,
       nodeId: choice.next,
-      stats,
-      flags: Array.from(new Set([...session.flags, ...(choice.addFlags ?? [])])),
-      history: [...session.history, { nodeId: node.id, title: node.title, choice: choice.label }],
+      history: [...session.history, {
+        nodeId: node.id,
+        title: node.title,
+        choice: choice.label,
+        snapshot: cloneStoryState(session),
+      }],
     });
-    window.setTimeout(() => {
-      const storyCopy = document.querySelector<HTMLElement>(".story-copy");
-      storyCopy?.focus({ preventScroll: true });
-      storyCopy?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 30);
+    focusStoryPage();
   };
+
+  const callbacks = story && session && node ? visibleStoryCallbacks(node.callbacks, session) : [];
+  const choices = story && session && node ? availableStoryChoices(node.choices, session) : [];
 
   return (
     <section className="story-arcade section-shell" id="story-arcade" aria-labelledby="story-arcade-title">
-      <div className="section-heading split-heading">
+      <div className="section-heading split-heading story-intro-heading">
         <div>
-          <p className="kicker">After Closing // branching fiction cabinet</p>
-          <h2 id="story-arcade-title">Choose the kind of trouble.</h2>
+          <p className="kicker">After Closing // three playable paperbacks</p>
+          <h2 id="story-arcade-title">Pick your trouble. The lights are already out.</h2>
         </div>
-        <p>Three original, illustrated stories remember every choice on this browser. Horror, action, and mystery share no fixed path and no single correct ending.</p>
+        <p>One cabinet is haunted. One city is running out of time. One case keeps rewriting its witnesses. Each story remembers who you trusted, what you carried, and what you left behind.</p>
       </div>
-      <p className="story-disclaimer">These are fictional arcade stories, not claims about Cathy's life or the historical Fillmore location. The factual memory archive remains separate below.</p>
+      <p className="story-disclaimer">Everything in After Closing is original fiction. These characters and events are separate from Cathy's life and from the documented history of the Fillmore arcade.</p>
 
       {!story || !session || !node ? (
-        <div className="story-shelf" aria-label="Story genres">
-          {STORY_DEFINITIONS.map((definition) => {
-            const saved = readSession(definition);
-            return (
-              <article className={`story-card story-${definition.id}`} key={definition.id} style={{ "--story-accent": definition.accent } as CSSProperties}>
-                <img src={`${import.meta.env.BASE_URL}art/${definition.image}`} alt="" loading="lazy" />
-                <span className="story-card-shade" />
-                <div className="story-card-copy">
-                  <span>{definition.shelfCode} // {saved ? "save detected" : "unread"}</span>
-                  <h3>{definition.title}</h3>
-                  <p className="story-subtitle">{definition.subtitle}</p>
-                  <p>{definition.teaser}</p>
-                  <button type="button" onClick={() => enterStory(definition)}>
-                    {saved ? "Resume story" : "Enter story"} <i aria-hidden="true">-&gt;</i>
-                  </button>
-                </div>
-              </article>
-            );
-          })}
-        </div>
+        <StoryShelf onEnter={enterStory} />
       ) : (
         <article
           className={`story-stage story-${story.id}`}
@@ -117,32 +125,62 @@ export function StoryArcade() {
         >
           <img className="story-stage-art" src={`${import.meta.env.BASE_URL}art/${story.image}`} alt="" />
           <span className="story-stage-atmosphere" aria-hidden="true" />
+          <StoryWorldmark genre={story.id} />
+
           <header className="story-stage-header">
             <div>
-              <span>{story.shelfCode} // choice {String(session.history.length + 1).padStart(2, "0")}</span>
+              <span>{story.shelfCode} // page {String(session.history.length + 1).padStart(2, "0")}</span>
               <h3>{story.title}</h3>
             </div>
+            <div
+              className="story-page-meter"
+              role="progressbar"
+              aria-label="Story decisions"
+              aria-valuemin={0}
+              aria-valuemax={12}
+              aria-valuenow={Math.min(session.history.length, 12)}
+              aria-valuetext={`${session.history.length} decisions made`}
+            >
+              {Array.from({ length: 12 }, (_, index) => <i className={index < session.history.length ? "read" : ""} key={index} />)}
+            </div>
             <div className="story-stage-actions">
-              <button type="button" onClick={() => setSession(null)}>Story shelf</button>
-              <button type="button" onClick={restartStory}>Restart file</button>
+              <button type="button" onClick={returnToShelf}>Story shelf</button>
+              <button type="button" onClick={turnBack} disabled={!session.history.at(-1)?.snapshot}>Turn back one page</button>
+              <button type="button" onClick={restartStory}>Start over</button>
             </div>
           </header>
+
+          <figure className="story-cast-scene">
+            <img src={`${import.meta.env.BASE_URL}art/${story.castImage}`} alt={story.castAlt} />
+            <figcaption>
+              <span>Original fictional cast // not family biography</span>
+              <strong>{story.cast.map((character) => character.name).join(" // ")}</strong>
+            </figcaption>
+          </figure>
 
           <div className="story-reading-room">
             <div className="story-copy" tabIndex={-1} aria-live="polite">
               <span>{node.chapter}</span>
               <h4>{node.title}</h4>
-              {node.body.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+              {node.body.map((paragraph, index) => <p key={`${node.id}-body-${index}`}>{paragraph}</p>)}
+
+              {callbacks.map((callback, callbackIndex) => (
+                <aside className="story-callback" key={`${node.id}-${callback.label}-${callbackIndex}`} aria-label="An earlier choice returns">
+                  <span>Earlier // {callback.label}</span>
+                  {callback.body.map((paragraph, index) => <p key={`${callback.label}-${index}`}>{paragraph}</p>)}
+                </aside>
+              ))}
+
               {node.ending ? (
                 <div className={`story-ending rank-${node.ending.rank}`}>
-                  <span>Ending recovered</span>
+                  <span>{story.ui.endingTitle}</span>
                   <strong>{node.ending.label}</strong>
-                  <button type="button" onClick={() => setSession(null)}>Choose another file</button>
-                  <button type="button" onClick={restartStory}>Read this story again</button>
+                  <button type="button" onClick={returnToShelf}>Choose another story</button>
+                  <button type="button" onClick={restartStory}>Read this one again</button>
                 </div>
               ) : (
                 <div className="story-choices" aria-label="Story choices">
-                  {availableChoices(node.choices, session.flags).map((choice, index) => (
+                  {choices.map((choice, index) => (
                     <button type="button" onClick={() => choose(choice)} key={`${node.id}-${choice.label}`}>
                       <span>{String(index + 1).padStart(2, "0")}</span>
                       <strong>{choice.label}</strong>
@@ -153,31 +191,20 @@ export function StoryArcade() {
               )}
             </div>
 
-            <aside className="story-dossier" aria-label="Story state">
-              <span>Live dossier</span>
-              <div className="story-stats">
-                {(Object.keys(session.stats) as StoryStat[]).map((stat) => (
-                  <div key={stat}>
-                    <p><span>{stat}</span><strong>{session.stats[stat]}</strong></p>
-                    <i><b style={{ width: `${session.stats[stat]}%` }} /></i>
-                  </div>
-                ))}
-              </div>
-              <div className="story-flags">
-                <span>Evidence carried</span>
-                {session.flags.length ? session.flags.slice(-6).map((flag) => <small key={flag}>{flag.replaceAll("-", " ")}</small>) : <small>Nothing yet</small>}
-              </div>
-            </aside>
+            <StoryState story={story} session={session} />
           </div>
 
           <footer className="story-trace">
-            <span>Decision trace // local only</span>
+            <span>{story.ui.trailTitle} // saved on this browser</span>
             <div>
               {session.history.length
-                ? session.history.slice(-5).map((entry, index) => (
-                    <p key={`${entry.nodeId}-${index}`}><i>{String(Math.max(1, session.history.length - 4 + index)).padStart(2, "0")}</i>{entry.choice}</p>
+                ? session.history.map((entry, index) => (
+                    <p key={`${entry.nodeId}-${index}`}>
+                      <i>{String(index + 1).padStart(2, "0")}</i>
+                      {entry.choice}
+                    </p>
                   ))
-                : <p><i>00</i>The file is waiting for its first decision.</p>}
+                : <p><i>00</i>The first choice is yours.</p>}
             </div>
           </footer>
         </article>
@@ -186,12 +213,101 @@ export function StoryArcade() {
   );
 }
 
+function StoryShelf({ onEnter }: { onEnter: (story: StoryDefinition) => void }) {
+  return (
+    <div className="story-shelf">
+      {STORY_DEFINITIONS.map((definition) => {
+        const saved = readSession(definition);
+        return (
+          <article className={`story-card story-${definition.id}`} data-story-id={definition.id} key={definition.id} style={{ "--story-accent": definition.accent } as CSSProperties}>
+            <img src={`${import.meta.env.BASE_URL}art/${definition.image}`} alt="" loading="lazy" />
+            <span className="story-card-shade" />
+            <StoryWorldmark genre={definition.id} />
+            <div className="story-card-copy">
+              <span>{definition.shelfCode} // {saved ? "save detected" : "unread"}</span>
+              <h3>{definition.title}</h3>
+              <p className="story-subtitle">{definition.subtitle}</p>
+              <p>{definition.teaser}</p>
+              <div className="story-card-cast" role="list" aria-label={`${definition.title} cast`}>
+                {definition.cast.map((character) => (
+                  <span role="listitem" key={character.id}><i aria-hidden="true">{character.glyph}</i>{character.name}</span>
+                ))}
+              </div>
+              <button type="button" onClick={() => onEnter(definition)}>
+                {saved ? "Resume story" : "Enter story"} <i aria-hidden="true">-&gt;</i>
+              </button>
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
+function StoryState({ story, session }: { story: StoryDefinition; session: StorySession }) {
+  const protagonist = story.cast.find((character) => character.player);
+  const companions = story.cast.filter((character) => !character.player);
+  const visibleFlags = session.flags.filter((flag) => story.flagLabels[flag]).slice(-5);
+
+  return (
+    <aside className="story-dossier" aria-label="Current story state">
+      <span>{story.ui.stateTitle}</span>
+      {protagonist ? (
+        <div className="story-protagonist">
+          <i aria-hidden="true">{protagonist.glyph}</i>
+          <div><strong>{protagonist.name}</strong><small>{protagonist.role}</small></div>
+        </div>
+      ) : null}
+
+      <div className="story-relationships">
+        {companions.map((character) => (
+          <div className="story-relationship" data-bond={bondTone(character, session.relationships[character.id] ?? 0)} key={character.id}>
+            <i aria-hidden="true">{character.glyph}</i>
+            <p><strong>{character.name}</strong><span>{bondLabel(character, session.relationships[character.id] ?? 0)}</span></p>
+          </div>
+        ))}
+      </div>
+
+      <div className="story-inventory">
+        <span>{story.ui.inventoryTitle}</span>
+        {session.inventory.length
+          ? session.inventory.map((item) => <small key={item}>{story.itemLabels[item] ?? humanize(item)}</small>)
+          : <small>{story.ui.emptyInventory}</small>}
+      </div>
+
+      {visibleFlags.length ? (
+        <div className="story-state-notes">
+          <span>What the story remembers</span>
+          {visibleFlags.map((flag) => <small key={flag}>{story.flagLabels[flag]}</small>)}
+        </div>
+      ) : null}
+
+      <details className="story-cast-notes">
+        <summary>Cast notes</summary>
+        {story.cast.map((character) => (
+          <p key={character.id}><strong>{character.name}</strong>{character.voice}</p>
+        ))}
+      </details>
+    </aside>
+  );
+}
+
+function StoryWorldmark({ genre }: { genre: StoryGenre }) {
+  return (
+    <span className={`story-worldmark worldmark-${genre}`} aria-hidden="true">
+      <i /><i /><i /><b />
+    </span>
+  );
+}
+
 function freshSession(story: StoryDefinition): StorySession {
   return {
+    version: 3,
     storyId: story.id,
     nodeId: story.start,
-    stats: { ...initialStats },
     flags: [],
+    inventory: [...story.initialItems],
+    relationships: initialRelationships(story),
     history: [],
   };
 }
@@ -200,22 +316,74 @@ function readSession(story: StoryDefinition): StorySession | null {
   try {
     const value = window.localStorage.getItem(`${savePrefix}${story.id}`);
     if (!value) return null;
-    const parsed = JSON.parse(value) as StorySession;
-    if (parsed.storyId !== story.id || !story.nodes[parsed.nodeId] || !parsed.stats || !Array.isArray(parsed.flags) || !Array.isArray(parsed.history)) return null;
-    return parsed;
+    const parsed = JSON.parse(value) as Partial<StorySession>;
+    if (parsed.storyId !== story.id || !parsed.nodeId || !story.nodes[parsed.nodeId] || !Array.isArray(parsed.flags) || !Array.isArray(parsed.history)) return null;
+
+    return {
+      version: 3,
+      storyId: story.id,
+      nodeId: parsed.nodeId,
+      flags: parsed.flags,
+      inventory: Array.isArray(parsed.inventory) ? parsed.inventory : [...story.initialItems],
+      relationships: { ...initialRelationships(story), ...(parsed.relationships ?? {}) },
+      history: parsed.history
+        .filter((entry): entry is StoryHistory => Boolean(entry?.nodeId && entry?.choice))
+        .map((entry) => ({
+          nodeId: entry.nodeId,
+          title: entry.title,
+          choice: entry.choice,
+          snapshot: isStorySnapshot(entry.snapshot) ? cloneStoryState(entry.snapshot) : undefined,
+        })),
+    };
   } catch {
     return null;
   }
 }
 
-function availableChoices(choices: StoryChoice[], flags: string[]): StoryChoice[] {
-  return choices.filter((choice) => {
-    const hasRequirements = (choice.requires ?? []).every((flag) => flags.includes(flag));
-    const avoidsExclusions = (choice.excludes ?? []).every((flag) => !flags.includes(flag));
-    return hasRequirements && avoidsExclusions;
-  });
+function cloneStoryState(state: StoryStateView): StoryStateView {
+  return {
+    flags: [...state.flags],
+    inventory: [...state.inventory],
+    relationships: { ...state.relationships },
+  };
 }
 
-function clampStat(value: number): number {
-  return Math.max(0, Math.min(100, value));
+function isStorySnapshot(value: unknown): value is StoryStateView {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<StoryStateView>;
+  return Array.isArray(candidate.flags)
+    && Array.isArray(candidate.inventory)
+    && Boolean(candidate.relationships && typeof candidate.relationships === "object");
+}
+
+function initialRelationships(story: StoryDefinition): Record<string, number> {
+  return Object.fromEntries(story.cast.filter((character) => !character.player).map((character) => [character.id, character.initialBond ?? 0]));
+}
+
+function bondTone(character: StoryCharacter, value: number): "low" | "neutral" | "high" {
+  if (!character.bondLabels || value === 0) return "neutral";
+  return value < 0 ? "low" : "high";
+}
+
+function bondLabel(character: StoryCharacter, value: number): string {
+  if (!character.bondLabels) return character.role;
+  if (value < 0) return character.bondLabels.low;
+  if (value > 0) return character.bondLabels.high;
+  return character.bondLabels.neutral;
+}
+
+function humanize(value: string): string {
+  return value.replaceAll("-", " ").replace(/^./, (letter) => letter.toUpperCase());
+}
+
+function focusStoryPage(delay = 30): void {
+  window.setTimeout(() => {
+    const storyCopy = document.querySelector<HTMLElement>(".story-copy");
+    storyCopy?.focus({ preventScroll: true });
+    storyCopy?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+  }, delay);
+}
+
+function prefersReducedMotion(): boolean {
+  return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 }

@@ -31,7 +31,7 @@ type Building = {
   color: string;
 };
 
-type Drone = { x: number; y: number; vx: number; cooldown: number; health: number };
+type Drone = { x: number; y: number; baseY: number; phase: number; vx: number; cooldown: number; health: number };
 type Bolt = { x: number; y: number; vx: number; vy: number };
 
 type SmashState = {
@@ -120,6 +120,8 @@ export function mountSkylineSmash(canvas: HTMLCanvasElement, options: GameMountO
 
     for (const drone of state.drones) {
       drone.x += drone.vx * delta;
+      drone.phase += delta;
+      drone.y = drone.baseY + Math.sin(drone.phase * 1.8) * 24;
       if (drone.x < 30 || drone.x > GAME_WIDTH - 65) drone.vx *= -1;
       drone.cooldown -= delta;
       if (drone.cooldown <= 0) {
@@ -168,10 +170,12 @@ export function mountSkylineSmash(canvas: HTMLCanvasElement, options: GameMountO
     for (const building of state.buildings) {
       const height = building.floors * 45;
       if (building.health > 0 && intersects(attackBox, { x: building.x, y: ground - height, width: building.width, height })) {
-        building.health -= 1;
+        const airSmash = state.player.y < ground - state.player.height - 34;
+        building.health -= airSmash ? 2 : 1;
+        building.health = Math.max(0, building.health);
         state.combo += 1;
         state.comboTimer = 1.6;
-        state.score += 100 * state.combo;
+        state.score += 100 * state.combo + (airSmash ? 175 : 0);
         state.rage = Math.min(100, state.rage + 11);
         state.shake = 11;
         const hitY = ground - Math.min(height - 20, 35 + building.health * 31);
@@ -226,7 +230,10 @@ export function mountSkylineSmash(canvas: HTMLCanvasElement, options: GameMountO
     drawBackground(context, backdrop);
     for (const building of state.buildings) drawBuilding(context, building);
     drawBolts(context, state.bolts);
-    for (const drone of state.drones) drawDrone(context, drone);
+    for (const drone of state.drones) {
+      drawDroneTelegraph(context, drone, state.player);
+      drawDrone(context, drone);
+    }
     drawMonster(context, state);
     if (state.rageFlash > 0) {
       context.strokeStyle = `rgba(139,229,142,${state.rageFlash})`;
@@ -246,6 +253,7 @@ export function mountSkylineSmash(canvas: HTMLCanvasElement, options: GameMountO
     drawPixelText(context, `RAGE ${String(Math.floor(state.rage)).padStart(3, "0")}%`, 590, 33, 16, state.rage >= 100 ? "#ffbf57" : "#8be58e");
     drawPixelText(context, `TIME ${Math.ceil(state.time)}`, 900, 33, 17, "#52e7ef", "right");
     if (state.combo > 1 && state.comboTimer > 0) drawPixelText(context, `${state.combo}X BLOCK COMBO`, 480, 95, 24, "#ff6f61", "center");
+    if (state.rage >= 100) drawPixelText(context, "RAGE READY // SHIFT CLEARS THE SKY", 480, 126, 16, "#ffbf57", "center");
 
     if (state.status === "paused") drawOverlay(context, "PAUSED", "THE CITY CAN WAIT", "#52e7ef");
     if (state.status === "won") drawOverlay(context, "SKYLINE CLEARED", `FINAL SCORE ${state.score}`, "#ffbf57");
@@ -287,9 +295,9 @@ function createState(): SmashState {
     player: { x: 32, y: ground - 76, vx: 0, vy: 0, width: 64, height: 76, facing: 1, health: 4, invulnerable: 0 },
     buildings: buildingSpecs.map(([x, width, floors, color]) => ({ x, width, floors, health: floors, maxHealth: floors, color })),
     drones: [
-      { x: 180, y: 115, vx: 70, cooldown: 1.4, health: 1 },
-      { x: 650, y: 150, vx: -55, cooldown: 2.5, health: 1 },
-      { x: 840, y: 95, vx: -82, cooldown: 3.2, health: 1 },
+      { x: 180, y: 315, baseY: 315, phase: 0.2, vx: 70, cooldown: 1.4, health: 1 },
+      { x: 650, y: 342, baseY: 342, phase: 1.7, vx: -55, cooldown: 2.5, health: 1 },
+      { x: 840, y: 304, baseY: 304, phase: 3.1, vx: -82, cooldown: 3.2, health: 1 },
     ],
     bolts: [],
     particles: [],
@@ -371,6 +379,16 @@ function drawBuilding(context: CanvasRenderingContext2D, building: Building): vo
   if (building.health > 0) {
     context.fillStyle = building.color;
     context.fillRect(building.x + 10, ground - height - 7, building.width - 20, 4);
+    const nextFloor = building.maxHealth - building.health;
+    const weakY = ground - (nextFloor + 1) * floorHeight + floorHeight / 2;
+    context.fillStyle = "rgba(255,241,189,0.82)";
+    context.beginPath();
+    context.arc(building.x + building.width / 2, weakY, 7, 0, Math.PI * 2);
+    context.fill();
+    context.strokeStyle = "rgba(255,191,87,0.44)";
+    context.beginPath();
+    context.arc(building.x + building.width / 2, weakY, 14, 0, Math.PI * 2);
+    context.stroke();
   }
 }
 
@@ -414,6 +432,18 @@ function drawDrone(context: CanvasRenderingContext2D, drone: Drone): void {
   context.moveTo(drone.x - 12, drone.y + 9);
   context.lineTo(drone.x + 55, drone.y + 9);
   context.stroke();
+}
+
+function drawDroneTelegraph(context: CanvasRenderingContext2D, drone: Drone, player: SmashState["player"]): void {
+  if (drone.cooldown <= 0 || drone.cooldown > 0.55) return;
+  context.save();
+  context.setLineDash([8, 9]);
+  context.strokeStyle = "rgba(255,111,97,0.58)";
+  context.beginPath();
+  context.moveTo(drone.x + 20, drone.y + 12);
+  context.lineTo(player.x + player.width / 2, player.y + player.height / 2);
+  context.stroke();
+  context.restore();
 }
 
 function drawBolts(context: CanvasRenderingContext2D, bolts: Bolt[]): void {

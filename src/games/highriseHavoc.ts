@@ -21,6 +21,7 @@ import {
   type GameStatus,
   type Particle,
 } from "./runtime";
+import { restoreHealth } from "./gameplayRules";
 
 type WindowCell = { row: number; column: number; intact: boolean };
 type Tower = { x: number; width: number; floors: number; tone: string; windows: WindowCell[]; collapse: number };
@@ -55,12 +56,14 @@ type HavocState = {
   comboTimer: number;
   broken: number;
   time: number;
+  finale: number;
   shake: number;
   status: GameStatus;
 };
 
 const ground = 502;
 const totalWindows = 54;
+const maximumEnergy = 6;
 
 export function mountHighriseHavoc(canvas: HTMLCanvasElement, options: GameMountOptions): GameController {
   const context = prepareCanvas(canvas);
@@ -113,21 +116,7 @@ export function mountHighriseHavoc(canvas: HTMLCanvasElement, options: GameMount
     state.player.attack = 0.14;
     state.player.attackCooldown = 0.2;
     const playerCenter = { x: state.player.x + 21, y: state.player.y + 27 };
-    let target: { tower: Tower; window: WindowCell; x: number; y: number } | null = null;
-    let targetDistance = Number.POSITIVE_INFINITY;
-
-    for (const tower of state.towers) {
-      for (const window of tower.windows) {
-        if (!window.intact) continue;
-        const position = windowPosition(tower, window);
-        const distance = Math.hypot(position.x - playerCenter.x, position.y - playerCenter.y);
-        const facingTarget = (position.x - playerCenter.x) * state.player.facing > -18;
-        if (facingTarget && distance < 84 && distance < targetDistance) {
-          target = { tower, window, ...position };
-          targetDistance = distance;
-        }
-      }
-    }
+    const target = findWindowTarget(state, playerCenter);
 
     for (const craft of state.crafts) {
       if (craft.health <= 0) continue;
@@ -241,7 +230,7 @@ export function mountHighriseHavoc(canvas: HTMLCanvasElement, options: GameMount
       craft.x += craft.vx * delta;
       if (craft.x < 20 || craft.x > GAME_WIDTH - 70) craft.vx *= -1;
       craft.cooldown -= delta;
-      if (craft.cooldown <= 0) {
+      if (craft.cooldown <= 0 && state.finale < 0) {
         const angle = Math.atan2(state.player.y - craft.y, state.player.x - craft.x);
         state.shells.push({ x: craft.x + 26, y: craft.y + 18, vx: Math.cos(angle) * 205, vy: Math.sin(angle) * 205, life: 5 });
         craft.cooldown = 1.75 + Math.random() * 1.65;
@@ -264,7 +253,7 @@ export function mountHighriseHavoc(canvas: HTMLCanvasElement, options: GameMount
       pickup.y = Math.min(ground - 24, pickup.y + 120 * delta);
       if (!pickup.taken && intersects(state.player, { x: pickup.x, y: pickup.y, width: 24, height: 24 })) {
         pickup.taken = true;
-        state.player.health = Math.min(5, state.player.health + 1);
+        state.player.health = restoreHealth(state.player.health, maximumEnergy);
         state.score += 250;
         sound.chord([523.25, 659.25, 783.99], 0.16, "square", 0.04);
       }
@@ -273,9 +262,16 @@ export function mountHighriseHavoc(canvas: HTMLCanvasElement, options: GameMount
     updateParticles(state.particles, delta);
     state.crafts = state.crafts.filter((craft) => craft.health > 0);
     if (state.broken >= totalWindows) {
-      state.score += Math.ceil(state.time) * 30 + state.player.health * 400;
-      state.status = "won";
-      sound.chord([261.63, 329.63, 392, 523.25], 0.5, "square", 0.055);
+      if (state.finale < 0) {
+        state.finale = 1.5;
+        state.player.invulnerable = Math.max(state.player.invulnerable, 2);
+        state.shells = [];
+      } else state.finale = Math.max(0, state.finale - delta);
+      if (state.finale <= 0 && state.towers.every((tower) => tower.collapse >= 0.98)) {
+        state.score += Math.ceil(state.time) * 30 + state.player.health * 400;
+        state.status = "won";
+        sound.chord([261.63, 329.63, 392, 523.25], 0.5, "square", 0.055);
+      }
     } else if (state.player.health <= 0 || state.time <= 0) {
       state.status = "lost";
       sound.play(62, 0.6, "sawtooth", 0.09, 35);
@@ -288,8 +284,12 @@ export function mountHighriseHavoc(canvas: HTMLCanvasElement, options: GameMount
     if (state.shake) context.translate((Math.random() - 0.5) * state.shake, (Math.random() - 0.5) * state.shake);
     drawBackground(context, backdrop);
     for (const tower of state.towers) drawTower(context, tower);
+    drawWindowTarget(context, state);
     for (const pickup of state.pickups) if (!pickup.taken) drawPickup(context, pickup);
-    for (const craft of state.crafts) drawCraft(context, craft);
+    for (const craft of state.crafts) {
+      drawCraftTelegraph(context, craft, state.player);
+      drawCraft(context, craft);
+    }
     for (const shell of state.shells) drawShell(context, shell);
     drawMonster(context, state);
     drawParticles(context, state.particles);
@@ -300,8 +300,10 @@ export function mountHighriseHavoc(canvas: HTMLCanvasElement, options: GameMount
     context.fillRect(18, 18, 924, 54);
     drawPixelText(context, `SCORE ${String(state.score).padStart(6, "0")}`, 34, 33, 17, "#ffbf57");
     drawPixelText(context, `WINDOWS ${String(state.broken).padStart(2, "0")}/${totalWindows}`, 330, 33, 17, "#8be58e");
+    drawPixelText(context, `ENERGY ${state.player.health}/${maximumEnergy}`, 650, 33, 15, state.player.health > 2 ? "#8be58e" : "#ff6f61", "center");
     drawPixelText(context, `TIME ${Math.ceil(state.time)}`, 900, 33, 17, "#52e7ef", "right");
     if (state.combo > 1 && state.comboTimer > 0) drawPixelText(context, `${state.combo}X HAVOC`, 480, 87, 22, "#ff6f61", "center");
+    if (state.finale >= 0 && state.status === "playing") drawPixelText(context, "STAND BACK // THIS IS THE GOOD PART", 480, 112, 17, "#ffbf57", "center");
 
     if (state.status === "paused") drawOverlay(context, "PAUSED", "HANG ONTO THE BUILDING", "#52e7ef");
     if (state.status === "won") drawOverlay(context, "BLOCK PARTY OVER", `FINAL SCORE ${state.score}`, "#8be58e");
@@ -361,6 +363,7 @@ function createState(): HavocState {
     comboTimer: 0,
     broken: 0,
     time: 135,
+    finale: -1,
     shake: 0,
     status: "playing",
   };
@@ -375,6 +378,50 @@ function windowPosition(tower: Tower, window: WindowCell): { x: number; y: numbe
   };
 }
 
+function findWindowTarget(
+  state: HavocState,
+  playerCenter = { x: state.player.x + 21, y: state.player.y + 27 },
+): { tower: Tower; window: WindowCell; x: number; y: number } | null {
+  let target: { tower: Tower; window: WindowCell; x: number; y: number } | null = null;
+  let targetDistance = Number.POSITIVE_INFINITY;
+  for (const tower of state.towers) {
+    for (const window of tower.windows) {
+      if (!window.intact) continue;
+      const position = windowPosition(tower, window);
+      const distance = Math.hypot(position.x - playerCenter.x, position.y - playerCenter.y);
+      const facingTarget = (position.x - playerCenter.x) * state.player.facing > -18;
+      if (facingTarget && distance < 84 && distance < targetDistance) {
+        target = { tower, window, ...position };
+        targetDistance = distance;
+      }
+    }
+  }
+  return target;
+}
+
+function drawWindowTarget(context: CanvasRenderingContext2D, state: HavocState): void {
+  const target = findWindowTarget(state);
+  if (!target || state.finale >= 0) return;
+  const pulse = 24 + Math.sin(state.time * 8) * 3;
+  context.strokeStyle = "rgba(234,246,242,0.86)";
+  context.lineWidth = 2;
+  context.strokeRect(target.x - pulse / 2, target.y - pulse / 2, pulse, pulse);
+  context.fillStyle = "rgba(255,191,87,0.22)";
+  context.fillRect(target.x - 6, target.y - 6, 12, 12);
+}
+
+function drawCraftTelegraph(context: CanvasRenderingContext2D, craft: Craft, player: HavocState["player"]): void {
+  if (craft.cooldown <= 0 || craft.cooldown > 0.48) return;
+  context.save();
+  context.setLineDash([9, 8]);
+  context.strokeStyle = "rgba(255,111,97,0.62)";
+  context.beginPath();
+  context.moveTo(craft.x + 26, craft.y + 12);
+  context.lineTo(player.x + player.width / 2, player.y + player.height / 2);
+  context.stroke();
+  context.restore();
+}
+
 function drawBackground(context: CanvasRenderingContext2D, backdrop: HTMLImageElement): void {
   const gradient = context.createLinearGradient(0, 0, 0, GAME_HEIGHT);
   gradient.addColorStop(0, "#10102e");
@@ -383,11 +430,15 @@ function drawBackground(context: CanvasRenderingContext2D, backdrop: HTMLImageEl
   context.fillStyle = gradient;
   context.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
   drawGameBackdrop(context, backdrop, 0.68, 0.22);
-  context.fillStyle = "#ff8b67";
+  const sunset = context.createRadialGradient(820, 120, 8, 820, 120, 92);
+  sunset.addColorStop(0, "rgba(255,225,166,0.96)");
+  sunset.addColorStop(0.42, "rgba(255,139,103,0.72)");
+  sunset.addColorStop(1, "rgba(255,139,103,0)");
+  context.fillStyle = sunset;
   context.beginPath();
-  context.arc(820, 120, 68, 0, Math.PI * 2);
+  context.arc(820, 120, 92, 0, Math.PI * 2);
   context.fill();
-  context.fillStyle = "#152038";
+  context.fillStyle = "rgba(21,32,56,0.72)";
   context.beginPath();
   context.moveTo(0, 345);
   context.lineTo(150, 230);

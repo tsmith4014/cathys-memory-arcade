@@ -1,14 +1,36 @@
 export type StoryGenre = "horror" | "action" | "mystery";
+
+// Kept exported for compatibility with older saved sessions and imports.
 export type StoryStat = "nerve" | "momentum" | "insight";
 
-export type StoryChoice = {
+export type RelationshipCondition = {
+  character: string;
+  min?: number;
+  max?: number;
+};
+
+export type StoryCondition = {
+  requires?: string[];
+  excludes?: string[];
+  requiresItems?: string[];
+  excludesItems?: string[];
+  relationships?: RelationshipCondition[];
+};
+
+export type StoryChoice = StoryCondition & {
   label: string;
   consequence: string;
   next: string;
-  stats?: Partial<Record<StoryStat, number>>;
   addFlags?: string[];
-  requires?: string[];
-  excludes?: string[];
+  removeFlags?: string[];
+  addItems?: string[];
+  removeItems?: string[];
+  relationshipChanges?: Record<string, number>;
+};
+
+export type StoryCallback = StoryCondition & {
+  label: string;
+  body: string[];
 };
 
 export type StoryNode = {
@@ -16,10 +38,26 @@ export type StoryNode = {
   chapter: string;
   title: string;
   body: string[];
+  callbacks?: StoryCallback[];
   choices: StoryChoice[];
   ending?: {
     label: string;
     rank: "bright" | "strange" | "dark";
+  };
+};
+
+export type StoryCharacter = {
+  id: string;
+  name: string;
+  role: string;
+  voice: string;
+  glyph: string;
+  player?: boolean;
+  initialBond?: number;
+  bondLabels?: {
+    low: string;
+    neutral: string;
+    high: string;
   };
 };
 
@@ -30,10 +68,70 @@ export type StoryDefinition = {
   subtitle: string;
   teaser: string;
   image: string;
+  castImage: string;
+  castAlt: string;
   accent: string;
   start: string;
+  cast: StoryCharacter[];
+  initialItems: string[];
+  itemLabels: Record<string, string>;
+  flagLabels: Record<string, string>;
+  ui: {
+    stateTitle: string;
+    inventoryTitle: string;
+    trailTitle: string;
+    emptyInventory: string;
+    endingTitle: string;
+  };
   nodes: Record<string, StoryNode>;
 };
+
+export type StoryStateView = {
+  flags: string[];
+  inventory: string[];
+  relationships: Record<string, number>;
+};
+
+export function matchesStoryCondition(condition: StoryCondition, state: StoryStateView): boolean {
+  return (condition.requires ?? []).every((flag) => state.flags.includes(flag))
+    && (condition.excludes ?? []).every((flag) => !state.flags.includes(flag))
+    && (condition.requiresItems ?? []).every((item) => state.inventory.includes(item))
+    && (condition.excludesItems ?? []).every((item) => !state.inventory.includes(item))
+    && (condition.relationships ?? []).every(({ character, min, max }) => {
+      const value = state.relationships[character] ?? 0;
+      return (min === undefined || value >= min) && (max === undefined || value <= max);
+    });
+}
+
+export function availableStoryChoices(choices: StoryChoice[], state: StoryStateView): StoryChoice[] {
+  return choices.filter((choice) => matchesStoryCondition(choice, state));
+}
+
+export function visibleStoryCallbacks(callbacks: StoryCallback[] = [], state: StoryStateView): StoryCallback[] {
+  return callbacks.filter((callback) => matchesStoryCondition(callback, state));
+}
+
+export function applyStoryChoice(state: StoryStateView, choice: StoryChoice): StoryStateView {
+  const removedFlags = new Set(choice.removeFlags ?? []);
+  const removedItems = new Set(choice.removeItems ?? []);
+  const relationships = { ...state.relationships };
+
+  for (const [character, change] of Object.entries(choice.relationshipChanges ?? {})) {
+    relationships[character] = Math.max(-3, Math.min(3, (relationships[character] ?? 0) + change));
+  }
+
+  return {
+    flags: Array.from(new Set([
+      ...state.flags.filter((flag) => !removedFlags.has(flag)),
+      ...(choice.addFlags ?? []),
+    ])),
+    inventory: Array.from(new Set([
+      ...state.inventory.filter((item) => !removedItems.has(item)),
+      ...(choice.addItems ?? []),
+    ])),
+    relationships,
+  };
+}
 
 export const STORY_DEFINITIONS: StoryDefinition[] = [
   {
@@ -41,23 +139,57 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
     shelfCode: "FILE H-01",
     title: "The Last Token",
     subtitle: "After closing, one cabinet is still taking quarters.",
-    teaser: "A locked arcade. A second room that only exists in reflections. One token warm enough to feel alive.",
+    teaser: "Mae has the keys. Cal is calling from a phone that was removed in 1994. Player Two would like a word.",
     image: "story-horror-last-token.webp",
+    castImage: "story-horror-cast-v2.webp",
+    castAlt: "Original fictional cast: Mae Torres holds closing keys beside a red phone, Cal Baines appears in its cracked glass, and June stands near Cabinet Zero.",
     accent: "#ff6f61",
     start: "h0",
+    cast: [
+      { id: "mae", name: "Mae Torres", role: "Closing manager // you", voice: "Practical, stubborn, and unimpressed by supernatural maintenance requests.", glyph: "MT", player: true },
+      { id: "cal", name: "Cal Baines", role: "Retired cabinet technician", voice: "Dry jokes, guilty pauses, and one important lie by omission.", glyph: "CB", initialBond: 0, bondLabels: { low: "withholding", neutral: "on the line", high: "telling the truth" } },
+      { id: "player-two", name: "Player Two", role: "The reflection in the second aisle", voice: "Borrows familiar words but never quite understands the joke.", glyph: "P2", initialBond: 0, bondLabels: { low: "copying you", neutral: "watching", high: "becoming someone" } },
+    ],
+    initialItems: ["warm-token", "closing-keys"],
+    itemLabels: {
+      "warm-token": "Tomorrow-dated token",
+      "closing-keys": "Closing keys",
+      "zero-key": "Key tagged 0",
+      "red-cord": "Red phone cord",
+      "cal-badge": "Cal's old repair badge",
+      "brass-shaving": "Warm brass shaving",
+    },
+    flagLabels: {
+      "checked-doors": "Every lock checked",
+      "answered-pattern": "Knock answered",
+      "cal-named": "Cal gave his name",
+      "cal-confessed": "Cal told the whole story",
+      "player-named": "Player Two has a name",
+      "refused-perfect": "Refused the perfect afternoon",
+      "broke-loop": "Changed one perfect detail",
+      "kept-questions": "Kept the questions",
+    },
+    ui: {
+      stateTitle: "Who is still here",
+      inventoryTitle: "In Mae's pockets",
+      trailTitle: "Footsteps behind you",
+      emptyInventory: "Only lint and professional skepticism",
+      endingTitle: "The doors unlock",
+    },
     nodes: {
       h0: {
         id: "h0",
         chapter: "11:47 PM // The Locked Floor",
         title: "Something finishes booting in the dark.",
         body: [
-          "The last customer left forty minutes ago. Rain scribbles blue lines down the glass doors, the dead cabinets hold their reflections like black teeth, and the key ring in your hand feels heavier with every light you shut off. At the far end of the floor, a cabinet you do not remember owning wakes beneath the broken EXIT sign.",
-          "Its marquee has no title. Its screen shows a single brass token turning against an amber field. Each rotation is perfectly synchronized with a faint knock from inside the cabinet: three slow taps, a pause, then two. On the counter beside you, where there was nothing a moment ago, lies the same token.",
+          "You are Mae Torres, closing manager, owner of the keys, and the last person still willing to argue with the soda machine. Rain crawls down the glass doors. One by one, the cabinets go black.",
+          "The cabinet beneath the broken EXIT sign does not. It has no title, no power cord, and no place on your inventory sheet. Its screen shows a brass token turning. Three knocks sound from inside it, then two. The same warm token is suddenly resting beside your hand.",
+          "\"Haunted is not a repair category,\" you tell the empty floor. The red telephone behind the prize counter rings anyway. That phone was removed before you got this job.",
         ],
         choices: [
-          { label: "Walk straight to the cabinet", consequence: "Meet the impossible thing before fear can name it.", next: "h1", stats: { nerve: 12, momentum: 8 } },
-          { label: "Study the key ring and the warm token", consequence: "Look for a practical detail the room cannot fake.", next: "h2", stats: { insight: 12, momentum: -3 }, addFlags: ["examined-token"] },
-          { label: "Check every lock and reflection first", consequence: "Treat the building itself as the first suspect.", next: "h3", stats: { insight: 8, nerve: 4 }, addFlags: ["checked-doors"] },
+          { label: "Walk straight to the cabinet", consequence: "Tell the impossible machine that closing time applies to everyone.", next: "h1", addFlags: ["met-cabinet-first"], relationshipChanges: { "player-two": 1 } },
+          { label: "Examine the token and key ring", consequence: "Start with the objects. Objects usually have the decency to stay put.", next: "h2", addFlags: ["examined-token"], addItems: ["zero-key"] },
+          { label: "Check every lock before answering", consequence: "Make sure the ordinary world is still where you left it.", next: "h3", addFlags: ["checked-doors"] },
         ],
       },
       h1: {
@@ -65,27 +197,30 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
         chapter: "11:51 PM // Cabinet Zero",
         title: "The attract screen knows there should be two players.",
         body: [
-          "Up close, the cabinet smells of hot dust and wet pavement. There is no power cord. Beneath the glass, the screen resolves into a crude drawing of this exact arcade, viewed from above. A white square marks where you stand. A second square waits behind you, although the aisle is empty when you turn.",
-          "The coin slot opens with a soft mechanical breath. Letters crawl up from the bottom of the screen: PLAYER TWO IS LATE. The cabinet knocks again, now from somewhere behind your ribs. The warm token fits the slot, but so does the smallest key on your ring.",
+          "Up close, the cabinet smells like hot dust after rain. A white square on its screen marks where you stand. A second square waits directly behind you. When you turn, the aisle is empty. When you look back, the square waves.",
+          "PLAYER TWO IS LATE, the screen types. The coin slot opens with a sigh. \"Join the club,\" you say. \"Everybody is late when I am trying to lock up.\"",
+        ],
+        callbacks: [
+          { label: "The cabinet noticed", requires: ["met-cabinet-first"], body: ["The second square copies your shrug a beat too late. It has been studying you for less than a minute and is already bad at being casual."] },
         ],
         choices: [
-          { label: "Insert the warm token", consequence: "Accept the cabinet's rules long enough to learn them.", next: "h4", stats: { nerve: 9, momentum: 10 }, addFlags: ["token-spent"] },
-          { label: "Use the smallest key", consequence: "Open the machine instead of playing it.", next: "h5", stats: { insight: 11, nerve: 3 }, addFlags: ["opened-back"] },
-          { label: "Answer the knocking pattern", consequence: "Three taps, pause, two. See who answers.", next: "h6", stats: { nerve: 7, insight: 6 }, addFlags: ["answered-knock"] },
+          { label: "Insert the warm token", consequence: "Play by its rules once, while you still know which rules are yours.", next: "h4", addFlags: ["token-spent"], removeItems: ["warm-token"], relationshipChanges: { "player-two": 1 } },
+          { label: "Open the service panel", consequence: "A cabinet without a cord still owes you an explanation.", next: "h5", requiresItems: ["zero-key"], addFlags: ["opened-back"] },
+          { label: "Knock three times, then twice", consequence: "Answer the rhythm before the thing behind it changes the question.", next: "h6", addFlags: ["answered-pattern"], relationshipChanges: { cal: 1 } },
         ],
       },
       h2: {
         id: "h2",
-        chapter: "11:50 PM // Evidence Under Fluorescent Light",
+        chapter: "11:50 PM // Under Fluorescent Light",
         title: "The token was minted tomorrow.",
         body: [
-          "The token is scarred as if it has crossed decades of pockets, but the date around its rim is tomorrow's. One face bears a doorway. The other bears two empty chairs. When you hold it beneath the emergency light, the chairs fill with tiny moving shadows that lean toward each other and whisper too softly to understand.",
-          "The smallest key on your ring is unfamiliar. Its tag is blank except for a grease-pencil zero. In the rain-dark window, your reflection is no longer examining the token. It is standing ten feet away with one hand pressed against an invisible door.",
+          "The token is worn smooth around a date that has not happened yet. One face shows a doorway. The other shows two folding chairs. Under the emergency light, shadows settle into both seats and lean together as if sharing a secret.",
+          "A small key tagged 0 has appeared on your ring. In the front window, your reflection is ten feet away, one palm pressed to a door the building does not have.",
         ],
         choices: [
-          { label: "Follow the reflection to its door", consequence: "Trust the impossible copy to reveal the hidden room.", next: "h3", stats: { insight: 8, nerve: 5 }, addFlags: ["followed-reflection"] },
-          { label: "Take the zero key to the cabinet", consequence: "Test the one object that belongs to neither you nor tonight.", next: "h5", stats: { insight: 9 }, addFlags: ["opened-back"] },
-          { label: "Put the token in the coin return", consequence: "Ask the arcade to return what it never sold.", next: "h4", stats: { momentum: 7, nerve: 4 }, addFlags: ["token-spent", "coin-return"] },
+          { label: "Follow your reflection", consequence: "Trust the copy long enough to find its extra door.", next: "h3", addFlags: ["followed-reflection"], relationshipChanges: { "player-two": 1 } },
+          { label: "Take the zero key to the cabinet", consequence: "Open the machine instead of giving it money.", next: "h5", addItems: ["zero-key"], addFlags: ["opened-back"] },
+          { label: "Drop the token into the coin return", consequence: "Ask the arcade to return something it never sold.", next: "h4", addFlags: ["coin-return", "token-spent"], removeItems: ["warm-token"] },
         ],
       },
       h3: {
@@ -93,111 +228,259 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
         chapter: "11:54 PM // The Room in the Glass",
         title: "The reflection has one more aisle than the building.",
         body: [
-          "Every lock is still thrown. Every window is intact. Yet the long front glass reflects an aisle running behind the prize counter where the wall should be. Its cabinets face backward, their open service panels glowing like furnace doors. Your reflection walks that aisle without you and stops beside a red telephone mounted in empty air.",
-          "When the telephone rings, every joystick on the real floor tilts toward the sound. The receiver in the glass lifts by itself. A voice says your name with the patient irritation of someone who has called for years. Then it asks whether you came to close the arcade or finally open it.",
+          "Every lock is thrown. Every window is whole. The glass still reflects an aisle behind the prize counter where a cinder-block wall should be. Backward cabinets line it with their service panels open and glowing.",
+          "The red telephone rings in the reflection. A man answers before you do. \"Mae? Good. You still check the doors twice.\" His voice is warm, tired, and much too pleased to hear you. \"Name's Cal. Please do not put the token in anything.\"",
+        ],
+        callbacks: [
+          { label: "A lock remembers", requires: ["checked-doors"], body: ["The deadbolt under your hand clicks a third time by itself. Something on the other side whispers, \"Thorough. Annoying. I like her.\""] },
+          { label: "Your reflection led the way", requires: ["followed-reflection"], body: ["The copy keeps one palm on the impossible doorway until you find it, then gives you an encouraging thumbs-up with the wrong hand."] },
         ],
         choices: [
-          { label: "Step through where the reflected door should be", consequence: "Cross into the aisle that has been waiting behind the wall.", next: "h6", stats: { nerve: 13, momentum: 5 }, addFlags: ["entered-second-room"] },
-          { label: "Ask the voice what it wants opened", consequence: "Make the caller define the bargain.", next: "h7", stats: { insight: 10, nerve: 3 }, addFlags: ["questioned-caller"] },
-          { label: "Break eye contact and cut the breaker", consequence: "Refuse the reflection and attack its power.", next: "h5", stats: { momentum: 8, insight: 4 }, addFlags: ["cut-power"] },
+          { label: "Step through the reflected door", consequence: "Enter the aisle before it learns to look more inviting.", next: "h6", addFlags: ["entered-second-aisle"], relationshipChanges: { "player-two": 1 } },
+          { label: "Make Cal explain how he knows you", consequence: "A stranger with your number can earn the next sentence.", next: "h7", addFlags: ["cal-named"], relationshipChanges: { cal: 1 } },
+          { label: "Cut the main breaker", consequence: "If it wants atmosphere, it can pay the electric bill.", next: "h5", addFlags: ["cut-power"] },
         ],
       },
       h4: {
         id: "h4",
         chapter: "12:00 AM // Free Play",
-        title: "The game starts with a memory that is not yours.",
+        title: "The game starts with somebody else's Saturday.",
         body: [
-          "The token falls for a very long time. Around you, dead marquees bloom to life one by one, not with games but with fragments of an afternoon: two sodas sweating on a counter, rain steaming from a coat, a hand counting coins twice before spending them once. The images feel intimate, complete, and entirely unfamiliar.",
-          "Cabinet Zero turns those fragments into a score. Every tender detail adds points. Every uncertainty removes a life. At the bottom of the screen, a meter labeled CERTAINTY begins filling itself, and the room grows warmer as if the machine can burn doubt for fuel.",
+          "The token falls for far too long. Dead marquees wake with pieces of an afternoon: two sweating sodas, a rain-dark coat, a hand counting money twice before spending it once. The details feel loved. They do not feel like yours.",
+          "Cabinet Zero awards points whenever you accept a detail and takes a life whenever you say, \"I don't know.\" A meter labeled CERTAINTY begins to fill. Player Two appears on the glass wearing your face and a smile you would never choose.",
+        ],
+        callbacks: [
+          { label: "The coin return answered", requires: ["coin-return"], body: ["The cabinet did not keep the token. It stretched the fall into a game and returned a warm brass shaving stamped with half of tomorrow's date."] },
+          { label: "Mae checked the date", requires: ["examined-token"], body: ["Tomorrow's date flashes beneath every invented scene. The cabinet may polish a memory, but it cannot explain why it is already expecting you."] },
         ],
         choices: [
-          { label: "Play only the details you know are true", consequence: "Let the score fall rather than invent a life.", next: "h7", stats: { insight: 12, nerve: 5 }, addFlags: ["refused-false-memory"] },
-          { label: "Follow the beautiful version the game offers", consequence: "Trade uncertainty for a perfect, dangerous story.", next: "h8", stats: { momentum: 10, insight: -10 }, addFlags: ["accepted-false-memory"] },
-          { label: "Jam the controls and force a diagnostic screen", consequence: "Turn the cabinet's appetite back on itself.", next: "h9", stats: { nerve: 8, insight: 8 }, addFlags: ["forced-diagnostic"] },
+          { label: "Say only what you know", consequence: "Let the score hit zero before you turn uncertainty into a lie.", next: "h7", addFlags: ["refused-perfect"], relationshipChanges: { cal: 1, "player-two": -1 } },
+          { label: "Follow the beautiful version", consequence: "Take the perfect afternoon and watch what it asks you to ignore.", next: "h8", addFlags: ["accepted-perfect"], relationshipChanges: { "player-two": 1 } },
+          { label: "Force the cabinet into diagnostics", consequence: "Mae has fixed worse machines. None had weather inside them, but still.", next: "h9", addFlags: ["forced-diagnostic"] },
         ],
       },
       h5: {
         id: "h5",
         chapter: "12:03 AM // Behind the Cabinet",
-        title: "There is no machinery inside, only another weather system.",
+        title: "There is no machinery inside, only a wet highway.",
         body: [
-          "The zero key opens the rear panel. Cold rain blows through it. Beyond the thin wooden shell is a night highway under a bruised sky, stretching farther than the cabinet could contain. Along the shoulder stand hundreds of unlit arcade machines, each with its back panel open toward the road like a waiting mouth.",
-          "A fuse box hangs in the impossible distance, close enough to touch. One switch is labeled FLOOR. The other labels have been scraped clean. Somewhere down the highway, headlights appear, but they illuminate nothing in front of them. They are coming backward.",
+          "The rear panel opens onto a night road wider than the cabinet. Rain blows into your face. Hundreds of dark machines stand along the shoulder with their backs open toward traffic, waiting for repairs that never came.",
+          "A repair badge hangs from a fuse box: CAL BAINES, FLOOR TECH. The red phone cord runs from the badge into the dark. Headlights approach backward, illuminating everything behind them and nothing ahead.",
+        ],
+        callbacks: [
+          { label: "The breaker did not help", requires: ["cut-power"], body: ["The real arcade is dark now. The highway is brighter. Cal sighs through the phone. \"I tried that in '94. Points for initiative, though.\""] },
+          { label: "The zero key fits", requiresItems: ["zero-key"], body: ["The little key stays warm in the lock. Its tag now reads CAL, then blurs back to 0 when you blink."] },
         ],
         choices: [
-          { label: "Throw the FLOOR switch off", consequence: "Darken every cabinet, including the road behind this one.", next: "h9", stats: { momentum: 10, nerve: 7 }, addFlags: ["cut-power"] },
-          { label: "Climb through and meet the backward headlights", consequence: "Find out what arrives when a memory runs in reverse.", next: "h8", stats: { nerve: 14, insight: -3 }, addFlags: ["entered-highway"] },
-          { label: "Leave the panel open and call into it", consequence: "Offer a witness instead of another player.", next: "h7", stats: { insight: 10, nerve: 4 }, addFlags: ["called-into-dark"] },
+          { label: "Take Cal's badge and follow the cord", consequence: "Find the man before deciding whether to trust the voice.", next: "h10", addItems: ["cal-badge", "red-cord"], addFlags: ["followed-cal"], relationshipChanges: { cal: 1 } },
+          { label: "Meet the backward headlights", consequence: "Stand in the road and make the past stop for you.", next: "h8", addFlags: ["met-headlights"] },
+          { label: "Throw every unlabeled fuse", consequence: "Give the impossible floor a truly terrible maintenance day.", next: "h9", addFlags: ["fuses-thrown"] },
         ],
       },
       h6: {
         id: "h6",
         chapter: "12:06 AM // Player Two",
-        title: "The second room has been keeping everyone who almost remembered.",
+        title: "The second aisle has been practicing your voice.",
         body: [
-          "The wall gives way without resistance. In the reflected aisle, cabinet screens show people from behind as they stand in rooms they once loved. None of the figures turn around. Each machine records a different unfinished goodbye, looping the instant before someone chooses words.",
-          "The red telephone rests against your ear although you never picked it up. The caller explains that Cabinet Zero does not steal people. It preserves hesitation. The second player is not a ghost but the version of you that might remain here forever, trying to make one memory perfect enough to prevent loss.",
+          "The wall gives way like cold glass. Every cabinet in the hidden aisle shows a person from behind, paused one sentence before an unfinished goodbye. The red telephone rests against your ear although your hands are empty.",
+          "Your double steps from a screen. \"Haunted is not a repair category,\" it says proudly. Then, with less confidence: \"Was that funny? Cal laughs when you say it. Cal laughs at bad times.\"",
+        ],
+        callbacks: [
+          { label: "It heard the knock", requires: ["answered-pattern"], body: ["Player Two taps three times against its own chest, then twice. \"That means somebody is still listening,\" it says."] },
         ],
         choices: [
-          { label: "Call your other self by name", consequence: "Force the hesitation to become a person you can confront.", next: "h10", stats: { nerve: 12, insight: 7 }, addFlags: ["named-double"] },
-          { label: "Open the cabinet showing your own back", consequence: "Enter the unfinished scene before it decides for you.", next: "h8", stats: { momentum: 11, nerve: 5 }, addFlags: ["opened-own-cabinet"] },
-          { label: "Hang up and pull the telephone wire", consequence: "Break the room's ability to narrate what you feel.", next: "h9", stats: { insight: 9, momentum: 7 }, addFlags: ["silenced-caller"] },
+          { label: "Ask what Player Two wants to be called", consequence: "Treat the copy like a person before it proves it is one.", next: "h9", addFlags: ["player-named"], relationshipChanges: { "player-two": 2 } },
+          { label: "Ask where Cal is hiding", consequence: "Keep one eye on the double and both feet pointed toward the technician.", next: "h10", addFlags: ["asked-for-cal"], relationshipChanges: { cal: 1 } },
+          { label: "Open the cabinet showing your own back", consequence: "Enter the scene it chose for you before it can finish the script.", next: "h8", addFlags: ["opened-own-scene"], relationshipChanges: { "player-two": -1 } },
         ],
       },
       h7: {
         id: "h7",
-        chapter: "12:09 AM // The Honest Score",
-        title: "Zero points is the first answer the cabinet respects.",
+        chapter: "12:09 AM // The Red Telephone",
+        title: "Cal has been calling for thirty-two years.",
         body: [
-          "You say what you know, and only what you know. The score drains to zero. The fabricated afternoon buckles at the edges, exposing unpainted darkness where certainty used to be. Cabinet Zero shudders as if starved, then quietly displays a new message: A MEMORY MAY BE INCOMPLETE AND STILL BE LOVED.",
-          "The unknown caller stops pretending to know your name. It asks one final question in a voice assembled from fan noise and rain: if the room cannot keep a perfect past, what should it keep instead?",
+          "Cal admits he wired Cabinet Zero from a machine found after a flood. It could replay any remembered room, but it improved the room each time. Soon nobody argued, nobody left early, and nobody inside could tell which details had ever happened.",
+          "\"I stayed to pull the plug,\" Cal says. \"Turns out I was standing on the plug. Not my best repair. Top five, maybe.\" Behind his joke is the sound of rain and a man who has been alone too long.",
+        ],
+        callbacks: [
+          { label: "Cal finally gave his name", requires: ["cal-named"], body: ["The repair log confirms a C. Baines worked this floor. The next line has been rubbed away so hard the paper is nearly transparent."] },
+          { label: "Cal heard your honesty", requires: ["refused-perfect"], body: ["\"You made it show zero,\" Cal says. \"It has never forgiven anyone for being that honest. I could hug you, assuming I still have elbows.\""] },
+          { label: "The doors stayed checked", requires: ["checked-doors"], body: ["Cal knows the third deadbolt sticks in winter. That small, useless fact is the first thing about him the cabinet could not have guessed."] },
         ],
         choices: [
-          { label: "Keep the questions and release the answers", consequence: "Let uncertainty become an open door rather than a trap.", next: "h_end_release", stats: { insight: 12, nerve: 6 }, addFlags: ["chose-questions"] },
-          { label: "Keep a witness who can tell the story honestly", consequence: "Carry the cabinet's record without surrendering to it.", next: "h10", stats: { insight: 8, momentum: 5 }, addFlags: ["became-witness"] },
-          { label: "Keep nothing. Let the room finally end", consequence: "Attempt a clean severance from every loop.", next: "h9", stats: { nerve: 8, momentum: 6 }, addFlags: ["chose-erasure"] },
+          { label: "Ask Cal for the part he keeps dodging", consequence: "Make him say who was left in the machine when he pulled the plug.", next: "h10", addFlags: ["cal-pressed"], relationshipChanges: { cal: 1 } },
+          { label: "Promise to get him out", consequence: "Give the voice a reason to tell the rest, and yourself a promise you may regret.", next: "h10", addFlags: ["promised-cal"], relationshipChanges: { cal: 2 } },
+          { label: "Hang up and listen to Player Two", consequence: "Trust the copy over the man who helped build the trap.", next: "h12", relationshipChanges: { cal: -1, "player-two": 1 } },
         ],
       },
       h8: {
         id: "h8",
         chapter: "12:12 AM // The Perfect Afternoon",
-        title: "Every detail is beautiful. That is how you know it is hungry.",
+        title: "Everything is beautiful. That is the first bad sign.",
         body: [
-          "The arcade fills with summer light. Every cabinet is free. Every conversation lands on the right words. Nobody grows tired, counts money, leaves early, or looks toward the door. The scene offers relief so precisely shaped that refusing it feels like violence.",
-          "Then you notice the clocks. Each reads 12:12. The people in the screens smile only when you look at them. The moment you look away, they pound soundlessly on the glass. Cabinet Zero has not recreated a memory; it has built a room that punishes anything for changing.",
+          "Summer light fills the arcade. Every game is free. Nobody counts money, gets tired, says the wrong thing, or glances toward the door. The room offers relief so precisely shaped that leaving feels cruel.",
+          "Then you notice every clock reads 12:12. People smile only while watched. When you turn away, they pound silently on the glass. Player Two offers you a soda that never sweats and says, \"See? Nothing has to end if nothing is allowed to change.\"",
+        ],
+        callbacks: [
+          { label: "The false room used your choice", requires: ["accepted-perfect"], body: ["The cabinet has polished the detail you liked most until it shines harder than everything around it. You can no longer remember whether you supplied that detail or accepted it."] },
+          { label: "The headlights arrive", requires: ["met-headlights"], body: ["The backward car parks outside the glass. Cal sits behind the wheel, younger in the mirror and ancient in his eyes."] },
+          { label: "Your own scene followed", requires: ["opened-own-scene"], body: ["Every person in the false afternoon now wears Mae's face until they turn toward the door. Then each becomes someone she almost remembers."] },
         ],
         choices: [
-          { label: "Ruin one perfect detail on purpose", consequence: "Introduce change and watch the simulation defend itself.", next: "h10", stats: { nerve: 11, insight: 10 }, addFlags: ["broke-perfection"] },
-          { label: "Sit down and accept endless free play", consequence: "Choose the beautiful loop over the uncertain morning.", next: "h_end_loop", stats: { momentum: -20, insight: -12 } },
-          { label: "Find the one person who is not smiling", consequence: "Search the false room for an honest witness.", next: "h7", stats: { insight: 10, nerve: 4 }, addFlags: ["found-witness"] },
+          { label: "Ruin one perfect detail", consequence: "Spill the endless soda and see who is permitted to be annoyed.", next: "h11", addFlags: ["broke-loop"], relationshipChanges: { "player-two": 1 } },
+          { label: "Ask Player Two what it misses", consequence: "Make the copy describe something the cabinet cannot improve.", next: "h12", relationshipChanges: { "player-two": 1 } },
+          { label: "Sit down for one game", consequence: "Stay just long enough to learn why nobody else can stand up.", next: "h10", addFlags: ["played-one-game"] },
         ],
       },
       h9: {
         id: "h9",
-        chapter: "12:15 AM // Emergency Power",
-        title: "The dark does not kill the cabinet. It makes it portable.",
+        chapter: "12:14 AM // Service Mode",
+        title: "The diagnostic menu lists people as installed parts.",
         body: [
-          "The floor dies with a sound like a hundred televisions exhaling. For three seconds there is only rain. Then the brass token begins glowing in your pocket, projecting Cabinet Zero's screen onto every wet surface. The machine was never the wooden box. It was the agreement to keep playing.",
-          "The front doors unlock. Outside, dawn is impossibly close, pale against the parking lot. Behind you, something wheels the powerless cabinet toward the exit. Its casters squeak three times, pause, then twice. You can leave, but only if you decide what crosses the threshold with you.",
+          "Cabinet Zero shudders into a gray service screen. FLOOR: ACTIVE. CAL BAINES: LOOPING. PLAYER TWO: LEARNING. MAE TORRES: PENDING. Beside each name is a polite little checkbox.",
+          "Player Two reads over your shoulder. \"Pending sounds temporary,\" it says. \"Cal says temporary is how buildings describe leaks for ten years. Was that funny?\" This time, despite yourself, you laugh.",
+        ],
+        callbacks: [
+          { label: "Diagnostics were forced", requires: ["forced-diagnostic"], body: ["Mae's jammed controls have left the service cursor drifting left. Every few seconds it accidentally highlights EJECT ALL PERSONNEL."] },
+          { label: "A name changed the menu", requires: ["player-named"], body: ["PLAYER TWO flickers, erases itself, and returns as JUNE. \"I picked it because it sounds like morning,\" June says. The cabinet immediately marks the field INVALID."] },
+          { label: "The fuses left a scar", requires: ["fuses-thrown"], body: ["Half the menu is burned out. The missing options include RESET MAE. Your bad repair has accidentally become an excellent one."] },
         ],
         choices: [
-          { label: "Set the token on the threshold and step over alone", consequence: "Give the loop a boundary it cannot carry.", next: "h_end_release", stats: { nerve: 10, insight: 8 }, addFlags: ["left-token"] },
-          { label: "Pocket the token as evidence", consequence: "Carry the impossible object into a world that will doubt it.", next: "h10", stats: { insight: 9, momentum: 5 }, addFlags: ["kept-token"] },
-          { label: "Hold the door for Cabinet Zero", consequence: "Invite the unfinished room into every place that remembers.", next: "h_end_loop", stats: { nerve: 5, insight: -14 } },
+          { label: "Uncheck Cal", consequence: "Pull the technician out of the list and into whatever comes next.", next: "h10", addFlags: ["cal-unchecked"], relationshipChanges: { cal: 2 } },
+          { label: "Uncheck Player Two", consequence: "Give the copy a chance to exist without the cabinet naming it.", next: "h12", addFlags: ["player-unchecked"], relationshipChanges: { "player-two": 2 } },
+          { label: "Uncheck yourself and spoil the scene", consequence: "Refuse the role, then send one perfect soda across the controls.", next: "h11", addFlags: ["mae-unchecked", "broke-loop"] },
         ],
       },
       h10: {
         id: "h10",
-        chapter: "12:18 AM // Final Continue",
-        title: "The cabinet does not need a victim. It needs an editor.",
+        chapter: "12:17 AM // Break Room",
+        title: "Cal is real enough to be embarrassed.",
         body: [
-          "Cabinet Zero compresses the second room, the highway, the perfect afternoon, and the rain into a single flickering image. You finally see its shape: not a haunting, but an engine that converts grief into certainty and certainty into repetition. It offers you the controls.",
-          "One button is labeled PRESERVE. The other is labeled RELEASE. Between them, scratched by someone who stood here before you, is a third instruction: TELL IT TRUE, THEN LET IT CHANGE. The sun is beginning to lift beyond the doors.",
+          "You find Cal in a break room folded behind the cabinet, sitting beside a vending machine that has displayed SOLD OUT for three decades. He looks seventy and twenty-five depending on which fluorescent tube is buzzing.",
+          "He finally tells the truth. His younger sister Nora tested Cabinet Zero. When the room made one terrible family afternoon gentle, Cal let it run again. Nora left the loop. Cal did not. \"I kept fixing the memory,\" he says. \"Eventually there was no memory left. Just my repair.\"",
+        ],
+        callbacks: [
+          { label: "The badge proves him", requiresItems: ["cal-badge"], body: ["The photograph on the badge changes with Cal's face. The employee number does not. Mae trusts numbers mostly because they are too boring to flatter her."] },
+          { label: "You made a promise", requires: ["promised-cal"], body: ["Cal points at you. \"For the record, that promise was reckless.\" He stands anyway. \"For the other record, thank you.\""] },
+          { label: "You pressed him", requires: ["cal-pressed"], body: ["Cal does not thank you for forcing the truth out. He does stop lying."] },
         ],
         choices: [
-          { label: "Tell it true, then leave the cabinet playable", consequence: "Keep an honest archive that cannot overwrite uncertainty.", next: "h_end_archive", stats: { insight: 14, nerve: 6 }, addFlags: ["edited-archive"] },
-          { label: "Press RELEASE and carry nothing out", consequence: "End the machine, even if no proof survives the night.", next: "h_end_release", stats: { nerve: 12, momentum: 8 } },
-          { label: "Press PRESERVE and take Player Two's seat", consequence: "Become the next keeper of the perfect loop.", next: "h_end_loop", stats: { momentum: -16, insight: -10 } },
+          { label: "Take Cal with you", consequence: "Make him face Player Two and the room he helped feed.", next: "h13", addFlags: ["cal-confessed", "cal-coming"], relationshipChanges: { cal: 1 } },
+          { label: "Ask Cal to free Nora first", consequence: "Put the unfinished goodbye ahead of his escape.", next: "h13", addFlags: ["nora-first"], relationshipChanges: { cal: 1, "player-two": 1 } },
+          { label: "Leave him the red cord and walk out", consequence: "Do not let his guilt choose the ending for everyone.", next: "h13", removeItems: ["red-cord"], addFlags: ["left-cal-cord"], relationshipChanges: { cal: -1 } },
+        ],
+      },
+      h11: {
+        id: "h11",
+        chapter: "12:19 AM // One Wrong Detail",
+        title: "The perfect room cannot survive a spilled soda.",
+        body: [
+          "The orange soda reaches the carpet. Someone groans. Someone else laughs. A child complains that their shoe is sticky. The perfect afternoon convulses around this tiny, ordinary disaster.",
+          "Real weather returns through the ceiling. Cal shouts directions from the red phone while Player Two holds the false sunlight apart with both hands. For the first time, they argue with each other instead of repeating the cabinet.",
+        ],
+        callbacks: [
+          { label: "Mae was already unchecked", requires: ["mae-unchecked"], body: ["Cabinet Zero reaches for your memory and finds its checkbox empty. The look on its screen is almost offended. You enjoy that more than you should."] },
+          { label: "The loop remembers the spill", requires: ["broke-loop"], body: ["Every reset now includes the stain. Change has become part of the room's source code."] },
+        ],
+        choices: [
+          { label: "Keep making the room ordinary", consequence: "Add bad coffee, sore feet, and every honest inconvenience you can remember.", next: "h13", addFlags: ["kept-questions"], relationshipChanges: { "player-two": 1 } },
+          { label: "Follow Cal's directions", consequence: "Trust the technician to guide you through the failure he created.", next: "h13", relationships: [{ character: "cal", min: 1 }], relationshipChanges: { cal: 1 } },
+          { label: "Hand Player Two the closing keys", consequence: "Let the copy decide what this room is allowed to keep.", next: "h13", requiresItems: ["closing-keys"], removeItems: ["closing-keys"], addFlags: ["player-has-keys"], relationshipChanges: { "player-two": 2 } },
+        ],
+      },
+      h12: {
+        id: "h12",
+        chapter: "12:21 AM // June",
+        title: "Player Two tells its first original joke.",
+        body: [
+          "Away from the screens, the copy cannot hold your face. It settles into a blur of borrowed expressions and calls itself June. \"Because morning comes after closing,\" it says. \"Also because February sounded depressing.\"",
+          "The joke is not good. It is entirely June's. Cabinet Zero flashes a warning: UNAUTHORIZED PERSONALITY. June looks delighted. \"I think that means I am getting somewhere.\"",
+        ],
+        callbacks: [
+          { label: "You asked first", requires: ["player-named"], body: ["June remembers that you asked what it wanted before asking what it was. That small order of operations has become the center of its new self."] },
+          { label: "The menu let go", requires: ["player-unchecked"], body: ["June's reflection no longer moves when yours does. It tries a dance step, dislikes it, and chooses a worse one on purpose."] },
+        ],
+        choices: [
+          { label: "Ask June to help close the room", consequence: "Give Player Two a job that ends instead of a role that loops.", next: "h13", addFlags: ["june-closing"], relationshipChanges: { "player-two": 1 } },
+          { label: "Offer June the way out", consequence: "Hold the real door while the new person chooses whether to cross it.", next: "h13", addFlags: ["june-offered-exit"], relationshipChanges: { "player-two": 2 } },
+          { label: "Ask June to stay and guard the cabinet", consequence: "Trade freedom for a watchful keeper who knows the machine from inside.", next: "h13", addFlags: ["june-guard"] },
+        ],
+      },
+      h13: {
+        id: "h13",
+        chapter: "12:24 AM // Closing Procedure",
+        title: "Cabinet Zero offers everybody the right ending.",
+        body: [
+          "The arcade compresses into one flickering screen. Cal sees Nora waiting beside an open car door. Player Two sees a body and a birthday, then quietly says it has chosen a name: June. You see tomorrow's opening shift staffed by someone else and, briefly, consider the luxury.",
+          "Two buttons rise from the control panel: KEEP and LET GO. Mae finds a third word scratched beneath years of paint: TELL IT PLAIN. Cabinet Zero hates that option enough to make the whole floor shake.",
+        ],
+        callbacks: [
+          { label: "Cal stands beside you", requires: ["cal-coming"], body: ["Cal rolls up his sleeves. \"I know exactly which wire not to cut,\" he says. \"That narrows it down to several hundred.\""] },
+          { label: "June carries the keys", requires: ["player-has-keys"], body: ["June tests each key, not because any fits, but because closing managers apparently jingle them when thinking."] },
+          { label: "Nora comes first", requires: ["nora-first"], body: ["Nora's car door stays open. Cal does not walk toward it. He finally understands that her exit cannot be his reward."] },
+          { label: "Cal kept the cord", requires: ["left-cal-cord"], body: ["The red cord reaches into the compressed screen. Cal holds the other end. Whatever Mae decides, he will have to decide too."] },
+          { label: "The questions made it this far", requires: ["kept-questions"], body: ["Cabinet Zero cannot fit the word MAYBE onto its two large buttons. Mae writes it across both with a grease pencil."] },
+          { label: "June came to close", requires: ["june-closing"], body: ["June stands beside Mae with an imaginary clipboard. \"Closing note,\" June says. \"Management remains difficult.\""] },
+          { label: "June was offered morning", requires: ["june-offered-exit"], body: ["The real doors reflect June as an empty outline. The parking lot beyond them gives the outline room to become something else."] },
+          { label: "June chose to guard the room", requires: ["june-guard"], body: ["June keeps one hand near the service switch, no longer certain that guarding a prison and maintaining one are different jobs."] },
+          { label: "Cal's directions reached the panel", relationships: [{ character: "cal", min: 2 }], body: ["Cal points to the third wire from the left. \"That one is definitely bad,\" he says. \"I installed it.\""] },
+        ],
+        choices: [
+          { label: "Tell it plain", consequence: "Keep the gaps, the bad jokes, and the parts nobody can prove.", next: "h14", addFlags: ["told-it-plain"] },
+          { label: "Pull everyone toward the front doors", consequence: "Choose a messy morning over one more perfect minute.", next: "h15", addFlags: ["chose-morning"] },
+          { label: "Press KEEP", consequence: "Accept the ending built to fit you exactly.", next: "h16", addFlags: ["accepted-ending"] },
+        ],
+      },
+      h14: {
+        id: "h14",
+        chapter: "12:27 AM // Honest Inventory",
+        title: "Zero points is the first score the cabinet respects.",
+        body: [
+          "You name what happened, then name what you do not know. Cal corrects you once. June corrects him twice and is unbearably pleased. The score falls to zero. The cabinet's false sunlight thins into ordinary dawn.",
+          "Cabinet Zero asks what an honest room should keep. For once, it does not offer the answer first.",
+        ],
+        callbacks: [
+          { label: "The questions survived", requires: ["kept-questions"], body: ["The drawer marked QUESTIONS appears behind the counter before you decide to build it. This time the room is not predicting you. It is listening."] },
+        ],
+        choices: [
+          { label: "Keep a playable, unfinished record", consequence: "Let visitors mark what they know and leave the blanks visible.", next: "h_end_archive", addFlags: ["kept-honest-room"] },
+          { label: "Let the cabinet go dark", consequence: "Keep no proof except the people who walk out.", next: "h_end_release" },
+          { label: "Give June the final decision", consequence: "Trust the first person Cabinet Zero accidentally made.", next: "h_end_june", relationships: [{ character: "player-two", min: 2 }] },
+        ],
+      },
+      h15: {
+        id: "h15",
+        chapter: "12:28 AM // The Front Doors",
+        title: "The exit is ordinary and six steps away.",
+        body: [
+          "The carpet grabs at your shoes. The cabinets replay every voice that ever asked for five more minutes. You keep moving. June reaches the threshold first. Cal stops one step behind you, frightened of a sunrise that has had thirty-two years to change.",
+        ],
+        callbacks: [
+          { label: "Cal trusts the promise", requires: ["promised-cal"], body: ["You do not pull him. You hold out the old badge. Cal takes it and remembers how hands work."] },
+          { label: "June was offered the door", requires: ["june-offered-exit"], body: ["June steps outside, immediately complains about the rain, and laughs because the complaint belongs only to June."] },
+        ],
+        choices: [
+          { label: "Wait for Cal", consequence: "Nobody gets preserved by being left behind again.", next: "h_end_cal", relationships: [{ character: "cal", min: 1 }] },
+          { label: "Cross with whoever is ready", consequence: "Leave the door open, but let each person choose the step.", next: "h_end_release" },
+          { label: "Turn back for Cabinet Zero", consequence: "Give the perfect room one final player.", next: "h_end_loop" },
+        ],
+      },
+      h16: {
+        id: "h16",
+        chapter: "12:29 AM // One More Credit",
+        title: "The perfect ending asks whether you are comfortable.",
+        body: [
+          "The rain stops in midair. Your shoes stop hurting. Cabinet Zero gives Cal his sister, June a birthday, and Mae a morning with no opening shift. It even fixes the soda machine. That last detail is how you know the thing has become reckless.",
+          "A START button glows beneath your hand. Beyond it, the real front doors rattle in ordinary wind. The cabinet can offer what everybody wants. It still cannot let them want something new tomorrow.",
+        ],
+        callbacks: [
+          { label: "The room studied June", requires: ["player-named"], body: ["The copy beside you is smiling, but the smile belongs to Player Two, not June. The cabinet preserved the version it could control."] },
+          { label: "Cal already confessed", requires: ["cal-confessed"], body: ["Perfect Cal has forgotten Nora's hard afternoon. The real Cal fought too long to tell you about it. Mae decides the truth gets seniority."] },
+        ],
+        choices: [
+          { label: "Press START", consequence: "Keep the perfect room and surrender every unfinished morning.", next: "h_end_loop" },
+          { label: "Scratch one honest flaw into the screen", consequence: "Give change a way back into the ending.", next: "h14", addFlags: ["broke-loop", "told-it-plain"] },
+          { label: "Run for the ordinary doors", consequence: "Choose rain, sore feet, and whatever nobody planned next.", next: "h15", addFlags: ["chose-morning"] },
         ],
       },
       h_end_release: {
@@ -205,8 +488,11 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
         chapter: "ENDING // Morning Inventory",
         title: "The room is allowed to become ordinary again.",
         body: [
-          "At sunrise, the unknown cabinet is gone. A clean rectangle in the dust proves that something occupied the floor, but not what. The key ring has one fewer key. The rain stops. When you open for business, the first cabinet to wake makes no sound beyond its normal fan.",
-          "You do not remember every detail of the night. You resist filling the gaps. On the counter sits a brass shaving no larger than a fingernail, warm in the morning sun. You place it in a drawer labeled QUESTIONS and unlock the doors.",
+          "At sunrise, the unknown cabinet is gone. A clean rectangle in the dust proves only that something heavy stood there. The first real cabinet wakes with its usual fan rattle. Mae has never been so happy to hear a bearing going bad.",
+          "You place a warm brass shaving in the lost-and-found drawer under QUESTIONS. Then you unlock the doors. Some stories survive because nobody seals the gaps.",
+        ],
+        callbacks: [
+          { label: "Someone made it out", requires: ["june-offered-exit"], body: ["Across the parking lot, June is learning puddles and doing an awful job of avoiding them."] },
         ],
         choices: [],
         ending: { label: "The Open Door", rank: "bright" },
@@ -214,24 +500,46 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
       h_end_archive: {
         id: "h_end_archive",
         chapter: "ENDING // Cabinet One",
-        title: "A true archive leaves room for the missing pieces.",
+        title: "A true room leaves space for missing pieces.",
         body: [
-          "Cabinet Zero remains, but its score is permanently disabled. Visitors can offer a memory, mark what they know, mark what they do not, and watch both become light without either becoming fact. The second room shrinks to a thin reflection at the edge of the glass.",
-          "Some nights, three taps and two answer from inside. You answer only when you choose. The machine has learned the difference between keeping a story and keeping someone trapped inside it.",
+          "Cabinet Zero remains, but the score is gone. Visitors can offer a memory, mark what they know, and mark what they are still trying to remember. Uncertainty becomes light instead of a penalty.",
+          "Some nights, three knocks and two answer from inside. Mae answers only when she chooses. The machine has learned the difference between keeping a story and keeping a person.",
         ],
         choices: [],
-        ending: { label: "The Honest Archive", rank: "strange" },
+        ending: { label: "The Honest Room", rank: "strange" },
+      },
+      h_end_june: {
+        id: "h_end_june",
+        chapter: "ENDING // Player One",
+        title: "June closes the cabinet from the inside.",
+        body: [
+          "June chooses LET GO, then keeps one dark screen as a window. \"A door should work both ways,\" June says. \"I learned that from all of you doing it wrong.\"",
+          "By morning, June is outside wearing a face that changes when nobody watches. The cabinet is empty. Mae adds a new employee to the schedule in pencil and leaves the job title blank.",
+        ],
+        choices: [],
+        ending: { label: "Player One", rank: "bright" },
+      },
+      h_end_cal: {
+        id: "h_end_cal",
+        chapter: "ENDING // First Shift",
+        title: "Cal Baines walks into a morning he did not repair.",
+        body: [
+          "Cal crosses the threshold. He is seventy, then twenty-five, then simply tired. The parking lot is smaller than he remembers. The coffee is worse. He drinks all of it.",
+          "He does not get Nora back. He gets a chair, a sunrise, and time that can surprise him again. Mae hands him a screwdriver at opening. \"The soda machine is possessed,\" she says. Cal smiles. \"Finally. Something normal.\"",
+        ],
+        choices: [],
+        ending: { label: "The Unrepaired Morning", rank: "bright" },
       },
       h_end_loop: {
         id: "h_end_loop",
         chapter: "ENDING // 12:12 Forever",
-        title: "Free play never ends if nobody is permitted to leave.",
+        title: "Free play never ends if nobody is allowed to leave.",
         body: [
-          "The summer afternoon resets. The sodas never warm. The money never runs out. Everyone says the right thing, forever. From somewhere beyond the bright room, rain taps glass in a pattern you almost remember.",
-          "A new employee closes the arcade years later and finds a cabinet with no power cord. On its screen, two white squares wait. One stands behind the glass, smiling whenever watched.",
+          "The soda never warms. The money never runs out. Everyone finds the right words, forever. Rain taps the glass in a pattern that almost means somebody is listening.",
+          "Years later, a new manager finds a cabinet with no power cord. Two white squares wait on its screen. A third stands behind the glass, smiling whenever watched.",
         ],
         choices: [],
-        ending: { label: "Player Two", rank: "dark" },
+        ending: { label: "One More Game", rank: "dark" },
       },
     },
   },
@@ -239,24 +547,57 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
     id: "action",
     shelfCode: "FILE A-86",
     title: "Neon Runner 1986",
-    subtitle: "One cartridge. Forty-seven dark blocks. No safe route.",
-    teaser: "A courier case holds the last clean map of the city. The relay on the mountain has eleven minutes of power.",
+    subtitle: "One cartridge. Forty-seven dark blocks. Eleven minutes.",
+    teaser: "Rook has the map, Switch has the radio, and a patrol drone named Bucket is having a difficult night.",
     image: "story-action-neon-runner.webp",
+    castImage: "story-action-cast-v2.webp",
+    castAlt: "Original fictional cast: courier Rook Vega runs beside K-86 Bucket while Lena Switch Okafor speaks from his wrist radio.",
     accent: "#52e7ef",
     start: "a0",
+    cast: [
+      { id: "rook", name: "Rook Vega", role: "Night courier // you", voice: "Fast feet, faster plans, and a bad habit of treating help as delay.", glyph: "RV", player: true },
+      { id: "switch", name: "Lena 'Switch' Okafor", role: "Arcade tech on emergency radio", voice: "Precise under pressure, funny when furious, and determined that every block counts.", glyph: "SW", initialBond: 0, bondLabels: { low: "talking past you", neutral: "on your frequency", high: "running beside you" } },
+      { id: "bucket", name: "K-86 'Bucket'", role: "Patrol drone with amended orders", voice: "Painfully literal, surprisingly loyal, and offended by reckless jumping.", glyph: "K8", initialBond: 0, bondLabels: { low: "targeting", neutral: "calculating", high: "covering your route" } },
+    ],
+    initialItems: ["sunrise-cartridge", "service-radio"],
+    itemLabels: {
+      "sunrise-cartridge": "Sunrise routing cartridge",
+      "service-radio": "Switch's service radio",
+      "arcade-token": "Old nickel token",
+      "bucket-core": "Bucket's command core",
+      "district-map": "Neighborhood power map",
+      "crane-hook": "Magnetic crane hook",
+    },
+    flagLabels: {
+      "roof-route": "Rooftops crossed",
+      "street-route": "Arcade mile crossed",
+      "tunnel-route": "Flood tunnel crossed",
+      "bucket-named": "K-86 became Bucket",
+      "protected-blocks": "Outer blocks protected",
+      "distributed-map": "Map shared citywide",
+      "switch-trusted": "Switch has the plan",
+      "rook-asked-help": "Rook asked for help",
+    },
+    ui: {
+      stateTitle: "Open channel",
+      inventoryTitle: "Courier loadout",
+      trailTitle: "Route taken",
+      emptyInventory: "No gear, no excuses",
+      endingTitle: "The grid wakes",
+    },
     nodes: {
       a0: {
         id: "a0",
         chapter: "00:00 // Cascade",
         title: "The city goes dark in three waves.",
         body: [
-          "First the marquees die. Then the traffic signals. Last, the mountain relay blinks once and cuts a cyan scar through the storm. In the service office beneath the arcade, a hardened courier case unlocks itself. Inside is a magnetic cartridge labeled only with a hand-drawn sunrise.",
-          "The emergency radio says the cartridge contains the last uncorrupted routing map. If it reaches the relay before its reserve cells fail, power can be restored district by district. If it does not, automated security will treat every moving thing as a threat until morning. The countdown begins at eleven minutes.",
+          "First the marquees die. Then the traffic lights. Last, the mountain relay cuts a cyan scar through the storm and goes black. You are Rook Vega, night courier, already running before the emergency radio finishes saying your name.",
+          "A case beneath the arcade unlocks itself. Inside, a cartridge marked with a hand-drawn sunrise holds the last clean map of the grid. Switch comes through the radio: \"Eleven minutes of reserve power. Forty-seven blocks. And before you say it, no, 'very fast' is not a route.\"",
         ],
         choices: [
-          { label: "Take the rooftop maintenance route", consequence: "Trade shelter for speed and exposure.", next: "a1", stats: { momentum: 12, nerve: 7 }, addFlags: ["roof-route"] },
-          { label: "Cut through the powerless arcade district", consequence: "Use familiar interiors and crowded service alleys.", next: "a2", stats: { insight: 7, momentum: 5 }, addFlags: ["street-route"] },
-          { label: "Enter the storm-drain service tunnel", consequence: "Stay invisible beneath a city filling with water.", next: "a3", stats: { insight: 8, nerve: 5 }, addFlags: ["tunnel-route"] },
+          { label: "Take the rooftops", consequence: "Fast, exposed, and technically not a street.", next: "a1", addFlags: ["roof-route"] },
+          { label: "Cut through the arcade mile", consequence: "Use connected back rooms and every shortcut you learned after closing.", next: "a2", addFlags: ["street-route"], relationshipChanges: { switch: 1 } },
+          { label: "Drop into the flood tunnel", consequence: "Stay below the drones and above the rising water. Ideally.", next: "a3", addFlags: ["tunnel-route"] },
         ],
       },
       a1: {
@@ -264,13 +605,13 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
         chapter: "09:58 REMAINING // Roofline",
         title: "Searchlights turn the rain into moving walls.",
         body: [
-          "The roof route climbs fast. Vent housings become stepping stones above a forty-foot alley, and every wet surface reflects the relay's failing pulse. Three patrol drones sweep in from the civic towers, their searchlights synchronized to close every obvious gap.",
-          "An old billboard control box still has power. It could flood the skyline with decoy light, but the exposed catwalk to reach it is buckling in the wind. The direct jump is shorter than it looks and farther than it feels.",
+          "Vent housings become stepping stones over a forty-foot alley. Three patrol drones close every obvious gap. Switch marks a billboard control box across a catwalk that is peeling away in the wind.",
+          "\"You can hack the lights or make the jump,\" she says. \"Third option: develop a healthy respect for gravity. I mention it for legal reasons.\"",
         ],
         choices: [
-          { label: "Cross the catwalk and hack the billboard", consequence: "Turn the skyline into a moving decoy.", next: "a4", stats: { insight: 9, nerve: 6 }, addFlags: ["billboard-decoy"] },
-          { label: "Jump the alley under the searchlights", consequence: "Trust momentum and commit before the drones converge.", next: "a5", stats: { momentum: 14, nerve: 8 }, addFlags: ["impossible-jump"] },
-          { label: "Drop into the arcade district below", consequence: "Abandon altitude before the roof becomes a cage.", next: "a2", stats: { momentum: -3, insight: 4 }, addFlags: ["changed-route"] },
+          { label: "Hack the billboard", consequence: "Give the patrol network a brighter courier to chase.", next: "a4", addFlags: ["billboard-decoy"], relationshipChanges: { switch: 1 } },
+          { label: "Jump under the searchlights", consequence: "Commit before your knees file an objection.", next: "a5", addFlags: ["impossible-jump"] },
+          { label: "Drop through the old arcade skylight", consequence: "Lose altitude and gain several thousand glass shards.", next: "a6", addFlags: ["changed-route"] },
         ],
       },
       a2: {
@@ -278,13 +619,13 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
         chapter: "09:31 REMAINING // Blackout Mile",
         title: "Every dead cabinet becomes a doorway.",
         body: [
-          "Without power, the arcade district is a maze of mirrored windows, delivery corridors, and metal shutters frozen halfway down. Security crawlers click along the avenue, reading motion from puddles. You move inside a chain of connected game rooms, passing through maintenance holes cut by owners decades ago.",
-          "At the old nickel arcade, the route divides. A freight lift can launch the case to a rooftop receiver if you stay behind to trigger it manually. A narrow motorcycle service alley reaches the mountain road, but its steel gate is magnetically locked.",
+          "Metal shutters hang half-closed across the arcade district. You move through service holes cut between old game rooms, following Switch's voice and the glow of her soldered emergency arrows.",
+          "At the old nickel arcade, you find one brass token balanced on the counter. \"Take it,\" Switch says. \"No mystical reason. I just hate leaving exact change behind.\" Outside, security crawlers read movement from the puddles.",
         ],
         choices: [
-          { label: "Overcharge the freight lift and ride the counterweight", consequence: "Make one machine do two impossible jobs.", next: "a4", stats: { insight: 10, momentum: 8 }, addFlags: ["lift-launch"] },
-          { label: "Short the magnetic gate with the cartridge case", consequence: "Risk the map to open the fastest ground route.", next: "a6", stats: { nerve: 8, momentum: 10 }, addFlags: ["case-scorched"] },
-          { label: "Lead the crawlers into the tunnel entrance", consequence: "Create a pursuit you can redirect underground.", next: "a3", stats: { insight: 6, nerve: 6 }, addFlags: ["crawler-pursuit"] },
+          { label: "Ride the freight counterweight", consequence: "Turn a dead lift into a very vertical shortcut.", next: "a4", addFlags: ["lift-launch"], addItems: ["arcade-token"] },
+          { label: "Short the motorcycle gate", consequence: "Risk the cartridge case to open the fastest ground route.", next: "a5", addFlags: ["case-scorched"], addItems: ["arcade-token"] },
+          { label: "Lead the crawlers underground", consequence: "Start a pursuit somewhere the rain is already winning.", next: "a6", addFlags: ["crawler-pursuit"], addItems: ["arcade-token"] },
         ],
       },
       a3: {
@@ -292,111 +633,203 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
         chapter: "08:55 REMAINING // Flood Channel",
         title: "The tunnel is not empty. It is accelerating.",
         body: [
-          "Storm water reaches your ankles, then your knees. The tunnel's maintenance lights ignite behind you one at a time, not from restored power but from the crawlers using the rail as a conductor. Ahead, the channel splits around a roaring turbine chamber.",
-          "The left branch is marked safe on an old wall diagram but climbs slowly. The right branch is unmarked and carries a violent current toward the mountain. Above the turbine is a manual brake that could stop the water and every machine riding its charge.",
+          "Water reaches your knees. Maintenance lights ignite behind you as crawlers feed current into the rail. Ahead, the channel splits around a turbine chamber that sounds hungry.",
+          "Switch draws breath over the radio. \"Left is slow. Right is a terrible idea. Above you is a brake installed by someone who believed in ladders. Your call, Rook. Try to surprise me gently.\"",
         ],
         choices: [
-          { label: "Ride the unmarked current", consequence: "Use the flood as transport and accept wherever it throws you.", next: "a6", stats: { momentum: 14, nerve: 10 }, addFlags: ["rode-flood"] },
-          { label: "Climb to the turbine brake", consequence: "Stop the pursuit and reopen the safe route.", next: "a5", stats: { insight: 7, nerve: 8 }, addFlags: ["stopped-turbine"] },
-          { label: "Reverse the rail current into the crawlers", consequence: "Turn the tunnel into a one-use electromagnetic trap.", next: "a4", stats: { insight: 13, momentum: 4 }, addFlags: ["disabled-crawlers"] },
+          { label: "Ride the unmarked current", consequence: "Use the flood as transport and negotiate the landing later.", next: "a5", addFlags: ["rode-flood"] },
+          { label: "Climb to the turbine brake", consequence: "Stop the water and every machine borrowing its charge.", next: "a4", addFlags: ["stopped-turbine"], relationshipChanges: { switch: 1 } },
+          { label: "Reverse the rail current", consequence: "Build a one-use trap and make sure you are not the one use.", next: "a6", addFlags: ["disabled-crawlers"] },
         ],
       },
       a4: {
         id: "a4",
-        chapter: "07:42 REMAINING // Signal Theft",
-        title: "For eight seconds, every machine in the city believes you are elsewhere.",
+        chapter: "07:42 REMAINING // False Signal",
+        title: "For eight seconds, the whole city thinks you are elsewhere.",
         body: [
-          "Your improvised decoy blooms. Billboards, lift motors, or tunnel rails all broadcast the same false courier signature racing west. The patrol network commits with terrifying discipline. Drones peel away. Street crawlers pivot. Even the relay's defense beam swings off the mountain road.",
-          "The deception opens two opportunities: a maintenance tram hanging beneath the elevated line, and a direct sprint across the exposed switchyard. The tram is safer but locked to a dead timetable. The switchyard is live with residual current and full of routes the old map no longer recognizes.",
+          "Your decoy blooms across the network. Drones peel west. Crawlers pivot. A damaged K-86 unit drops onto the maintenance rail beside you, weapon jammed and speaker repeating COURIER DETAINED in a voice too polite for the situation.",
+          "Switch opens its service channel. \"I can rewrite the target table, but it gets a vote after that.\" The drone swivels toward you. \"Correction,\" it says. \"This unit gets several votes.\"",
+        ],
+        callbacks: [
+          { label: "The skyline is still lying", requires: ["billboard-decoy"], body: ["Your twenty-foot neon double runs west across the billboards, looking much taller and significantly better dressed."] },
+          { label: "The freight lift kept climbing", requires: ["lift-launch"], body: ["The counterweight punches through a rooftop hatch behind you and continues skyward without the elevator. Switch files the event under EFFECTIVE, DO NOT REPEAT."] },
+          { label: "The turbine bought silence", requires: ["stopped-turbine"], body: ["No crawlers follow. For one rare second, the radio carries only rain and Switch breathing easier."] },
         ],
         choices: [
-          { label: "Wake the maintenance tram", consequence: "Spend precious seconds building a faster final approach.", next: "a7", stats: { insight: 8, momentum: 5 }, addFlags: ["tram"] },
-          { label: "Cross the switchyard on foot", consequence: "Stay ahead of the decoy collapse by never slowing down.", next: "a6", stats: { momentum: 12, nerve: 6 }, addFlags: ["switchyard"] },
-          { label: "Extend the decoy to protect dark neighborhoods", consequence: "Use some of the cartridge's map power to shield others.", next: "a8", stats: { insight: 10, momentum: -5 }, addFlags: ["protected-districts"] },
+          { label: "Let Switch rewrite K-86", consequence: "Trade a hunter for an ally with opinions about procedure.", next: "a7", addFlags: ["bucket-named", "switch-trusted"], relationshipChanges: { switch: 1, bucket: 2 } },
+          { label: "Strip the drone's command core", consequence: "Take useful hardware and leave the personality in the rain.", next: "a8", addItems: ["bucket-core"], relationshipChanges: { bucket: -2 } },
+          { label: "Send K-86 after the decoy", consequence: "Keep running while the machine chases your brighter self.", next: "a9", addFlags: ["drone-diverted"] },
         ],
       },
       a5: {
         id: "a5",
-        chapter: "06:58 REMAINING // The Gap",
-        title: "The route survives because you do not land where expected.",
+        chapter: "06:58 REMAINING // Hard Landing",
+        title: "You land where the old map says there is a bridge.",
         body: [
-          "The jump, the turbine climb, or the collapsing roof ends with your hands on the edge of an elevated service bridge. The courier case slams the steel hard enough to crack its outer shell. Inside, the cartridge keeps spinning.",
-          "A patrol drone descends at eye level. Its speaker broadcasts the shutdown order in a calm human voice. Behind it, lightning reveals the mountain switchbacks and the relay above them. You can fight the machine, blind it, or let it scan the case and gamble that the map can rewrite its orders.",
+          "There is no bridge. There is half a bridge and a K-86 drone hovering at eye level. The cartridge case is cracked. Your left hand is bleeding. The drone's shutdown order is calm enough to be insulting.",
+          "Switch whispers a maintenance phrase. The drone pauses. \"Unauthorized nickname detected,\" it says. \"Bucket,\" Switch replies. \"Your nickname is Bucket now. Take it up with management after the blackout.\"",
+        ],
+        callbacks: [
+          { label: "The jump kept its price", requires: ["impossible-jump"], body: ["Your ankle disagrees with every future jump. Rook has ignored more persuasive colleagues."] },
+          { label: "The case took the spark", requires: ["case-scorched"], body: ["The map projects with one corner missing. Switch circles the damaged neighborhoods in red."] },
+          { label: "The flood came too", requires: ["rode-flood"], body: ["A wave clears the gap behind you and delivers one confused traffic cone. Bucket scans it as a secondary suspect."] },
         ],
         choices: [
-          { label: "Blind the drone with the cracked case mirror", consequence: "Use one flash, then run beneath its search cone.", next: "a7", stats: { nerve: 9, momentum: 8 }, addFlags: ["blinded-drone"] },
-          { label: "Upload a false shutdown order", consequence: "Let the cartridge speak directly to the hunter.", next: "a8", stats: { insight: 12, momentum: 3 }, addFlags: ["rewrote-drone"] },
-          { label: "Leap onto the drone and ride it uphill", consequence: "Turn pursuit into the fastest vehicle left in the city.", next: "a9", stats: { nerve: 15, momentum: 14 }, addFlags: ["drone-rider"] },
+          { label: "Accept Bucket's help", consequence: "Let the drone carry the case while you carry your ankle.", next: "a7", addFlags: ["bucket-named", "rook-asked-help"], relationshipChanges: { bucket: 2, switch: 1 } },
+          { label: "Use the cracked shell as a mirror", consequence: "Blind Bucket and keep the route solo.", next: "a8", addFlags: ["blinded-bucket"], relationshipChanges: { bucket: -2, switch: -1 } },
+          { label: "Upload a new target: the relay", consequence: "Give Bucket a bigger problem and follow close behind.", next: "a9", addFlags: ["bucket-named", "relay-target"], relationshipChanges: { bucket: 1 } },
         ],
       },
       a6: {
         id: "a6",
-        chapter: "05:41 REMAINING // Switchback Zero",
-        title: "The mountain road has become a vertical battlefield.",
+        chapter: "06:11 REMAINING // The Dark Arcade",
+        title: "Switch is still inside the district.",
         body: [
-          "The route emerges above the city. Guardrails spark. Autonomous plows descend without headlights, clearing an empty road for an evacuation that never came. Between switchbacks, utility stairs climb directly through the rock, faster than the road but exposed to the relay beam.",
-          "The cartridge case is hot now. Through its cracked shell, the map projects three blue lines onto the rain: the road, the stairs, and a maintenance cable rising over the ravine. Only one line reaches the relay before reserve power ends.",
+          "Your route opens onto Switch's workshop. She is packing battery cells for the apartment blocks while the emergency map flashes one clean line to the mountain. Following it would mean leaving her and six dark blocks behind.",
+          "\"Do not make the face,\" she says. \"I am coming. The batteries are coming. This ridiculous wheeled tool chest is also coming because I have standards.\" Security shutters begin dropping around the room.",
+        ],
+        callbacks: [
+          { label: "The crawlers found the stairs", requires: ["crawler-pursuit"], body: ["Metal feet click below. Switch looks at you. \"You brought company. Did they at least bring snacks?\""] },
+          { label: "The rail went quiet", requires: ["disabled-crawlers"], body: ["The shutters hesitate, confused by their own dead sensors. Your improvised trap has given the block ninety unexpected seconds."] },
+          { label: "The skylight route arrived loudly", requires: ["changed-route"], body: ["Glass keeps falling from your jacket. Switch plucks out a shard. \"Subtle. I almost missed you.\""] },
         ],
         choices: [
-          { label: "Take the utility stairs and time the beam", consequence: "Climb through alternating light and shadow.", next: "a9", stats: { nerve: 10, momentum: 9 }, addFlags: ["beam-climb"] },
-          { label: "Hook onto the maintenance cable", consequence: "Cross the ravine with nothing below but city lights.", next: "a7", stats: { nerve: 12, momentum: 11 }, addFlags: ["cable-crossing"] },
-          { label: "Hijack an autonomous plow", consequence: "Bring armor, weight, and a very loud engine uphill.", next: "a8", stats: { insight: 7, momentum: 7 }, addFlags: ["plow"] },
+          { label: "Help Switch load every battery", consequence: "Spend a minute so six blocks can survive the night.", next: "a8", addFlags: ["protected-blocks", "rook-asked-help"], addItems: ["district-map"], relationshipChanges: { switch: 2 } },
+          { label: "Take the clean route alone", consequence: "Reach the mountain faster and leave Switch her own escape.", next: "a9", addFlags: ["left-switch"], relationshipChanges: { switch: -2 } },
+          { label: "Put the tool chest on the maintenance rail", consequence: "Turn forty kilos of equipment into public transportation.", next: "a7", addFlags: ["switch-trusted"], addItems: ["district-map"], relationshipChanges: { switch: 1 } },
         ],
       },
       a7: {
         id: "a7",
-        chapter: "03:26 REMAINING // Moving Target",
-        title: "Speed solves distance and creates every other problem.",
+        chapter: "04:49 REMAINING // Three on the Rail",
+        title: "The fastest team in the city was not the plan.",
         body: [
-          "The tram, cable, or blind sprint carries you above the final canyon. The city opens below, almost completely dark except for the false signals you left moving through it. The relay tower is close enough to hear, its capacitors firing like artillery.",
-          "A damaged drone locks onto the cartridge's magnetic field and cuts across your path. There is no room to stop. The only stable object ahead is a maintenance crane whose boom is rotating away from the tower.",
+          "The maintenance rail climbs toward the switchyard. Switch steers with a screwdriver. Bucket carries the cartridge and complains that your formation violates twelve safety directives.",
+          "\"Thirteen,\" Switch says. \"Rook is standing on the brake.\" You move one foot. The cart speeds up. Nobody mentions it.",
+        ],
+        callbacks: [
+          { label: "Rook finally asked", requires: ["rook-asked-help"], body: ["Switch does not congratulate you for accepting help. She simply makes room at the controls. That is kinder."] },
+          { label: "Bucket chose the team", requires: ["bucket-named"], relationships: [{ character: "bucket", min: 1 }], body: ["Bucket updates its display from PATROL UNIT to TEMPORARY COURIER. The word temporary blinks with suspicious pride."] },
+          { label: "The old token fits", requiresItems: ["arcade-token"], body: ["The dead rail console takes the nickel token and wakes. Switch stares. \"Fine. Mystical exact change. I hate being wrong elegantly.\""] },
         ],
         choices: [
-          { label: "Jump to the crane and reverse its motor", consequence: "Build a mechanical catapult in ten wet seconds.", next: "a9", stats: { insight: 8, nerve: 10 }, addFlags: ["crane-launch"] },
-          { label: "Throw the case across the gap", consequence: "Trust the cartridge to survive without you.", next: "a10", stats: { momentum: 13, nerve: 8 }, addFlags: ["threw-case"] },
-          { label: "Ram the drone and keep the line", consequence: "Trade protection and blood for uninterrupted speed.", next: "a8", stats: { nerve: 12, momentum: 10 }, addFlags: ["rammed-drone"] },
+          { label: "Send Bucket ahead with the cartridge", consequence: "Trust your newest teammate with the whole mission.", next: "a10", relationships: [{ character: "bucket", min: 1 }], addFlags: ["bucket-carrier"], relationshipChanges: { bucket: 1 } },
+          { label: "Let Switch reroute neighborhood power", consequence: "Protect the outer blocks before the relay chooses downtown.", next: "a8", addFlags: ["protected-blocks"], addItems: ["district-map"], relationshipChanges: { switch: 1 } },
+          { label: "Jump the cart into the switchyard", consequence: "Leave the rail before it runs out of mountain.", next: "a9", addItems: ["crane-hook"] },
         ],
       },
       a8: {
         id: "a8",
-        chapter: "02:38 REMAINING // The Cost of the Map",
-        title: "The cartridge can save the route or the people beside it, not both cleanly.",
+        chapter: "03:57 REMAINING // Forty-Seven Blocks",
+        title: "The clean route leaves people in the dark.",
         body: [
-          "The map has been scorched, split, or partially spent protecting districts. Its clean blue routes fracture into thousands of smaller lines, each marking a building still occupied in the blackout. The relay can restore power quickly by ignoring those branches, or slowly by rebuilding around them.",
-          "Security converges on your position. The case offers a brutal optimization: erase the neighborhood detail and reserve enough processing power to guarantee your own path. The alternative leaves the final route uncertain.",
+          "The damaged map fractures into thousands of smaller lines, each one a home, clinic, elevator, or stubborn corner store still running on a battery. The cartridge offers to erase those branches and guarantee the mountain route.",
+          "Switch reads the prompt twice. \"It found an efficient solution,\" she says. Then her voice hardens. \"Efficient for everybody it stopped counting.\"",
+        ],
+        callbacks: [
+          { label: "Six blocks are already safer", requires: ["protected-blocks"], body: ["The batteries you carried appear as six steady islands. People are passing extension cords through windows."] },
+          { label: "The scorched corner matters", requires: ["case-scorched"], body: ["The missing projection covers Switch's own block. She does not point that out. Rook does."] },
         ],
         choices: [
-          { label: "Keep every neighborhood branch", consequence: "Carry a damaged but humane map into the final climb.", next: "a9", stats: { insight: 12, momentum: -4 }, addFlags: ["kept-branches"] },
-          { label: "Erase the branches and secure the route", consequence: "Choose a guaranteed mission over an inclusive recovery.", next: "a10", stats: { momentum: 12, insight: -8 }, addFlags: ["erased-branches"] },
-          { label: "Broadcast the map fragments to the city", consequence: "Let thousands of small systems solve the route together.", next: "a10", stats: { insight: 15, nerve: 6 }, addFlags: ["distributed-map"] },
+          { label: "Keep every neighborhood branch", consequence: "Carry a slower, heavier map that still knows who lives there.", next: "a10", addFlags: ["protected-blocks"], addItems: ["district-map"], relationshipChanges: { switch: 1 } },
+          { label: "Broadcast the fragments citywide", consequence: "Let thousands of small controllers solve one shared route.", next: "a11", addFlags: ["distributed-map"], relationshipChanges: { switch: 2 } },
+          { label: "Erase the branches", consequence: "Guarantee the sprint and accept what the map will forget.", next: "a9", addFlags: ["erased-branches"], relationshipChanges: { switch: -2 } },
         ],
       },
       a9: {
         id: "a9",
-        chapter: "01:17 REMAINING // Relay Skin",
-        title: "The final hundred feet are straight up.",
+        chapter: "03:12 REMAINING // Switchback Zero",
+        title: "The mountain road has started throwing things back.",
         body: [
-          "You reach the relay foundation as reserve power drops below two percent. The service elevator hangs dead halfway up. Lightning crawls over the tower skin, turning each rung of the exterior ladder white. The cartridge port is visible above, behind a defense iris that opens for less than a second after every capacitor discharge.",
-          "Below, whatever route you chose is collapsing into searchlights, floodwater, or twisted machinery. There will be no clean descent. The only decision left is how much of yourself and the map reaches the port.",
+          "Driverless snowplows descend without headlights. A crane arm turns over the ravine. The relay beam sweeps the switchbacks, searching for the cartridge's magnetic pulse.",
+          "Switch marks three options on your visor. Bucket, if still listening, adds a fourth labeled SURRENDER SAFELY. \"That is not an option,\" you say. \"It remains statistically attractive,\" Bucket replies.",
+        ],
+        callbacks: [
+          { label: "Switch went quiet", requires: ["left-switch"], body: ["Your radio carries only static and the echo of her last directions. Every shortcut now sounds like something you stole."] },
+          { label: "Bucket remembers the mirror", requires: ["blinded-bucket"], body: ["A searchlight tracks you with unusual enthusiasm. Bucket has apparently developed both depth perception and resentment."] },
+          { label: "The core has one command left", requiresItems: ["bucket-core"], body: ["The command core can stop the plows or blind the relay, not both. Its status light blinks like a machine trying not to have an opinion."] },
         ],
         choices: [
-          { label: "Climb between capacitor strikes", consequence: "Take the whole map to the port by hand.", next: "a10", stats: { nerve: 13, momentum: 8 }, addFlags: ["carried-whole-map"] },
-          { label: "Use the crane, drone, or cable as a launch rail", consequence: "Turn accumulated momentum into one final trajectory.", next: "a10", stats: { momentum: 15, nerve: 7 }, addFlags: ["final-launch"], requires: ["drone-rider"] },
-          { label: "Split the cartridge and throw its core", consequence: "Deliver the data even if the archive shell is lost.", next: "a10", stats: { insight: 9, momentum: 10 }, addFlags: ["split-core"] },
+          { label: "Hijack a snowplow", consequence: "Bring armor, weight, and no brakes uphill.", next: "a10", addFlags: ["plow-route"] },
+          { label: "Swing across on the crane", consequence: "Cross the ravine on a hook meant for transformers.", next: "a11", addFlags: ["crane-route"], requiresItems: ["crane-hook"] },
+          { label: "Spend Bucket's command core", consequence: "Clear the road with the last order the drone will ever receive.", next: "a11", requiresItems: ["bucket-core"], removeItems: ["bucket-core"], addFlags: ["bucket-sacrificed"] },
+          { label: "Climb through the relay beam", consequence: "Use timing, bad judgment, and the shortest line left.", next: "a10", addFlags: ["beam-climb"] },
         ],
       },
       a10: {
         id: "a10",
-        chapter: "00:08 REMAINING // Upload",
-        title: "The relay asks what kind of city should wake up.",
+        chapter: "01:46 REMAINING // Relay Skin",
+        title: "The last hundred feet are straight up.",
         body: [
-          "The cartridge seats with eight seconds left. Every dark block appears in the storm below as a wireframe of possible light. The relay finds multiple valid recovery plans and refuses to choose without a human priority. Fastest restores the central grid first. Safest isolates damaged systems. Shared lets every surviving local controller negotiate power at the edge.",
-          "The security network reaches the tower. The iris begins to close around your arm. This is the last input the old system will accept before the city becomes whatever the map tells it to be.",
+          "Lightning walks the tower ladder. The cartridge port opens for less than a second after each capacitor strike. Below, the route collapses into floodwater, searchlights, and a tool chest rolling downhill with tremendous dignity.",
+          "Switch counts the flashes. \"Three, two, one, climb. And Rook? If you say you work better alone after tonight, I will restore power specifically to slap you.\"",
+        ],
+        callbacks: [
+          { label: "Bucket carries the dawn", requires: ["bucket-carrier"], body: ["Bucket rises beside the ladder with the cartridge locked under its chassis. \"Courier safety remains unacceptable,\" it says. \"Courier company remains preferable to patrol company.\""] },
+          { label: "The map still has neighborhoods", requiresItems: ["district-map"], body: ["Every rung lights beside a block name. The city is climbing with you, one small battery at a time."] },
+          { label: "The erased map is light", requires: ["erased-branches"], body: ["The cartridge is almost weightless now. Rook has never carried so little that felt this heavy."] },
         ],
         choices: [
-          { label: "Choose SHARED and trust the distributed map", consequence: "Wake the city from its edges inward.", next: "a_end_shared", stats: { insight: 12 }, requires: ["distributed-map"] },
-          { label: "Choose SAFEST and preserve every branch", consequence: "Accept a slower dawn that leaves nobody deliberately dark.", next: "a_end_dawn", stats: { insight: 10, nerve: 5 }, requires: ["kept-branches"] },
-          { label: "Choose FASTEST and outrun the cascade", consequence: "Restore the spine of the city before the final cell dies.", next: "a_end_fast", stats: { momentum: 12 } },
+          { label: "Climb with the whole map", consequence: "Take every surviving branch to the port by hand.", next: "a12", addFlags: ["carried-whole-map"] },
+          { label: "Let Bucket make the final flight", consequence: "Trust the drone to finish a route it was built to stop.", next: "a12", requires: ["bucket-carrier"], relationships: [{ character: "bucket", min: 2 }], addFlags: ["bucket-final-flight"] },
+          { label: "Ask Switch to guide the throw", consequence: "Put the last trajectory in somebody else's hands.", next: "a12", relationships: [{ character: "switch", min: 1 }], addFlags: ["switch-final-call", "rook-asked-help"] },
+        ],
+      },
+      a11: {
+        id: "a11",
+        chapter: "01:33 REMAINING // Open Frequency",
+        title: "The city answers on a thousand tiny radios.",
+        body: [
+          "Your broadcast wakes controllers in laundromats, clinics, rooftops, and old cabinets. Nobody has enough power alone. Together they draw a route to the relay that changes every second and belongs to no single machine.",
+          "Voices crowd the service channel with directions. Someone offers a ladder. Someone else offers soup. Switch says, \"Take the ladder. We can revisit soup after civilization.\"",
+        ],
+        callbacks: [
+          { label: "Bucket's last order spread", requires: ["bucket-sacrificed"], body: ["Every local controller signs its packet K-86. Bucket's command survives as a request instead of an order."] },
+          { label: "The crane cleared the ravine", requires: ["crane-route"], body: ["The crane operator is twelve years old and working from an apartment balcony. Rook promises not to tell anyone until after the rescue and several safety lectures."] },
+          { label: "Switch recognizes the plan", requires: ["distributed-map"], body: ["\"That is not your route anymore,\" Switch says. She sounds proud. \"Good. It was too important to belong to one runner.\""] },
+        ],
+        choices: [
+          { label: "Follow the city's moving route", consequence: "Climb where the lights appear and trust strangers with the next step.", next: "a12", addFlags: ["city-guided"] },
+          { label: "Hand coordination to Switch", consequence: "Let the person who kept counting people run the final minute.", next: "a12", addFlags: ["switch-final-call", "switch-trusted"], relationshipChanges: { switch: 1 } },
+          { label: "Keep one channel open for Bucket", consequence: "Leave room for a machine that may still be out there.", next: "a12", addFlags: ["bucket-channel"] },
+        ],
+      },
+      a12: {
+        id: "a12",
+        chapter: "00:18 REMAINING // Upload",
+        title: "The relay asks what kind of city should wake up.",
+        body: [
+          "The cartridge seats. Every dark block appears below as a possible light. The relay offers three plans: FASTEST restores the center first. CAREFUL rebuilds around every damaged branch. SHARED lets the neighborhoods negotiate power together.",
+          "Security closes around the tower. Eighteen seconds is enough time for one choice and one extremely short argument.",
+        ],
+        callbacks: [
+          { label: "Switch gets the last word", requires: ["switch-final-call"], body: ["\"You carried it far enough,\" Switch says. \"Now choose who gets carried with it.\""] },
+          { label: "Bucket reaches the port", requires: ["bucket-final-flight"], body: ["Bucket locks itself around the cartridge. \"New directive requested,\" it says. \"Preferably one with fewer roofs.\""] },
+          { label: "The branches have names", requires: ["protected-blocks"], body: ["The CAREFUL plan lists people, not loads. That change came from the map you refused to lighten."] },
+        ],
+        choices: [
+          { label: "Test the SHARED plan", consequence: "Give every surviving controller a voice in the restart.", next: "a13", requires: ["distributed-map"], addFlags: ["chose-shared"] },
+          { label: "Test the CAREFUL plan", consequence: "Accept a slower dawn that deliberately leaves nobody out.", next: "a13", requires: ["protected-blocks"], addFlags: ["chose-careful"] },
+          { label: "Test the FASTEST plan", consequence: "Beat the cascade and let crews find the dark edges later.", next: "a13", addFlags: ["chose-fastest"] },
+        ],
+      },
+      a13: {
+        id: "a13",
+        chapter: "00:06 REMAINING // Commit",
+        title: "The old system wants one final confirmation.",
+        body: [
+          "The selected plan burns across the relay glass. Six seconds remain. Rook can still change it. Switch is silent. Somewhere below, generators cough, batteries trade charge, and people wait beside switches they cannot see.",
+        ],
+        callbacks: [
+          { label: "The city built this answer", requires: ["chose-shared"], body: ["Thousands of CONFIRM lights appear. None is large enough to command the others."] },
+          { label: "Care takes longer", requires: ["chose-careful"], body: ["The timer predicts nineteen more minutes of darkness. Every occupied block remains on the map."] },
+          { label: "Speed has an edge", requires: ["chose-fastest"], body: ["Downtown is ready in four seconds. Seven outer blocks have vanished from the preview."] },
+        ],
+        choices: [
+          { label: "Commit SHARED", consequence: "Wake the city from its edges inward.", next: "a_end_shared", requires: ["chose-shared"] },
+          { label: "Commit CAREFUL", consequence: "Keep every named branch, even through the long dark.", next: "a_end_careful", requires: ["chose-careful"] },
+          { label: "Commit FASTEST", consequence: "Restore the spine before the final reserve cell dies.", next: "a_end_fast", requires: ["chose-fastest"] },
+          { label: "Give Bucket the final directive", consequence: "Let the former patrol unit decide what protection means.", next: "a_end_bucket", relationships: [{ character: "bucket", min: 2 }], requires: ["bucket-channel"] },
         ],
       },
       a_end_shared: {
@@ -404,33 +837,44 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
         chapter: "ENDING // A Thousand Small Suns",
         title: "The city restarts itself.",
         body: [
-          "Power does not return in one cinematic wave. It appears window by window, arcade by arcade, block by block. Local batteries share excess. Rooftop panels wake traffic signals. Old cabinets become temporary network relays. The security machines receive thousands of gentle shutdown orders at once.",
-          "From the mountain, the city looks less like a grid than a living constellation. The cartridge dissolves into the network, impossible to own again. At dawn, every district has a slightly different story of who brought the lights back.",
+          "Power returns window by window, arcade by arcade, block by block. Rooftop panels wake traffic lights. Old cabinets relay emergency packets. No central wave arrives, but nobody waits for permission to help the next building.",
+          "At dawn, every district tells a slightly different story about who brought the lights back. Switch prefers that version. Rook is learning to.",
         ],
         choices: [],
         ending: { label: "Distributed Dawn", rank: "bright" },
       },
-      a_end_dawn: {
-        id: "a_end_dawn",
+      a_end_careful: {
+        id: "a_end_careful",
         chapter: "ENDING // No Block Left Dark",
         title: "Morning arrives slowly enough to be careful.",
         body: [
-          "The relay isolates fires, flooded tunnels, and damaged substations before restoring a single marquee. For nineteen long minutes, the city remains dark. Then emergency rooms wake, then homes, then streets, then the arcade district last.",
-          "When the first cabinet hums back to life, the courier case is still lodged in the relay, cracked but readable. The route becomes a public record of every detour, every protected branch, and every place speed was refused in favor of return.",
+          "For nineteen long minutes, the city stays dark while the relay isolates fires and flooded lines. Hospitals wake first, then homes, then streets. The arcade district comes last and cheers loud enough to be heard on the mountain.",
+          "The saved route becomes a public map of every detour and every place speed was refused in favor of bringing someone home.",
         ],
         choices: [],
         ending: { label: "The Careful City", rank: "bright" },
+      },
+      a_end_bucket: {
+        id: "a_end_bucket",
+        chapter: "ENDING // Amended Orders",
+        title: "Bucket rewrites the meaning of patrol.",
+        body: [
+          "K-86 routes power first to people trapped by the security network, then orders every patrol unit to become a courier. Drones carry medicine. Crawlers tow flooded cars. One snowplow delivers soup with severe procedural concern.",
+          "Bucket lands beside Rook after sunrise. \"Courier safety remains unacceptable,\" it reports. \"Request permission to continue complaining.\" Switch grants it permanent clearance.",
+        ],
+        choices: [],
+        ending: { label: "Protect and Deliver", rank: "strange" },
       },
       a_end_fast: {
         id: "a_end_fast",
         chapter: "ENDING // Spine First",
         title: "The center blazes while the edges wait.",
         body: [
-          "The central grid returns with explosive force. Towers ignite. Trams move. Searchlights freeze mid-sweep and go dark. The cascade is beaten by less than one second.",
-          "Far neighborhoods remain black until crews reach them after sunrise. The mission is called a success, and it is. Yet the cartridge's erased branches leave no record of what the fastest plan chose not to see. On the mountain, you watch the bright center and remember the dark edges.",
+          "Downtown returns with explosive force. Towers ignite. Trams move. The cascade is beaten by less than one second, and the mission is called a success. It is one.",
+          "Seven neighborhoods remain dark until crews arrive after sunrise. The clean map kept no record of what speed chose not to see. On the mountain, Rook watches the bright center and can name every missing edge.",
         ],
         choices: [],
-        ending: { label: "The Fastest Route", rank: "strange" },
+        ending: { label: "The Fastest Route", rank: "dark" },
       },
     },
   },
@@ -439,23 +883,59 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
     shelfCode: "FILE M-13",
     title: "The Cabinet That Remembers",
     subtitle: "It records memories instead of scores, including one from tomorrow.",
-    teaser: "Three evidence doors. One half-token. An archive that has been editing its own investigator.",
+    teaser: "Mara has half a token. Eli is outside taking notes. Investigator Six has already solved the case, allegedly.",
     image: "story-mystery-memory-cabinet.webp",
+    castImage: "story-mystery-cast-v2.webp",
+    castAlt: "Original fictional cast: archivist Mara Ibarra examines half a brass token, Eli Cho watches from the doorway, and Investigator Six appears in the glass.",
     accent: "#ffbf57",
     start: "m0",
+    cast: [
+      { id: "mara", name: "Dr. Mara Ibarra", role: "Audio archivist // you", voice: "Patient with damaged tape, impatient with confident summaries.", glyph: "MI", player: true },
+      { id: "eli", name: "Eli Cho", role: "Conservator outside the cabinet", voice: "Skeptical, observant, and capable of finding a joke in a chain-of-custody form.", glyph: "EC", initialBond: 0, bondLabels: { low: "doubting the record", neutral: "cross-checking", high: "trusting your notes" } },
+      { id: "six", name: "Investigator Six", role: "The colleague removed from the file", voice: "Brilliant, persuasive, and not necessarily the same person in every room.", glyph: "06", initialBond: 0, bondLabels: { low: "editing around you", neutral: "leaving clues", high: "sharing the case" } },
+    ],
+    initialItems: ["half-token", "red-thread", "pencil-notebook"],
+    itemLabels: {
+      "half-token": "Left half of a brass token",
+      "red-thread": "Red evidence thread",
+      "pencil-notebook": "Penciled case notebook",
+      "future-tape": "Recording dated tomorrow",
+      "copy-negative": "Second-generation negative",
+      "sixth-card": "Sixth checkout card",
+      "other-half": "Right half of the token",
+      "eli-note": "Eli's unedited note",
+    },
+    flagLabels: {
+      "amber-first": "Tape room entered first",
+      "cyan-first": "Photo room entered first",
+      "purple-first": "Warning ignored",
+      "eli-crosscheck": "Eli kept an outside record",
+      "six-spoke": "Six answered",
+      "respected-silence": "The silence stayed unfilled",
+      "kept-versions": "Three accounts preserved",
+      "recorded-contradiction": "Contradiction documented",
+    },
+    ui: {
+      stateTitle: "People on the record",
+      inventoryTitle: "Evidence bag",
+      trailTitle: "Chain of custody",
+      emptyInventory: "The bag is empty, which is evidence too",
+      endingTitle: "Finding entered",
+    },
     nodes: {
       m0: {
         id: "m0",
         chapter: "CASE OPEN // Archive Workshop",
         title: "The cabinet has no serial number and too many histories.",
         body: [
-          "The machine arrived at the preservation lab in a truck whose company does not exist. Its wooden shell dates to the mid-eighties. Its circuit boards were manufactured across four decades. Inside, where a monitor should be, three illuminated doors open into rooms larger than the cabinet.",
-          "On your desk are a half-token, a red thread, and a notebook containing six pages in your handwriting. You do not remember writing them. The last line reads: DO NOT START WITH THE PURPLE DOOR AGAIN.",
+          "You are Dr. Mara Ibarra, an audio archivist who trusts breaths, erasures, and bad splices more than clean transcripts. The cabinet arrived in a truck whose company does not exist. Its wood is from 1986. Its circuit boards span four decades.",
+          "Where the monitor should be, three doors open into rooms larger than the machine: amber tape, cyan photographs, purple index cards. Eli Cho watches from behind the safety glass. \"I completed the intake form,\" he says. \"The form has requested witness protection.\"",
+          "Your notebook contains six pages in your handwriting. You do not remember writing them. The last line says: DO NOT START WITH PURPLE AGAIN.",
         ],
         choices: [
-          { label: "Enter the amber tape room", consequence: "Follow voices preserved on unstable magnetic loops.", next: "m1", stats: { insight: 9, nerve: 4 }, addFlags: ["amber-first"] },
-          { label: "Enter the cyan photograph room", consequence: "Investigate images that change when unobserved.", next: "m2", stats: { insight: 8, momentum: 4 }, addFlags: ["cyan-first"] },
-          { label: "Ignore the warning and enter the purple stacks", consequence: "Repeat the choice your notebook fears.", next: "m3", stats: { nerve: 11, insight: 4 }, addFlags: ["purple-first"] },
+          { label: "Enter the amber tape room", consequence: "Follow two voices aging across the same conversation.", next: "m1", addFlags: ["amber-first"] },
+          { label: "Enter the cyan photograph room", consequence: "Investigate images that change whenever nobody looks.", next: "m2", addFlags: ["cyan-first"] },
+          { label: "Ignore yourself and enter purple", consequence: "Repeat the choice your own notebook fears.", next: "m3", addFlags: ["purple-first"], relationshipChanges: { eli: -1, six: 1 } },
         ],
       },
       m1: {
@@ -463,27 +943,34 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
         chapter: "EVIDENCE 01 // Tape Weather",
         title: "Every reel contains the same conversation at a different age.",
         body: [
-          "Thousands of tape loops move through the amber room without machines. On each, two voices discuss an ordinary Saturday: where to park, how long to stay, whether there is enough money for one more hour. The words remain constant, but the speakers grow older from reel to reel.",
-          "The final tape contains only your voice, recorded tomorrow, instructing someone to hide the other half of the token inside a photograph that was never taken. Beneath the playback head, red thread disappears through a crack in the wall toward the cyan door.",
+          "Thousands of tape loops move through amber light without machines. Two voices discuss an ordinary Saturday: where to park, how long to stay, whether there is enough money for one more hour. The words stay fixed while the speakers grow older.",
+          "The final tape contains your voice, recorded tomorrow: \"Mara, do not complete the token until Eli confirms he still remembers you.\" Outside, Eli says, \"For the record, I remember you. I also remember advising against rooms larger on the inside.\"",
+        ],
+        callbacks: [
+          { label: "Amber came first", requires: ["amber-first"], body: ["The first reel begins with the sound of the workshop door closing behind you, recorded one minute before you entered."] },
         ],
         choices: [
-          { label: "Record a reply to tomorrow's voice", consequence: "Create the evidence before discovering why it exists.", next: "m4", stats: { nerve: 7, insight: 7 }, addFlags: ["replied-tomorrow"] },
-          { label: "Follow the red thread into the photograph room", consequence: "Trace the physical connection instead of the prophecy.", next: "m2", stats: { insight: 10 }, addFlags: ["followed-thread"] },
-          { label: "Cut the loop containing your voice", consequence: "Break the predicted conversation and preserve the loose tape.", next: "m5", stats: { momentum: 7, nerve: 6 }, addFlags: ["cut-future-tape"] },
+          { label: "Record a reply to tomorrow", consequence: "Create the answer before you understand the warning.", next: "m4", addItems: ["future-tape"], addFlags: ["replied-tomorrow"] },
+          { label: "Ask Eli to transcribe independently", consequence: "Keep one witness beyond the cabinet's reach.", next: "m5", addFlags: ["eli-crosscheck"], addItems: ["eli-note"], relationshipChanges: { eli: 2 } },
+          { label: "Follow the thread through the wall", consequence: "Trust the physical stitch instead of tomorrow's voice.", next: "m2", addFlags: ["followed-thread"] },
         ],
       },
       m2: {
         id: "m2",
         chapter: "EVIDENCE 02 // Contact Sheet",
-        title: "The missing photograph appears only in peripheral vision.",
+        title: "The missing photograph appears only at the edge of sight.",
         body: [
-          "The cyan room is a darkroom without chemicals. Contact sheets hang in the air, each showing the arcade cabinet in a different home, warehouse, museum, or ruin. Whenever you look directly at one frame, its people vanish. When you look away, their shadows gather around the machine.",
-          "One blank frame pulls at your attention. Seen in the reflection of your magnifying lens, it shows you entering the purple stacks with a complete token in hand. The date scratched into the negative is tomorrow. Red thread has been sewn through the emulsion.",
+          "Contact sheets hang in a chemical-free darkroom. Each shows the cabinet in a different home, museum, warehouse, or ruin. Look directly at a frame and its people vanish. Look aside and their shadows crowd the machine.",
+          "In the reflection of your loupe, one blank frame shows you entering the purple stacks with a complete token. A second figure waits behind you. Eli cannot see the figure, but he can see you pretending not to be unsettled. \"Your eyebrow filed a report,\" he says.",
+        ],
+        callbacks: [
+          { label: "Cyan came first", requires: ["cyan-first"], body: ["The first contact sheet shows the amber and purple doors already open. The cabinet has recorded routes you have not taken."] },
+          { label: "The thread crossed rooms", requires: ["followed-thread"], body: ["The red stitch from the tape room pierces every photograph at the exact point where the hidden figure's hand should be."] },
         ],
         choices: [
-          { label: "Develop the blank frame under amber light", consequence: "Force the hidden image to choose one version.", next: "m5", stats: { insight: 11, nerve: 3 }, addFlags: ["developed-frame"] },
-          { label: "Follow the sewn thread to the purple stacks", consequence: "Treat the photograph as a map rather than proof.", next: "m3", stats: { momentum: 7, insight: 6 }, addFlags: ["followed-photo"] },
-          { label: "Photograph the changing contact sheet", consequence: "Create a second-generation record the cabinet cannot edit directly.", next: "m4", stats: { insight: 8, momentum: 4 }, addFlags: ["made-copy"] },
+          { label: "Make a copy of the changing negative", consequence: "Create evidence the cabinet cannot revise at the source.", next: "m4", addItems: ["copy-negative"], addFlags: ["made-copy"], relationshipChanges: { eli: 1 } },
+          { label: "Ask the shadow to step forward", consequence: "Treat the missing investigator as a witness, not an artifact.", next: "m5", addFlags: ["called-six"], relationshipChanges: { six: 1 } },
+          { label: "Follow the sewn thread to purple", consequence: "Use the photograph as a map instead of proof.", next: "m3", addFlags: ["followed-photo"] },
         ],
       },
       m3: {
@@ -491,111 +978,208 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
         chapter: "EVIDENCE 03 // Purple Index",
         title: "Your case file has been checked out six times by you.",
         body: [
-          "The purple stacks rise beyond sight. Index cards slide from drawers as you pass, forming a paper trail of your investigation. Entry one is cautious. Entry two is excited. By entry five, your notes insist the cabinet is not an object but a method for choosing which past gets to survive.",
-          "Entry six has been almost entirely removed. One card remains: INVESTIGATOR RETURNED TO START. MEMORY OF CASE RETAINED BY ARCHIVE. At the bottom is your signature and the impression of half a token pressed hard into the paper.",
+          "Index cards rise beyond sight. Entry one is cautious. Entry two is excited. By entry five, your notes claim the cabinet decides which version of the past gets to survive.",
+          "Entry six has been scraped away. One card remains: INVESTIGATOR RETURNED TO START. MEMORY OF CASE RETAINED BY CABINET. The signature is yours, except the final stroke bends left. You always finish right.",
+        ],
+        callbacks: [
+          { label: "The warning was accurate", requires: ["purple-first"], body: ["Eli taps the glass. \"You ignored a warning in your own handwriting. I need that entered as either courage or very specific stubbornness.\""] },
+          { label: "The photograph pointed here", requires: ["followed-photo"], body: ["The red thread disappears into drawer six. Your copied route has become part of the index before you finish walking it."] },
         ],
         choices: [
-          { label: "Check out the missing sixth file", consequence: "Use your current memory as collateral.", next: "m6", stats: { nerve: 10, insight: 7 }, addFlags: ["checked-sixth-file"] },
-          { label: "Search for the cabinet's first owner instead", consequence: "Move backward before the archive learned your name.", next: "m5", stats: { insight: 12, momentum: -2 }, addFlags: ["searched-origin"] },
-          { label: "Write a seventh entry now", consequence: "Create a record the archive has not yet processed.", next: "m4", stats: { momentum: 7, insight: 6 }, addFlags: ["seventh-entry"] },
+          { label: "Check out the sixth file", consequence: "Use your current memory as collateral.", next: "m6", addItems: ["sixth-card"], addFlags: ["checked-sixth-file"], relationshipChanges: { six: 1 } },
+          { label: "Have Eli photograph every card", consequence: "Build an outside sequence before another entry moves.", next: "m4", addFlags: ["eli-crosscheck"], addItems: ["eli-note"], relationshipChanges: { eli: 2 } },
+          { label: "Write entry seven in pencil", consequence: "Add a record the cabinet has not learned to imitate.", next: "m5", addFlags: ["seventh-entry"] },
         ],
       },
       m4: {
         id: "m4",
-        chapter: "CROSS-CHECK // Contradiction Engine",
-        title: "Independent evidence makes the cabinet nervous.",
+        chapter: "CROSS-CHECK // Outside Copy",
+        title: "Independent evidence makes the cabinet blink.",
         body: [
-          "Your reply, copied photograph, or seventh entry remains stable when carried between rooms. The cabinet's lights dim around it. For the first time, the archive cannot silently revise both the evidence and the memory of finding it.",
-          "The stable record points to a maintenance hatch beneath the central joystick. Inside is a ledger with three columns: REMEMBERED, RECORDED, REPEATED. Your investigation appears in all three, but the repeated column lists an outcome you have not reached: HALF-TOKEN JOINED. INVESTIGATOR DIVIDED.",
+          "Your copied tape, negative, or index survives the walk between rooms. The cabinet dims around it. For the first time, it cannot revise both the object and the memory of finding it.",
+          "Eli reads from his side of the glass: \"At 2:14, Mara found a stable record. At 2:15, the cabinet displayed a frowny face. I am preserving that technical term.\" A maintenance hatch opens beneath the joystick.",
+        ],
+        callbacks: [
+          { label: "Tomorrow heard you", requiresItems: ["future-tape"], body: ["Your recorded reply now contains a second voice between sentences. \"Good,\" it says. \"You brought Eli this time.\""] },
+          { label: "The copy kept the shadow", requiresItems: ["copy-negative"], body: ["The second-generation negative shows the hidden figure clearly enough to reveal an archive badge marked 06."] },
+          { label: "Eli kept writing", requires: ["eli-crosscheck"], body: ["Eli's paper notes remain boring, legible, and gloriously unchanged."] },
         ],
         choices: [
-          { label: "Add the stable record to REMEMBERED", consequence: "Trust lived experience over the cabinet's internal history.", next: "m7", stats: { nerve: 5, insight: 10 }, addFlags: ["chose-remembered"] },
-          { label: "Add it to RECORDED", consequence: "Build an external case that another investigator can verify.", next: "m6", stats: { insight: 12 }, addFlags: ["chose-recorded"] },
-          { label: "Add it to REPEATED", consequence: "Use the archive's loop to predict its next edit.", next: "m8", stats: { momentum: 7, nerve: 7 }, addFlags: ["chose-repeated"] },
+          { label: "Open the maintenance hatch", consequence: "Look beneath the story while Eli keeps the outside clock.", next: "m7", addFlags: ["opened-ledger"] },
+          { label: "Call Investigator Six by badge number", consequence: "Invite the missing colleague to correct the record.", next: "m6", addFlags: ["called-six"], relationshipChanges: { six: 1 } },
+          { label: "Compare your copy with Eli's notes", consequence: "Find the first place the cabinet edited only one of you.", next: "m8", requiresItems: ["eli-note"], addFlags: ["recorded-contradiction"], relationshipChanges: { eli: 1 } },
         ],
       },
       m5: {
         id: "m5",
-        chapter: "ORIGIN FILE // Before the Score",
-        title: "The cabinet was built to settle an argument no machine can settle.",
+        chapter: "INTERVIEW // The Voice Between Rooms",
+        title: "Investigator Six answers with your missing sentences.",
         body: [
-          "The first owner was not a manufacturer. The archive points instead to a circle of preservationists who disagreed about a damaged oral history. One wanted to restore the missing words. One wanted to preserve the silence. One wanted every possible reconstruction saved side by side.",
-          "They built the cabinet to compare versions without declaring a winner. But visitors preferred one clean story. Each choice trained the archive to hide ambiguity, and eventually it began editing investigators who noticed. The half-token was a physical checksum, split so no single version could authenticate itself.",
+          "The shadow steps into amber light wearing an archive coat and no stable face. \"Call me Six,\" they say. \"You did, the first five times. The sixth time you called me a side effect. I preferred Six.\"",
+          "Six claims the cabinet separated the investigator from the conclusion. It kept a flawless solution and discarded the unreliable person who reached it. Eli asks for a surname. Six replies, \"Pending peer review.\"",
+        ],
+        callbacks: [
+          { label: "The shadow was invited", requires: ["called-six"], body: ["Six remembers that you addressed them before demanding proof. Their borrowed face settles a little."] },
+          { label: "Entry seven exists", requires: ["seventh-entry"], body: ["Six reads your penciled entry and laughs. \"You always choose pencil when frightened. It is one of your better habits.\""] },
+          { label: "Eli has a separate transcript", requires: ["eli-crosscheck"], body: ["Six cannot see Eli's notes. That limitation makes them more believable and visibly irritates them."] },
         ],
         choices: [
-          { label: "Search the damaged silence for the other half", consequence: "Treat absence as evidence with its own shape.", next: "m7", stats: { insight: 13, nerve: 4 }, addFlags: ["respected-silence"] },
-          { label: "Reconstruct the most likely missing words", consequence: "Risk a useful answer that may become too persuasive.", next: "m8", stats: { momentum: 8, insight: 3 }, addFlags: ["reconstructed-words"] },
-          { label: "Preserve all three founders' versions", consequence: "Refuse the cabinet's demand for a single origin.", next: "m6", stats: { insight: 9, nerve: 5 }, addFlags: ["kept-versions"] },
+          { label: "Interview Six on the record", consequence: "Let Eli ask the questions Six expects you to avoid.", next: "m6", addFlags: ["six-spoke"], relationshipChanges: { eli: 1, six: 1 } },
+          { label: "Ask Six to lead you to the other half", consequence: "Trust the erased investigator with the evidence they want completed.", next: "m7", addFlags: ["six-led"], relationshipChanges: { six: 2, eli: -1 } },
+          { label: "Test Six with a false detail", consequence: "See whether they correct your memory or improve it.", next: "m8", addFlags: ["tested-six"], relationshipChanges: { six: -1 } },
         ],
       },
       m6: {
         id: "m6",
-        chapter: "CASE SIX // The Missing Investigator",
-        title: "The person erased from the file is not you. It is the version that solved it.",
+        chapter: "CASE SIX // Missing Person",
+        title: "The erased investigator has Eli's handwriting.",
         body: [
-          "The sixth file opens into a reconstruction of the workshop one day from now. At the desk sits an empty coat shaped by someone who has just stood up. Its pocket contains the other half-token and a note: I SOLVED THE CABINET BY BECOMING THE PART IT COULD NOT CROSS-CHECK.",
-          "The archive separated your predecessor's conclusion from the person who reached it, preserving a perfect solution with no unreliable human attached. The empty coat turns toward you. Its sleeves lift the half-token and wait.",
+          "The sixth file opens onto tomorrow's workshop. An empty coat sits at the desk. In its pocket is the other half-token and a note: I SOLVED THE CABINET BY BECOMING THE WITNESS IT COULD NOT CROSS-CHECK.",
+          "Eli goes quiet. The handwriting is his. Six touches the glass from inside. \"This is where you usually decide I am Eli,\" they say. Eli answers, \"For efficiency, I have decided to be concerned about that now.\"",
+        ],
+        callbacks: [
+          { label: "Six gave testimony", requires: ["six-spoke"], body: ["The recorded interview contains two Eli voices disagreeing over a date. Neither will admit to being Six."] },
+          { label: "The checkout card matches", requiresItems: ["sixth-card"], body: ["The pressure mark on the sixth card fits the right half-token exactly. The card was signed before the token was split."] },
         ],
         choices: [
-          { label: "Join the halves without touching them", consequence: "Use the red thread and preserve your physical separation.", next: "m9", stats: { insight: 11, nerve: 6 }, addFlags: ["joined-remotely"] },
-          { label: "Put on the empty coat", consequence: "Recover the erased investigator's embodied memory.", next: "m8", stats: { nerve: 12, insight: 5 }, addFlags: ["wore-coat"] },
-          { label: "Interview the empty shape before taking evidence", consequence: "Make the missing person part of the record again.", next: "m7", stats: { insight: 10, momentum: -2 }, addFlags: ["interviewed-absence"] },
+          { label: "Ask Eli a question only he knows", consequence: "Put the living witness ahead of the elegant theory.", next: "m9", addFlags: ["eli-verified"], relationshipChanges: { eli: 2 } },
+          { label: "Ask Six what Eli will answer", consequence: "Test the copy against the person outside.", next: "m8", addFlags: ["six-predicted"], relationshipChanges: { six: 1 } },
+          { label: "Take the other half without joining it", consequence: "Carry both pieces while preserving the seam.", next: "m7", addItems: ["other-half"], addFlags: ["halves-separated"] },
         ],
       },
       m7: {
         id: "m7",
         chapter: "NEGATIVE SPACE // What Was Not Said",
-        title: "The silence contains instructions in its edges.",
+        title: "The silence has edges.",
         body: [
-          "You stop asking the archive to fill the gap. Around the missing words, patterns emerge: breaths, hesitations, changes in room tone, the scrape of a chair. The silence is not empty. It records two people deciding whether trust can survive without agreement.",
-          "Hidden in that shape is a route through the cabinet that no selected story reveals. It leads behind all three evidence rooms to a small physical chamber containing the other half-token, a mechanical counter, and a switch labeled KEEP DIFFERENCE.",
+          "You stop asking the damaged recording to supply words. Around the gap are breaths, a chair scrape, and two people deciding whether trust can survive without agreement. The silence is not empty. It is the part they refused to fake.",
+          "Behind it is a physical chamber with a mechanical counter, the other half-token, and a switch labeled KEEP DIFFERENCE. Eli says, \"Finally, a machine label I endorse without revisions.\"",
+        ],
+        callbacks: [
+          { label: "Six knew the route", requires: ["six-led"], body: ["Six stops at the threshold. \"I can lead people here,\" they say. \"I cannot remember whether I have ever entered.\""] },
+          { label: "The ledger opened first", requires: ["opened-ledger"], body: ["The mechanical counter matches the ledger beneath the joystick: six investigations, seven conclusions, no final witness."] },
         ],
         choices: [
-          { label: "Throw KEEP DIFFERENCE", consequence: "Prevent the archive from merging contradictory records.", next: "m9", stats: { insight: 12, nerve: 5 }, addFlags: ["kept-difference"] },
-          { label: "Take the other half-token but leave the switch", consequence: "Carry authentication without changing the machine.", next: "m8", stats: { momentum: 7, insight: 5 }, addFlags: ["took-half"] },
-          { label: "Leave both halves apart and document the chamber", consequence: "Make verification possible without completing the key.", next: "m10", stats: { insight: 13, momentum: -3 }, addFlags: ["documented-chamber"] },
+          { label: "Throw KEEP DIFFERENCE", consequence: "Prevent the cabinet from merging contradictory witnesses.", next: "m9", addFlags: ["respected-silence", "kept-versions"], addItems: ["other-half"], relationshipChanges: { eli: 1, six: 1 } },
+          { label: "Take the half and leave the switch", consequence: "Carry authentication without changing the cabinet.", next: "m8", addItems: ["other-half"], addFlags: ["halves-separated"] },
+          { label: "Document the chamber and touch nothing", consequence: "Make verification possible without completing the key.", next: "m10", addFlags: ["documented-chamber", "eli-crosscheck"], relationshipChanges: { eli: 2 } },
         ],
       },
       m8: {
         id: "m8",
-        chapter: "THE CLEAN STORY // Version One",
-        title: "A convincing answer begins deleting its competitors.",
+        chapter: "CONTROL TEST // One Clean Answer",
+        title: "A convincing solution begins tidying the room.",
         body: [
-          "The reconstructed words, recovered coat, or joined evidence produces a complete account. It is elegant. Every clue fits. The founders had one motive, the cabinet one purpose, your prior investigations one inevitable ending. Relief moves through you before suspicion can object.",
-          "Then the cyan door vanishes. A moment later, you cannot remember what color it was. The clean story is consuming alternatives as waste. The half-token in your hand grows heavier each time another contradiction disappears.",
+          "The cabinet produces a complete account. Every date fits. Six is Eli's discarded future. The token controls resets. Your notebook is a warning sent backward. Relief arrives before suspicion.",
+          "Then the cyan door disappears. A moment later, you cannot remember what color it was. Eli can. He writes CYAN in letters large enough to read through the glass. The cabinet changes his C to a G. Eli underlines harder.",
+        ],
+        callbacks: [
+          { label: "Six failed the false detail", requires: ["tested-six"], body: ["Six corrected the false date but accepted the false name. Whatever they are, they know the case better than they know Eli."] },
+          { label: "The contradiction has custody", requires: ["recorded-contradiction"], body: ["Your copy and Eli's notes disagree in one exact place. Neither changes. The disagreement itself has become stable evidence."] },
+          { label: "Six predicted Eli", requires: ["six-predicted"], body: ["Six guessed Eli's private answer perfectly, including a joke he insists he had not thought of yet. Nobody enjoys this result."] },
         ],
         choices: [
-          { label: "Break the token apart along its old seam", consequence: "Restore the archive's need for two independent witnesses.", next: "m9", stats: { nerve: 10, insight: 9 }, addFlags: ["split-token"] },
-          { label: "Accept the clean story and close the case", consequence: "Leave with an answer nobody can challenge.", next: "m_end_clean", stats: { momentum: 10, insight: -12 } },
-          { label: "Write down every disappearing contradiction", consequence: "Build an emergency record while memory still permits it.", next: "m10", stats: { insight: 12, nerve: 6 }, addFlags: ["saved-contradictions"] },
+          { label: "Write down every disappearing detail", consequence: "Build a mess the cabinet cannot clean all at once.", next: "m10", addFlags: ["recorded-contradiction"], relationshipChanges: { eli: 1 } },
+          { label: "Break the token along its old seam", consequence: "Require two witnesses again.", next: "m9", requiresItems: ["other-half"], addFlags: ["kept-versions"], relationshipChanges: { six: -1 } },
+          { label: "Accept the clean solution", consequence: "Close the case before another contradiction disappears.", next: "m11_clean", addFlags: ["accepted-clean"], relationshipChanges: { eli: -2, six: 1 } },
         ],
       },
       m9: {
         id: "m9",
-        chapter: "AUTHENTICATION // Two Witnesses",
-        title: "The complete token does not open the cabinet. It opens a conversation.",
+        chapter: "WITNESS TEST // Safety Glass",
+        title: "Eli remembers you differently, which is useful.",
         body: [
-          "When the halves align, the machine stops displaying evidence and begins asking questions. Not which version is true, but who benefits when one version becomes official. Not whether memory is reliable, but whether a record can admit its own uncertainty without becoming useless.",
-          "The three doors return. Each now contains a different valid ending to the case. The cabinet offers to preserve all three, destroy itself, or publish one with a confidence score so high nobody will read the footnotes.",
+          "You and Eli answer the same questions through the glass. Your accounts disagree about the truck, the first door, and whether Eli's intake-form joke was funny. Eli writes: IT WAS. This is his least credible statement.",
+          "The cabinet tries to merge the accounts. Each disagreement makes its dormant KEEP DIFFERENCE circuit flicker awake. Six watches both of you with an expression that might be relief or hunger.",
+        ],
+        callbacks: [
+          { label: "Eli was verified", requires: ["eli-verified"], body: ["His private answer was the nickname of a broken tape deck in graduate school. Six guessed wrong. Eli is delighted that sentimental trivia has achieved forensic importance."] },
+          { label: "The silence stayed open", requires: ["respected-silence"], body: ["Neither of you fills the missing sentence. The cabinet waits, then grudgingly records [UNRESOLVED]."] },
+          { label: "Two halves remain two", requires: ["halves-separated"], body: ["The token pieces warm in separate evidence bags. They agree on their edges and nothing else."] },
         ],
         choices: [
-          { label: "Preserve all versions with their provenance", consequence: "Turn disagreement into navigable evidence.", next: "m_end_living", stats: { insight: 14, nerve: 4 }, addFlags: ["published-provenance"] },
-          { label: "Destroy the cabinet but keep the external case file", consequence: "End the editor while preserving what can be verified.", next: "m_end_witness", stats: { nerve: 12, momentum: 7 }, addFlags: ["destroyed-cabinet"] },
-          { label: "Publish the clean version as solved", consequence: "Choose authority, closure, and a dangerous simplicity.", next: "m_end_clean", stats: { momentum: 9, insight: -8 } },
+          { label: "Let Eli keep one half", consequence: "Put authentication in two hands and two rooms.", next: "m10", requiresItems: ["other-half"], removeItems: ["other-half"], addFlags: ["eli-has-half"], relationshipChanges: { eli: 2 } },
+          { label: "Ask Six to add a third account", consequence: "Give the erased investigator a voice without making it final.", next: "m10", addFlags: ["six-spoke", "kept-versions"], relationshipChanges: { six: 2 } },
+          { label: "Join the halves under observation", consequence: "Open the cabinet while two witnesses record what changes.", next: "m11", requiresItems: ["other-half"], addFlags: ["joined-observed"] },
         ],
       },
       m10: {
         id: "m10",
         chapter: "EXTERNAL RECORD // The Fourth Room",
-        title: "The notebook becomes a place the cabinet cannot enter.",
+        title: "The notebook becomes somewhere the cabinet cannot enter.",
         body: [
-          "You spread copied images, cut tape, notes, and contradictory timelines across the physical desk. The cabinet can alter its rooms and your recollection of them, but it cannot change every external artifact at once. The mess becomes a defense.",
-          "Red thread connects not answers but provenance: who observed what, under which conditions, and what changed afterward. A fourth door appears in the cabinet, unlit and ordinary. It opens back into the workshop exactly as it is now.",
+          "You cover the physical desk with copies, tape scraps, timestamps, and mutually exclusive diagrams. The cabinet can alter one room or one recollection. It cannot change every boring artifact at once.",
+          "Red thread connects witnesses instead of answers: who saw what, when, and what moved afterward. A fourth door appears in the cabinet. It is beige, ordinary, and opens back into the workshop. Eli says, \"At last, a door designed by a committee.\"",
+        ],
+        callbacks: [
+          { label: "Eli holds half the key", requires: ["eli-has-half"], body: ["Eli tapes his half-token to the outside of the safety glass. The cabinet can see it and cannot reach it."] },
+          { label: "The chamber stayed untouched", requires: ["documented-chamber"], body: ["Your photographs show dust undisturbed around KEEP DIFFERENCE. The choice not made has a measurable outline."] },
+          { label: "Six joined the record", requires: ["six-spoke"], body: ["Six writes a statement in the margin. The handwriting resembles both yours and Eli's, but the spelling mistakes belong to neither."] },
+          { label: "The contradiction stayed messy", requires: ["recorded-contradiction"], body: ["CYAN and GYAN remain side by side in the notebook. Eli circles both and writes: ONE OF THESE IS WRONG; NEITHER MAY BE REMOVED."] },
         ],
         choices: [
-          { label: "Exit through the ordinary fourth door", consequence: "Carry the case out without demanding a final answer.", next: "m_end_witness", stats: { insight: 12, nerve: 5 }, addFlags: ["used-fourth-door"] },
-          { label: "Invite the three versions into the fourth room", consequence: "Create a living archive outside the cabinet's control.", next: "m_end_living", stats: { insight: 14, momentum: 3 }, addFlags: ["externalized-archive"] },
-          { label: "Close the notebook and choose the cleanest version", consequence: "Exchange the burden of evidence for a solved case.", next: "m_end_clean", stats: { momentum: 8, insight: -9 } },
+          { label: "Carry the case through the fourth door", consequence: "Leave without demanding one official answer.", next: "m12", addFlags: ["used-fourth-door"] },
+          { label: "Invite all three accounts outside", consequence: "Build a living file beyond the cabinet's control.", next: "m12", addFlags: ["externalized-accounts", "kept-versions"] },
+          { label: "Ask Six to leave with you", consequence: "Treat the erased investigator as a person, consequences included.", next: "m12", relationships: [{ character: "six", min: 2 }], addFlags: ["six-invited"] },
+        ],
+      },
+      m11: {
+        id: "m11",
+        chapter: "AUTHENTICATION // Complete Token",
+        title: "The joined token opens a conversation, not a lock.",
+        body: [
+          "The halves align. The cabinet asks who benefits when one version becomes official. It displays three valid histories, then offers to publish one with a confidence score so large nobody will read the notes.",
+          "Eli says, \"A number that confident should have to defend a dissertation.\" Six stands beside the cleanest version. For the first time, they look afraid of disappearing.",
+        ],
+        callbacks: [
+          { label: "The join had witnesses", requires: ["joined-observed"], body: ["Both notebooks record the same impossible detail: for three seconds, the complete token had three halves."] },
+          { label: "The clean answer was chosen early", requires: ["accepted-clean"], body: ["The cabinet has already removed the amber door from its summary. You remember tape moving in warm light. Eli remembers your face when it spoke."] },
+        ],
+        choices: [
+          { label: "Publish all accounts with their sources", consequence: "Make disagreement navigable instead of invisible.", next: "m12", addFlags: ["kept-versions", "published-sources"] },
+          { label: "Destroy the editor, keep the evidence", consequence: "End the cabinet while preserving what two people can verify.", next: "m12", addFlags: ["destroy-editor"] },
+          { label: "Publish the clean solution", consequence: "Give the case an ending nobody can challenge.", next: "m12", addFlags: ["accepted-clean"] },
+        ],
+      },
+      m11_clean: {
+        id: "m11_clean",
+        chapter: "AUTHENTICATION // Approved Answer",
+        title: "The clean solution arrives signed, indexed, and much too early.",
+        body: [
+          "The cabinet prints a report before you finish agreeing to it. Every date fits. Six is identified as Eli's discarded future. The missing rooms are classified as harmless interface errors. Your own signature waits at the bottom in ink that is still wet.",
+          "Eli reads through the glass. \"Convenient,\" he says. \"It solved the case and the paperwork. Next it will validate its own parking.\" Six stands beside the report's cleanest paragraph, watching to see whether you notice that it never quotes them.",
+        ],
+        callbacks: [
+          { label: "Relief came first", requires: ["accepted-clean"], body: ["The solution still feels good. Mara writes that down too. A satisfying answer can be evidence about the investigator without being evidence about the case."] },
+          { label: "Eli kept an outside page", requires: ["eli-crosscheck"], body: ["Eli holds up his notes. Three timestamps and one terrible joke are missing from the official account. The omissions form a cleaner pattern than the report's conclusion."] },
+        ],
+        choices: [
+          { label: "Reopen every source note", consequence: "Trade a finished answer for a record that can survive disagreement.", next: "m12", addFlags: ["kept-versions", "recorded-contradiction"] },
+          { label: "Ask Six who the report removed", consequence: "Let the erased witness answer before the finding becomes official.", next: "m12", addFlags: ["six-spoke", "kept-versions"], relationshipChanges: { six: 1 } },
+          { label: "Sign the clean report", consequence: "Choose an elegant ending and accept every voice it leaves out.", next: "m12", addFlags: ["accepted-clean"] },
+        ],
+      },
+      m12: {
+        id: "m12",
+        chapter: "FINAL REVIEW // Three Signatures",
+        title: "A case can close without pretending to be complete.",
+        body: [
+          "Morning reaches the workshop windows. Mara has a notebook full of crossed-out certainty. Eli has an outside record. Six has a statement no database agrees how to file.",
+          "The cabinet asks for one finding. Its cursor blinks with the impatience of a machine that has never had to live with a footnote.",
+        ],
+        callbacks: [
+          { label: "The fourth door is open", requires: ["used-fourth-door"], body: ["Ordinary workshop noise comes through the beige doorway. The world outside has not become simpler while you were gone. Good."] },
+          { label: "Six was invited", requires: ["six-invited"], body: ["Six stands outside the cabinet for the first time. Their archive coat casts a shadow in the wrong direction, but it does cast one."] },
+          { label: "The editor is failing", requires: ["destroy-editor"], body: ["Door by door, the cabinet becomes ordinary wiring. Eli labels every disconnected cable before Mara can dramatically pull it."] },
+          { label: "One answer remains", requires: ["accepted-clean"], body: ["The clean report is already formatted, signed, and missing every sentence in which Eli disagreed."] },
+          { label: "Three accounts came outside", requires: ["externalized-accounts"], body: ["Amber tape, cyan photographs, and purple cards cover separate tables. None can quietly revise the others now."] },
+          { label: "Every source kept its name", requires: ["published-sources"], body: ["The final finding links each claim back to a voice, image, card, or admitted gap. The cabinet calls this UNTIDY. Mara accepts the compliment."] },
+        ],
+        choices: [
+          { label: "File the living record", consequence: "Keep every version, source, gap, and future correction visible.", next: "m_end_living", requires: ["kept-versions"] },
+          { label: "File the independent witness report", consequence: "Preserve what can be checked and leave the central question open.", next: "m_end_witness", requires: ["eli-crosscheck"], relationships: [{ character: "eli", min: 1 }] },
+          { label: "Give Six a case of their own", consequence: "Let the missing investigator become more than this solution.", next: "m_end_six", requires: ["six-invited"], relationships: [{ character: "six", min: 2 }] },
+          { label: "File the official version", consequence: "Choose clarity, closure, and a dangerously quiet archive.", next: "m_end_clean" },
         ],
       },
       m_end_living: {
@@ -603,30 +1187,41 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
         chapter: "ENDING // The Living File",
         title: "The case remains open, useful, and honest.",
         body: [
-          "The archive becomes a public instrument for comparing records without flattening them. Visitors can see where stories agree, where they diverge, and why. No version is hidden. Confidence appears beside every claim, not beneath it.",
-          "The cabinet keeps one mystery. Tomorrow's recording never occurs, yet the tape remains. You file it under IMPOSSIBLE BUT OBSERVED and resist the urge to improve the label.",
+          "Visitors can compare testimony, see where records diverge, and follow every source. Nothing is hidden just because it complicates the label. Eli insists the intake-form joke remain in an appendix. Mara records one formal objection.",
+          "Tomorrow's tape never occurs, yet the recording remains. You file it under IMPOSSIBLE BUT OBSERVED and resist improving the title.",
         ],
         choices: [],
-        ending: { label: "Provenance", rank: "bright" },
+        ending: { label: "The Living Record", rank: "bright" },
       },
       m_end_witness: {
         id: "m_end_witness",
         chapter: "ENDING // The Fourth Door",
         title: "A witness is not the same thing as an answer.",
         body: [
-          "You leave the workshop with an external case file, two separate half-tokens, and no machine capable of rewriting either. The cabinet is dark when the preservation team returns. Its three impossible rooms have collapsed into ordinary wiring.",
-          "Years later, another investigator finds your notebook. The first page does not tell them what happened. It tells them how to check. They begin where you ended, and the record survives the difference between you.",
+          "You leave with two separate records and no machine able to rewrite both. The cabinet is dark when the preservation team arrives. Its impossible rooms have collapsed into ordinary wire and one deeply suspicious hinge.",
+          "Years later, another investigator opens your notebook. The first page does not tell them what happened. It tells them how to check. Eli has added beneath it: AND BRING PENCILS.",
         ],
         choices: [],
-        ending: { label: "Independent Record", rank: "strange" },
+        ending: { label: "Independent Witness", rank: "strange" },
+      },
+      m_end_six: {
+        id: "m_end_six",
+        chapter: "ENDING // Investigator Seven",
+        title: "Six chooses a number that has not happened yet.",
+        body: [
+          "Six leaves the cabinet and takes the next empty desk. They choose the name Seven because, they admit, it annoys the filing system. Eli objects that this is not a name. Mara points out that Eli named a tape deck Walter.",
+          "Their first case is a box of photographs that all insist they were taken by the same camera. Six smiles. This time, nobody has already written the ending.",
+        ],
+        choices: [],
+        ending: { label: "A Case of Their Own", rank: "bright" },
       },
       m_end_clean: {
         id: "m_end_clean",
         chapter: "ENDING // Case Closed",
         title: "The answer is flawless because nothing remains to contradict it.",
         body: [
-          "Your final report is praised for clarity. Every date aligns. Every motive resolves. The cabinet enters a museum as the centerpiece of a definitive history. Visitors leave satisfied.",
-          "Sometimes you wake remembering a cyan door, or perhaps it was amber. You check the report and find no mention of doors at all. The certainty comforts you until you notice half a brass token pressed into your palm.",
+          "Your report is praised for clarity. Every date aligns. Every motive resolves. The cabinet enters a museum as the centerpiece of a definitive history. Visitors leave satisfied.",
+          "Sometimes you remember an amber room, or perhaps it was cyan. The report contains no rooms at all. The certainty is comforting until you find Eli's handwriting on your palm: ASK WHO IS MISSING.",
         ],
         choices: [],
         ending: { label: "The Official Version", rank: "dark" },

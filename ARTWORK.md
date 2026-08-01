@@ -23,13 +23,19 @@ The generated sources are preserved by Codex. The optimized WebP files are the o
 
 ## Branching story illustrations
 
-Three more 1280 by 720 illustrations were generated with the same built-in tool for the fictional After Closing story cabinet:
+The fictional After Closing cabinet uses two original art layers per story. The first three 1280 by 720 environments establish each room:
 
 - `public/art/story-horror-last-token.webp`: a rain-dark locked arcade, one unknown amber cabinet, keys, and a brass token, composed as intimate psychological horror without people, monsters, brands, or gore.
 - `public/art/story-action-neon-runner.webp`: a storm-black retro-future Colorado Springs courier route from wet rooftops to a mountain relay, with a protected memory cartridge and no visible courier.
 - `public/art/story-mystery-memory-cabinet.webp`: a secret analog archive inside an open cabinet, with tapes, contact sheets, brass machinery, three evidence doors, a detective desk, and no readable documents or people.
 
-The story art depicts original fiction. It does not depict Cathy, Chad, or additional biographical events.
+Three wide cast paintings add recurring fictional characters and props without replacing those environments:
+
+- `public/art/story-horror-cast-v2.webp`: Mae Torres beside the red closing-room phone, Cal Baines reflected in its cracked chrome, and Player Two waiting at a distant cabinet. Rain, fans, relay lights, and warm service light replace any visible grid motif.
+- `public/art/story-action-cast-v2.webp`: Rook crossing a blackout service road with Switch on the wrist radio and the battered K-86 patrol drone, Bucket, running beside him. Neighborhood candlelight and the mountain route provide depth without a neon grid.
+- `public/art/story-mystery-cast-v2.webp`: Mara Ibarra examining a brass half-token and reel-to-reel tape, Eli Cho on the old intercom, and the ambiguous previous investigator, Six, caught in layered archive reflections.
+
+These cast images were generated with the built-in OpenAI image-generation tool as landscape late-1980s gamebook paintings with modern cinematic depth, darker lower thirds for readable choices, and explicit constraints against text, logos, commercial characters, family likenesses, scanlines, or visible grids. The story art depicts original fiction. It does not depict Cathy, Chad, or additional biographical events.
 
 ## Family photographs
 

@@ -15,6 +15,9 @@ const requiredFiles = [
   "dist/art/story-horror-last-token.webp",
   "dist/art/story-action-neon-runner.webp",
   "dist/art/story-mystery-memory-cabinet.webp",
+  "dist/art/story-horror-cast-v2.webp",
+  "dist/art/story-action-cast-v2.webp",
+  "dist/art/story-mystery-cast-v2.webp",
   "dist/memory/cathy-chad-photobooth-program.jpg",
   "dist/memory/cathy-life-program.jpg",
   "dist/data/signals.json",
@@ -66,7 +69,7 @@ for (const gameTitle of ["Skyline Smash", "Token Trail", "Dungeon Circuit", "Hig
 }
 for (const requiredCopy of [
   "$5",
-  "all-you-can-play admission",
+  "Five dollars was not pocket change.",
   "Six chapters. One way home.",
   "Fillmore After Dark",
   "Moxie's Midnight Run",

@@ -1,5 +1,6 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { arcadeGames, mountGame, type GameController, type GameDefinition, type GameHud } from "../games";
+import "../gameplay.css";
 
 type GameArcadeProps = {
   soundEnabled: boolean;
@@ -17,9 +18,14 @@ export function GameArcade({ soundEnabled, onActiveChange }: GameArcadeProps) {
   }, [activeGame, onActiveChange]);
 
   const closeGame = (): void => {
+    const gameTitle = activeGame?.title;
     setActiveGame(null);
     setGameUrl(null);
     setScoreVersion((version) => version + 1);
+    window.setTimeout(() => {
+      if (!gameTitle) return;
+      document.querySelector<HTMLButtonElement>(`[aria-label="Play ${gameTitle}"]`)?.focus();
+    }, 0);
   };
 
   const launchGame = (game: GameDefinition): void => {
@@ -31,14 +37,14 @@ export function GameArcade({ soundEnabled, onActiveChange }: GameArcadeProps) {
     <section className="lobby section-shell" id="lobby" aria-labelledby="lobby-title">
       <div className="section-heading split-heading">
         <div>
-          <p className="kicker">Free play // six cabinets online</p>
-          <h2 id="lobby-title">Pick a game. Chase the board.</h2>
+          <p className="kicker">Free play // six cabinets humming</p>
+          <h2 id="lobby-title">Pick a cabinet. Stay awhile.</h2>
         </div>
-        <p>Original games, rendered live in your browser. No downloads, accounts, ads, tracking, commercial characters, or borrowed cabinet art.</p>
+        <p>Six small games made for this room. Nothing to install, nobody keeping score except the machine, and no quarter-eating nonsense.</p>
       </div>
       <div className="game-series-heading">
-        <span>Original trilogy // upgraded</span>
-        <p>Fast arcade experiments with new movement, scoring, and power systems.</p>
+        <span>The first three // quick and noisy</span>
+        <p>Easy to start, worth replaying, and considerably less sticky than an actual 1986 control panel.</p>
       </div>
       <div className="game-grid">
         {arcadeGames.filter((game) => game.series === "original").map((game) => (
@@ -46,19 +52,19 @@ export function GameArcade({ soundEnabled, onActiveChange }: GameArcadeProps) {
         ))}
       </div>
       <div className="game-series-heading remix-heading">
-        <span>Memory remix // three deeper successors</span>
-        <p>Genre-faithful tributes built from original code, art, levels, characters, and sound.</p>
+        <span>Three longer rides // bring both tokens</span>
+        <p>More rooms, stranger weather, and original characters who have made several questionable choices.</p>
       </div>
       <div className="game-grid remix-grid">
         {arcadeGames.filter((game) => game.series === "memory-remix").map((game) => (
           <GameCard game={game} key={`${game.id}-${scoreVersion}-${progressVersion}`} onLaunch={() => launchGame(game)} />
         ))}
       </div>
-      <div className="floor-status" aria-label="Arcade floor status">
-        <span><i className="status-light" /> Floor open</span>
-        <span>6 original games</span>
-        <span>Local high scores</span>
-        <span>Story progress saved locally</span>
+      <div className="floor-status" role="list" aria-label="Arcade floor status">
+        <span role="listitem"><i className="status-light" /> Floor open</span>
+        <span role="listitem">6 handmade games</span>
+        <span role="listitem">Best scores stay here</span>
+        <span role="listitem">Your place is kept on this browser</span>
       </div>
       <MemoryRoute version={progressVersion} />
       {activeGame ? (
@@ -94,7 +100,7 @@ function GameCard({ game, onLaunch }: { game: GameDefinition; onLaunch: () => vo
         <div className="game-card-copy">
           <div className="game-card-meta">
             <span className="game-cabinet">{game.cabinet} // {game.difficulty}</span>
-            <span className={completed ? "chapter-state recovered" : "chapter-state"}>{completed ? "Signal recovered" : game.chapter}</span>
+            <span className={completed ? "chapter-state recovered" : "chapter-state"}>{completed ? "Chapter kept" : game.chapter}</span>
           </div>
           <h3>{game.title}</h3>
           <p className="game-subtitle">{game.subtitle}</p>
@@ -182,14 +188,25 @@ function GameStage({
         requestClose();
         return;
       }
+      if (event.repeat && ["p", "r"].includes(event.key.toLowerCase())) return;
       controllerRef.current?.setInput(event.key, true);
     };
     const onKeyUp = (event: KeyboardEvent): void => controllerRef.current?.setInput(event.key, false);
+    const releaseHeldInput = (): void => {
+      for (const key of ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "w", "a", "s", "d", " ", "z", "x", "Shift"]) {
+        controllerRef.current?.setInput(key, false);
+      }
+    };
+    const onVisibilityChange = (): void => { if (document.hidden) releaseHeldInput(); };
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", releaseHeldInput);
+    document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", releaseHeldInput);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       document.body.style.overflow = previousOverflow;
     };
   }, [game]);
@@ -218,7 +235,7 @@ function GameStage({
 
   return (
     <div className="game-modal" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <div className={`game-stage tone-${game.tone}`} role="dialog" aria-modal="true" aria-labelledby="active-game-title">
+      <div className={`game-stage tone-${game.tone}`} data-game-id={game.id} role="dialog" aria-modal="true" aria-labelledby="active-game-title">
         <header className="game-stage-header">
           <div><span>{game.cabinet} // now playing</span><h2 id="active-game-title">{game.title}</h2></div>
           <div className="game-stage-score"><span>Score</span><strong>{String(hud.score).padStart(6, "0")}</strong></div>
@@ -269,9 +286,12 @@ function MemoryRoute({ version }: { version: number }) {
           <p className="kicker">Cathy route // local save file</p>
           <h3 id="memory-route-title">Six chapters. One way home.</h3>
         </div>
-        <div className="route-progress" aria-label={`${completed.length} of ${arcadeGames.length} memory signals recovered`}>
+        <div className="route-progress" role="group" aria-label={`${completed.length} of ${arcadeGames.length} chapters finished`}>
           <strong>{completed.length}/{arcadeGames.length}</strong>
-          <span>signals recovered</span>
+          <span>chapters carried home</span>
+          <div className="route-progress-lights" aria-hidden="true">
+            {arcadeGames.map((game) => <i className={readCompletion(game.id) ? "recovered" : ""} key={game.id} />)}
+          </div>
         </div>
       </div>
       <p className="route-disclaimer">These cabinet stories are original metaphors inspired by known memories and Cathy's family-authorized program. They are not presented as additional biographical claims.</p>
@@ -279,11 +299,14 @@ function MemoryRoute({ version }: { version: number }) {
         {arcadeGames.map((game, index) => {
           const recovered = readCompletion(game.id);
           return (
-            <article className={recovered ? "route-stop recovered" : "route-stop"} key={game.id}>
-              <span className="route-node">{String(index + 1).padStart(2, "0")}</span>
-              <small>{game.theme}</small>
-              <strong>{recovered ? game.keepsake : "Signal locked"}</strong>
-              <p>{recovered ? game.completion : `Complete ${game.title} to recover this chapter.`}</p>
+            <article className={`route-stop tone-${game.tone}${recovered ? " recovered" : ""}`} key={game.id}>
+              <div className="route-stop-head">
+                <span className="route-node">{String(index + 1).padStart(2, "0")}</span>
+                <span className={`route-sigil sigil-${game.id}`} aria-hidden="true"><i /><i /><i /></span>
+              </div>
+              <small>{game.theme} // {recovered ? "recovered" : "chapter waiting"}</small>
+              <strong>{game.keepsake}</strong>
+              <p>{recovered ? game.completion : routePromise[game.id]}</p>
               <button type="button" onClick={() => {
                 const target = document.querySelector<HTMLButtonElement>(`[aria-label="Play ${game.title}"]`);
                 target?.click();
@@ -293,19 +316,29 @@ function MemoryRoute({ version }: { version: number }) {
         })}
       </div>
       <aside className={complete ? "route-epilogue unlocked" : "route-epilogue"}>
-        <span>{complete ? "After closing // unlocked" : "After closing // 6 signals required"}</span>
+        <span>{complete ? "After closing // door open" : "After closing // finish all six"}</span>
         <h4>{complete ? "The lights stay on because the memory changed shape." : "There is one room behind the last cabinet."}</h4>
-        <p>{complete ? "The point was never clearing every machine. It was making a place where Cathy's story could remain active: played, heard, remembered, and still unfinished." : "Complete all six chapters on this browser to open the epilogue."}</p>
+        <p>{complete ? "Clearing every machine was never the point. The point was making somewhere warm, a little loud, and easy to return to." : "Finish all six chapters on this browser. The last door is patient."}</p>
       </aside>
     </section>
   );
 }
+
+const routePromise: Record<GameDefinition["id"], string> = {
+  "skyline-smash": "Break the skyline and keep the part of you that is still standing.",
+  "token-trail": "Cross the sunrise gate with the small things you found along the way.",
+  "dungeon-circuit": "Outlast three rooms and earn the continue after the hard loss.",
+  "highrise-havoc": "Climb loud enough to wake the city, then stay for the beautiful mess.",
+  "sunset-run": "Take the long route and bring both tokens to the same door.",
+  "dragonfire-descent": "Read the guardians, break the seals, and carry morning back outside.",
+};
 
 function TouchControls({ onInput, game }: { onInput: (key: string, active: boolean) => void; game: GameDefinition }) {
   const bind = (key: string) => ({
     onPointerDown: (event: React.PointerEvent<HTMLButtonElement>) => { event.currentTarget.setPointerCapture(event.pointerId); onInput(key, true); },
     onPointerUp: () => onInput(key, false),
     onPointerCancel: () => onInput(key, false),
+    onLostPointerCapture: () => onInput(key, false),
     onContextMenu: (event: React.MouseEvent) => event.preventDefault(),
   });
   return (

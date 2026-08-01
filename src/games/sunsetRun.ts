@@ -21,6 +21,7 @@ import {
   type GameStatus,
   type Particle,
 } from "./runtime";
+import { restoreHealth } from "./gameplayRules";
 
 type Platform = { x: number; y: number; width: number; height: number; tone: string };
 type MovingLift = Platform & { minY: number; maxY: number; vy: number };
@@ -55,11 +56,13 @@ type SunsetState = {
   score: number;
   collected: number;
   time: number;
+  exitHint: number;
   status: GameStatus;
 };
 
 const worldWidth = 4680;
 const floorY = 490;
+const maximumHearts = 4;
 const platforms: Platform[] = [
   { x: 0, y: floorY, width: 650, height: 50, tone: "#1f5d66" },
   { x: 735, y: floorY, width: 540, height: 50, tone: "#1f5d66" },
@@ -98,7 +101,9 @@ export function mountSunsetRun(canvas: HTMLCanvasElement, options: GameMountOpti
     const hud: GameHud = {
       score: state.score,
       status: state.status,
-      message: state.status === "playing" ? `${keepsakes}/2 keepsakes // ${state.collected} sparks // ${state.player.health} hearts` : undefined,
+      message: state.status === "playing"
+        ? `${keepsakes}/2 keepsakes // ${state.collected} sparks // ${state.player.health} hearts${state.exitHint > 0 ? " // one is still behind you" : ""}`
+        : undefined,
     };
     const serialized = JSON.stringify(hud);
     if (serialized !== lastHud) {
@@ -145,11 +150,24 @@ export function mountSunsetRun(canvas: HTMLCanvasElement, options: GameMountOpti
   const update = (delta: number): void => {
     if (state.status !== "playing") return;
     state.time = Math.max(0, state.time - delta);
+    state.exitHint = Math.max(0, state.exitHint - delta);
     state.player.invulnerable = Math.max(0, state.player.invulnerable - delta);
     state.player.jumpBuffer = Math.max(0, state.player.jumpBuffer - delta);
     const horizontal = Number(input.down("arrowright", "d")) - Number(input.down("arrowleft", "a"));
     const sprinting = input.down("shift", "x");
     const standing = standingPlatform(state);
+    for (const lift of state.lifts) {
+      const previousLiftY = lift.y;
+      lift.y += lift.vy * delta;
+      if (lift.y <= lift.minY) {
+        lift.y = lift.minY;
+        lift.vy = Math.abs(lift.vy);
+      } else if (lift.y >= lift.maxY) {
+        lift.y = lift.maxY;
+        lift.vy = -Math.abs(lift.vy);
+      }
+      if (standing === lift) state.player.y += lift.y - previousLiftY;
+    }
     state.player.coyote = standing ? 0.11 : Math.max(0, state.player.coyote - delta);
     if (horizontal) state.player.facing = horizontal;
 
@@ -172,11 +190,6 @@ export function mountSunsetRun(canvas: HTMLCanvasElement, options: GameMountOpti
     state.player.x = clamp(state.player.x + state.player.vx * delta, 0, worldWidth - state.player.width);
     state.player.y += state.player.vy * delta;
 
-    for (const lift of state.lifts) {
-      lift.y += lift.vy * delta;
-      if (lift.y < lift.minY || lift.y > lift.maxY) lift.vy *= -1;
-    }
-
     const surfaces: Platform[] = [...platforms, ...state.lifts, ...state.crates.filter((crate) => !crate.broken).map((crate) => ({ ...crate, tone: "#ffbf57" }))];
     if (state.player.vy >= 0) {
       for (const platform of surfaces) {
@@ -185,7 +198,7 @@ export function mountSunsetRun(canvas: HTMLCanvasElement, options: GameMountOpti
         const overlapsX = state.player.x + state.player.width > platform.x && state.player.x < platform.x + platform.width;
         if (overlapsX && previousBottom <= platform.y + 5 && nextBottom >= platform.y) {
           state.player.y = platform.y - state.player.height;
-          state.player.vy = platform instanceof Object && "vy" in platform ? Number(platform.vy) : 0;
+          state.player.vy = 0;
           break;
         }
       }
@@ -267,6 +280,7 @@ export function mountSunsetRun(canvas: HTMLCanvasElement, options: GameMountOpti
     state.camera += (clamp(state.player.x - 300, 0, worldWidth - GAME_WIDTH) - state.camera) * Math.min(1, delta * 6);
 
     const keepsakeCount = state.keepsakes.filter((keepsake) => keepsake.taken).length;
+    if (state.player.x >= 4545 && keepsakeCount < 2) state.exitHint = 2.5;
     if (state.player.x >= 4590 && keepsakeCount === 2) {
       state.score += Math.ceil(state.time) * 24 + state.player.health * 350 + state.collected * 35;
       state.status = "won";
@@ -293,6 +307,7 @@ export function mountSunsetRun(canvas: HTMLCanvasElement, options: GameMountOpti
     drawParticles(context, state.particles);
     context.restore();
     drawScreenFinish(context, "#ffbf57");
+    if (state.exitHint > 0) drawKeepsakeGuidance(context, state);
 
     context.fillStyle = "rgba(2, 7, 11, 0.78)";
     context.fillRect(18, 18, 924, 54);
@@ -301,6 +316,7 @@ export function mountSunsetRun(canvas: HTMLCanvasElement, options: GameMountOpti
     drawPixelText(context, `TIME ${Math.ceil(state.time)}`, 900, 33, 17, "#8be58e", "right");
     const district = state.player.x < 1400 ? "FILLMORE APPROACH" : state.player.x < 2750 ? "MIDNIGHT MARKET" : state.player.x < 3970 ? "SWITCHBACK HEIGHTS" : "SUNRISE EXIT";
     drawPixelText(context, district, 480, 87, 14, "rgba(234,246,242,0.74)", "center");
+    drawPixelText(context, districtRule(state.player.x), 480, 510, 12, "rgba(234,246,242,0.72)", "center");
 
     if (state.status === "paused") drawOverlay(context, "PAUSED", "SATURDAY IS STILL HERE", "#52e7ef");
     if (state.status === "won") drawOverlay(context, "BOTH TOKENS HOME", `FINAL SCORE ${state.score}`, "#ffbf57");
@@ -370,6 +386,7 @@ function createState(): SunsetState {
     score: 0,
     collected: 0,
     time: 185,
+    exitHint: 0,
     status: "playing",
   };
 }
@@ -392,7 +409,7 @@ function breakCrate(state: SunsetState, crate: Crate, sound: ArcadeSfx): void {
   if (crate.contains === "spark") {
     state.sparks.push({ x: crate.x + 23, y: crate.y - 18, taken: false, phase: 0 });
   } else if (crate.contains === "heart") {
-    state.player.health = Math.min(3, state.player.health + 1);
+    state.player.health = restoreHealth(state.player.health, maximumHearts);
     sound.chord([523.25, 659.25], 0.14, "square", 0.04);
   }
 }
@@ -411,13 +428,19 @@ function drawBackground(context: CanvasRenderingContext2D, camera: number, backd
   context.fillStyle = gradient;
   context.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
   drawGameBackdrop(context, backdrop, 0.66, camera / (worldWidth - GAME_WIDTH) * 2 - 1);
-  context.fillStyle = district >= 2 ? "#ffbf57" : "#52e7ef";
+  const sunTone = district >= 2 ? [255, 191, 87] : [82, 231, 239];
+  const sunRadius = 48 + district * 6;
+  const sun = context.createRadialGradient(800, 125, 5, 800, 125, sunRadius + 28);
+  sun.addColorStop(0, `rgba(${sunTone.join(",")},0.9)`);
+  sun.addColorStop(0.48, `rgba(${sunTone.join(",")},0.48)`);
+  sun.addColorStop(1, `rgba(${sunTone.join(",")},0)`);
+  context.fillStyle = sun;
   context.beginPath();
-  context.arc(800, 125, 38 + district * 8, 0, Math.PI * 2);
+  context.arc(800, 125, sunRadius + 28, 0, Math.PI * 2);
   context.fill();
   for (let layer = 0; layer < 3; layer += 1) {
     const offset = -((camera * (0.07 + layer * 0.08)) % 420);
-    context.fillStyle = ["rgba(8,20,38,0.36)", "rgba(8,18,31,0.62)", "#09131d"][layer];
+    context.fillStyle = ["rgba(8,20,38,0.3)", "rgba(8,18,31,0.52)", "rgba(9,19,29,0.86)"][layer];
     context.beginPath();
     context.moveTo(-430, GAME_HEIGHT);
     for (let x = -430; x <= 1450; x += 210) {
@@ -440,6 +463,8 @@ function drawPlatform(context: CanvasRenderingContext2D, platform: Platform): vo
 }
 
 function drawLift(context: CanvasRenderingContext2D, lift: MovingLift): void {
+  context.fillStyle = "rgba(0,0,0,0.28)";
+  context.fillRect(lift.x + 10, lift.maxY + 20, lift.width, 8);
   drawPlatform(context, lift);
   context.strokeStyle = `${lift.tone}66`;
   context.beginPath();
@@ -528,4 +553,23 @@ function drawExit(context: CanvasRenderingContext2D, x: number, keepsakes: numbe
   context.fillStyle = open ? "rgba(139,229,142,0.22)" : "rgba(255,111,97,0.14)";
   context.fillRect(x + 7, 285, 34, 205);
   drawPixelText(context, open ? "HOME" : "2 TOKENS", x + 24, 330, 12, open ? "#8be58e" : "#ff6f61", "center");
+}
+
+function drawKeepsakeGuidance(context: CanvasRenderingContext2D, state: SunsetState): void {
+  const missing = state.keepsakes.filter((keepsake) => !keepsake.taken);
+  if (!missing.length) return;
+  const nearest = missing.reduce((best, candidate) => (
+    Math.abs(candidate.x - state.player.x) < Math.abs(best.x - state.player.x) ? candidate : best
+  ));
+  const pointsLeft = nearest.x < state.player.x;
+  context.fillStyle = "rgba(2,7,11,0.88)";
+  context.fillRect(260, 420, 440, 58);
+  drawPixelText(context, pointsLeft ? "<  ONE KEEPSAKE IS STILL BEHIND YOU" : "ONE KEEPSAKE IS STILL AHEAD  >", 480, 438, 15, "#ffbf57", "center");
+}
+
+function districtRule(x: number): string {
+  if (x < 1400) return "FIND YOUR FEET // THE FIRST CONTINUE IS CLOSE";
+  if (x < 2750) return "JUMP INTO CRATES FROM BELOW // SOME HOLD HEARTS";
+  if (x < 3970) return "RIDE THE LIFTS // KEEP THE SECOND TOKEN IN SIGHT";
+  return "BOTH KEEPSAKES OPEN THE HOME GATE";
 }

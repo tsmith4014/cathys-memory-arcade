@@ -21,6 +21,14 @@ import {
   type GameStatus,
   type Particle,
 } from "./runtime";
+import {
+  TOKEN_TRAIL_FINISH_X,
+  TOKEN_TRAIL_FINAL_TOKEN_X,
+  TOKEN_TRAIL_GOLD_THRESHOLD,
+  TOKEN_TRAIL_TOTAL,
+  tokenTrailOutcome,
+  type TokenTrailOutcome,
+} from "./gameplayRules";
 
 type Platform = { x: number; y: number; width: number; height: number; tone: string };
 type Token = { x: number; y: number; taken: boolean; phase: number };
@@ -38,11 +46,16 @@ type TrailState = {
   time: number;
   stompChain: number;
   stompTimer: number;
+  checkpointFlash: number;
+  checkpointLabel: string;
+  boostCooldown: number;
+  outcome: TokenTrailOutcome | null;
   status: GameStatus;
 };
 
 const worldWidth = 3480;
 const floorY = 480;
+const boostPads = [1080, 2245, 3185];
 const platforms: Platform[] = [
   { x: 0, y: floorY, width: 560, height: 60, tone: "#1e5660" },
   { x: 650, y: floorY, width: 510, height: 60, tone: "#1e5660" },
@@ -77,7 +90,7 @@ export function mountTokenTrail(canvas: HTMLCanvasElement, options: GameMountOpt
     const hud: GameHud = {
       score: state.score,
       status: state.status,
-      message: state.status === "playing" ? `${state.collected}/24 tokens // ${state.player.health} hearts // chain x${Math.max(1, state.stompChain)}` : undefined,
+      message: state.status === "playing" ? `${state.collected}/${TOKEN_TRAIL_TOTAL} tokens // ${state.player.health} hearts // chain x${Math.max(1, state.stompChain)}` : undefined,
     };
     const serialized = JSON.stringify(hud);
     if (serialized !== lastHud) {
@@ -110,6 +123,8 @@ export function mountTokenTrail(canvas: HTMLCanvasElement, options: GameMountOpt
     state.player.jumpBuffer = 0;
     state.stompChain = 0;
     state.stompTimer = 0;
+    state.checkpointFlash = 1.5;
+    state.checkpointLabel = "CONTINUE READY";
     state.camera = clamp(state.checkpoint - 180, 0, worldWidth - GAME_WIDTH);
   };
 
@@ -133,6 +148,8 @@ export function mountTokenTrail(canvas: HTMLCanvasElement, options: GameMountOpt
     state.player.dashCooldown = Math.max(0, state.player.dashCooldown - delta);
     state.player.jumpBuffer = Math.max(0, state.player.jumpBuffer - delta);
     state.stompTimer = Math.max(0, state.stompTimer - delta);
+    state.checkpointFlash = Math.max(0, state.checkpointFlash - delta);
+    state.boostCooldown = Math.max(0, state.boostCooldown - delta);
     if (state.stompTimer <= 0) state.stompChain = 0;
     const direction = Number(input.down("arrowright", "d")) - Number(input.down("arrowleft", "a"));
     const onGround = isStanding(state.player);
@@ -188,12 +205,27 @@ export function mountTokenTrail(canvas: HTMLCanvasElement, options: GameMountOpt
     if (state.player.x > 1640 && state.checkpoint < 1640) {
       state.checkpoint = 1720;
       state.score += 500;
+      state.checkpointFlash = 2.2;
+      state.checkpointLabel = "MIDNIGHT CONTINUE BANKED";
       sound.play(660, 0.18, "triangle", 0.07);
     }
     if (state.player.x > 2750 && state.checkpoint < 2750) {
       state.checkpoint = 2810;
       state.score += 500;
+      state.checkpointFlash = 2.2;
+      state.checkpointLabel = "SUNRISE CONTINUE BANKED";
       sound.play(760, 0.18, "triangle", 0.07);
+    }
+
+    if (state.boostCooldown <= 0) {
+      const pad = boostPads.find((x) => intersects(state.player, { x, y: floorY - 10, width: 76, height: 14 }));
+      if (pad !== undefined) {
+        state.player.vx = Math.max(470, state.player.vx);
+        state.player.dash = Math.max(state.player.dash, 0.12);
+        state.boostCooldown = 0.8;
+        burst(state.particles, pad + 38, floorY - 8, "#52e7ef", 18, 150);
+        sound.play(310, 0.14, "sawtooth", 0.04, 620);
+      }
     }
 
     for (const token of state.tokens) {
@@ -228,10 +260,12 @@ export function mountTokenTrail(canvas: HTMLCanvasElement, options: GameMountOpt
     updateParticles(state.particles, delta);
     state.camera += (clamp(state.player.x - 330, 0, worldWidth - GAME_WIDTH) - state.camera) * Math.min(1, delta * 6);
 
-    if (state.player.x >= 3370) {
-      state.score += Math.ceil(state.time) * 20 + state.player.health * 250 + state.collected * 50;
+    if (state.player.x >= TOKEN_TRAIL_FINISH_X) {
+      state.outcome = tokenTrailOutcome(state.collected);
+      const endingBonus = state.outcome === "perfect" ? 3000 : state.outcome === "golden" ? 1400 : 400;
+      state.score += Math.ceil(state.time) * 20 + state.player.health * 250 + state.collected * 50 + endingBonus;
       state.status = "won";
-      sound.play(880, 0.42, "square", 0.08);
+      sound.chord(state.outcome === "perfect" ? [523.25, 659.25, 783.99, 1046.5] : [440, 554.37, 659.25], 0.42, "square", 0.06);
     } else if (state.time <= 0) {
       state.status = "lost";
       sound.play(55, 0.45, "sawtooth", 0.09);
@@ -244,6 +278,9 @@ export function mountTokenTrail(canvas: HTMLCanvasElement, options: GameMountOpt
     context.save();
     context.translate(-Math.round(state.camera), 0);
     for (const platform of platforms) drawPlatform(context, platform);
+    for (const pad of boostPads) drawBoostPad(context, pad, state.boostCooldown);
+    drawCheckpoint(context, 1720, state.checkpoint >= 1720);
+    drawCheckpoint(context, 2810, state.checkpoint >= 2810);
     for (const token of state.tokens) if (!token.taken) drawToken(context, token);
     for (const enemy of state.enemies) if (enemy.alive) drawEnemy(context, enemy);
     drawGate(context, 3390, state.collected);
@@ -255,15 +292,19 @@ export function mountTokenTrail(canvas: HTMLCanvasElement, options: GameMountOpt
     context.fillStyle = "rgba(4, 11, 18, 0.76)";
     context.fillRect(18, 18, 924, 54);
     drawPixelText(context, `SCORE ${String(state.score).padStart(6, "0")}`, 34, 33, 17, "#ffbf57");
-    drawPixelText(context, `TOKENS ${String(state.collected).padStart(2, "0")}/24`, 360, 33, 17, "#52e7ef");
+    drawPixelText(context, `TOKENS ${String(state.collected).padStart(2, "0")}/${TOKEN_TRAIL_TOTAL}`, 360, 33, 17, "#52e7ef");
     drawPixelText(context, `TIME ${Math.ceil(state.time)}`, 900, 33, 17, "#8be58e", "right");
     if (state.stompChain > 1) drawPixelText(context, `STOMP CHAIN x${state.stompChain}`, 480, 112, 17, "#ef78ff", "center");
     const zone = state.player.x < 1200 ? "NEON FOOTHILLS" : state.player.x < 2360 ? "MIDNIGHT SWITCHYARD" : "SUNRISE TERMINAL";
     drawPixelText(context, zone, 480, 87, 14, "rgba(234, 246, 242, 0.72)", "center");
+    if (state.checkpointFlash > 0) drawPixelText(context, state.checkpointLabel, 480, 122, 18, "#8be58e", "center");
 
     if (state.status === "paused") drawOverlay(context, "PAUSED", "TRAIL POSITION SAVED", "#52e7ef");
-    if (state.status === "won") drawOverlay(context, "TRAIL COMPLETE", `${state.collected}/24 TOKENS // SCORE ${state.score}`, "#ffbf57");
-    if (state.status === "lost") drawOverlay(context, "OUT OF CONTINUES", `TOKENS BANKED ${state.collected}/24`, "#ff6f61");
+    if (state.status === "won") {
+      const ending = tokenEndingCopy(state.outcome ?? tokenTrailOutcome(state.collected));
+      drawOverlay(context, ending.title, `${ending.copy} // SCORE ${state.score}`, ending.color);
+    }
+    if (state.status === "lost") drawOverlay(context, "OUT OF CONTINUES", `TOKENS POCKETED ${state.collected}/${TOKEN_TRAIL_TOTAL}`, "#ff6f61");
   };
 
   const loop = new FrameLoop((delta) => {
@@ -293,7 +334,7 @@ function createState(): TrailState {
   const tokenPositions = [
     [185, 425], [310, 330], [530, 270], [730, 435], [775, 345], [980, 270], [1100, 425], [1290, 315],
     [1535, 240], [1720, 320], [1845, 425], [1970, 255], [2220, 335], [2420, 295], [2500, 425], [2675, 225],
-    [2835, 325], [2940, 425], [3100, 255], [3200, 425], [3290, 400], [3350, 365], [3410, 330], [3450, 290],
+    [2835, 325], [2940, 425], [3100, 255], [3200, 425], [3290, 400], [3350, 365], [3410, 330], [TOKEN_TRAIL_FINAL_TOKEN_X, 425],
   ];
   return {
     player: { x: 45, y: 390, previousY: 390, vx: 0, vy: 0, width: 36, height: 48, health: 4, invulnerable: 0, dash: 0, dashCooldown: 0, coyote: 0.15, jumpBuffer: 0, airDashReady: true },
@@ -313,6 +354,10 @@ function createState(): TrailState {
     time: 135,
     stompChain: 0,
     stompTimer: 0,
+    checkpointFlash: 0,
+    checkpointLabel: "",
+    boostCooldown: 0,
+    outcome: null,
     status: "playing",
   };
 }
@@ -414,5 +459,38 @@ function drawGate(context: CanvasRenderingContext2D, x: number, collected: numbe
   context.strokeRect(x, 280, 62, 200);
   context.fillStyle = "rgba(255, 191, 87, 0.16)";
   context.fillRect(x + 7, 287, 48, 193);
-  drawPixelText(context, collected >= 18 ? "OPEN" : "EXIT", x + 31, 330, 13, "#ffbf57", "center");
+  const label = collected >= TOKEN_TRAIL_TOTAL ? "PERFECT" : collected >= TOKEN_TRAIL_GOLD_THRESHOLD ? "GOLD" : "SUNRISE";
+  drawPixelText(context, label, x + 31, 330, 11, "#ffbf57", "center");
+}
+
+function drawBoostPad(context: CanvasRenderingContext2D, x: number, cooldown: number): void {
+  context.fillStyle = cooldown > 0 ? "rgba(82,231,239,0.22)" : "rgba(82,231,239,0.48)";
+  context.fillRect(x, floorY - 8, 76, 8);
+  context.fillStyle = "#eaf6f2";
+  for (let offset = 10; offset < 68; offset += 18) {
+    context.beginPath();
+    context.moveTo(x + offset, floorY - 7);
+    context.lineTo(x + offset + 8, floorY - 4);
+    context.lineTo(x + offset, floorY - 1);
+    context.fill();
+  }
+}
+
+function drawCheckpoint(context: CanvasRenderingContext2D, x: number, active: boolean): void {
+  context.strokeStyle = active ? "#8be58e" : "rgba(139,229,142,0.28)";
+  context.lineWidth = 3;
+  context.beginPath();
+  context.moveTo(x, floorY);
+  context.lineTo(x, floorY - 72);
+  context.stroke();
+  context.fillStyle = active ? "#8be58e" : "rgba(139,229,142,0.28)";
+  context.beginPath();
+  context.arc(x, floorY - 80, active ? 10 : 6, 0, Math.PI * 2);
+  context.fill();
+}
+
+function tokenEndingCopy(outcome: TokenTrailOutcome): { title: string; copy: string; color: string } {
+  if (outcome === "perfect") return { title: "EVERY TOKEN HOME", copy: "24/24 // THE MACHINE OWES YOU A SODA", color: "#ffbf57" };
+  if (outcome === "golden") return { title: "GOLDEN TRAIL", copy: "THE LONG WAY PAID OFF", color: "#8be58e" };
+  return { title: "SUNRISE REACHED", copy: "A FEW TOKENS ARE STILL OUT THERE", color: "#52e7ef" };
 }
