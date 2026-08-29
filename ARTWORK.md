@@ -23,7 +23,7 @@ The generated sources are preserved by Codex. The optimized WebP files are the o
 
 ## Branching story illustrations
 
-The fictional After Closing cabinet uses two original art layers per story. The first three 1280 by 720 environments establish each room:
+The fictional After Closing cabinet begins with two original art layers per story. The first three 1280 by 720 environments establish each room:
 
 - `public/art/story-horror-last-token.webp`: a rain-dark locked arcade, one unknown amber cabinet, keys, and a brass token, composed as intimate psychological horror without people, monsters, brands, or gore.
 - `public/art/story-action-neon-runner.webp`: a storm-black retro-future Colorado Springs courier route from wet rooftops to a mountain relay, with a protected memory cartridge and no visible courier.
@@ -35,9 +35,15 @@ Three wide cast paintings add recurring fictional characters and props without r
 - `public/art/story-action-cast-v2.webp`: Rook crossing a blackout service road with Switch on the wrist radio and the battered K-86 patrol drone, Bucket, running beside him. Neighborhood candlelight and the mountain route provide depth without a neon grid.
 - `public/art/story-mystery-cast-v2.webp`: Mara Ibarra examining a brass half-token and reel-to-reel tape, Eli Cho on the old intercom, and the ambiguous previous investigator, Six, caught in layered archive reflections.
 
-The reader alternates between each story's environment and cast painting as the action changes. Every scene has an explicit art choice and mobile focal point; concise text is placed in the lower third, while the original long prose remains available only at selected turning points. This keeps the illustration dominant without discarding the deeper version of the scene.
+Ten additional 1672 by 941 turning-point paintings give each route a visual beginning, escalation, and payoff instead of recycling one backdrop through every decision:
 
-These cast images were generated with the built-in OpenAI image-generation tool as landscape late-1980s gamebook paintings with modern cinematic depth, darker lower thirds for readable choices, and explicit constraints against text, logos, commercial characters, family likenesses, scanlines, or visible grids. The story art depicts original fiction. It does not depict Cathy, Chad, or additional biographical events.
+- Horror: `story-horror-extra-aisle-v3.webp`, `story-horror-mirror-v3.webp`, `story-horror-perfect-trap-v3.webp`, and `story-horror-ordinary-morning-v3.webp` move from rain-dark uncertainty through a seductive frozen afternoon to an imperfect dawn.
+- Action: `story-action-flood-channel-v3.webp`, `story-action-three-on-rail-v3.webp`, and `story-action-distributed-dawn-v3.webp` show the flooded live rail, the crew's storm-speed fork, and a town restored by many small relays.
+- Mystery: `story-mystery-evidence-rooms-v3.webp`, `story-mystery-fourth-door-v3.webp`, and `story-mystery-living-file-v3.webp` make contradictory evidence, the impossible fourth door, and the communal archive visible before the prose explains them.
+
+Every scene now directs its image, camera behavior, atmosphere, speaker, and three discoverable props. Concise text stays in the lower third, the original long prose remains available only at selected turning points, and a keyboard-accessible artwork view removes the decisions until the visitor returns or presses Escape. This keeps the illustration dominant without discarding the deeper version of the scene.
+
+These cast and turning-point images were generated with the built-in OpenAI image-generation tool as landscape late-1980s gamebook and arcade-side-art paintings with modern cinematic depth, environmental evidence, and explicit constraints against text, logos, commercial characters, family likenesses, scanlines, or visible grids. The story art depicts original fiction. It does not depict Cathy, Chad, or additional biographical events.
 
 ## Family photographs
 

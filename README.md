@@ -10,11 +10,11 @@ This is a living 1986-meets-AI memorial for Cathy and a real browser arcade. It 
 - A two-token entrance ceremony with original coin, relay, marquee, and cabinet-wake sound design
 - Six original, full-canvas games with enemies, scoring systems, win/loss states, keyboard controls, and mobile controls
 - A six-chapter memory route with distinct save-slot art, metaphorical story keepsakes, local completion saves, and an unlockable epilogue
-- A separate cinematic branching-fiction cabinet with full-bleed environment and cast art, concise scene cuts, optional long reads at pivotal moments, persistent decisions, conditional callbacks, relationship state, inventory, page rewind, local saves, and multiple endings
+- A separate cinematic branching-fiction cabinet with scene-specific painted frames, in-character dialogue, environmental clues, animated atmosphere, a distraction-free artwork view, optional long reads at pivotal moments, persistent decisions, conditional callbacks, relationship state, inventory, page rewind, local saves, and multiple endings
 - Local high scores and story progress that never leave the visitor's browser
 - A memory core that separates personal recollection from sourced historical context
 - The real Cathy-and-Chad photo-booth portraits and a life file sourced from her family-authorized program
-- Six unique AI-assisted Colorado and fantasy game backplates plus three story environments and three original fictional cast paintings
+- Six unique AI-assisted Colorado and fantasy game backplates plus sixteen original story environment, cast, and turning-point paintings
 - An after-hours signal booth refreshed daily by GitHub Actions from a small set of respected sources
 - A six-track adaptive browser score with a visible live transport, forms up to 32 bars, a patient rave build, synthetic formant voice, drums, sub-bass, pads, leads, echo, generated reverb, room ambience, and game effects synthesized locally with the Web Audio API
 - Keyboard, touch, focus restoration, direct section links, reduced-motion, and screen-reader support

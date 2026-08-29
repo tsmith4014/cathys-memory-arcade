@@ -130,14 +130,42 @@ describe("Cathy's Memory Arcade", () => {
     fireEvent.click(within(horrorCard!).getByRole("button", { name: /enter story/i }));
     expect(screen.getByRole("heading", { name: /one cabinet stays on/i })).toBeInTheDocument();
     expect(document.querySelector(".story-stage")).toHaveAttribute("data-scene-art", "world");
+    expect(document.querySelector(".story-stage")).toHaveAttribute("data-effect", "rain");
+    expect(document.querySelector(".story-stage")).toHaveAttribute("data-camera", "push");
     expect(document.querySelector(".story-scene-beat")).toHaveTextContent(/warm token dated tomorrow/i);
+    expect(screen.getByText(/closing time applies to the living/i)).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: /details visible in this scene/i })).toHaveTextContent(/tomorrow's token/i);
     expect(screen.getByRole("button", { name: /turn back one page/i })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: /walk straight to the cabinet/i }));
     expect(screen.getByRole("heading", { name: /player two is late/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/your last choice was walk straight to the cabinet/i)).toBeInTheDocument();
     expect(window.localStorage.getItem("cathy-arcade:story:horror")).toContain("\"nodeId\":\"h1\"");
     fireEvent.click(screen.getByRole("button", { name: /turn back one page/i }));
     expect(screen.getByRole("heading", { name: /one cabinet stays on/i })).toBeInTheDocument();
     expect(screen.getByText(/tomorrow-dated token/i)).toBeInTheDocument();
+  });
+
+  it("changes the painted scene, environmental clues, and camera direction with the story", () => {
+    render(<App />);
+    const horrorCard = screen.getByRole("heading", { name: "The Last Token" }).closest("article");
+    expect(horrorCard).not.toBeNull();
+    expect(horrorCard!.querySelectorAll(".story-card-reel img")).toHaveLength(3);
+
+    fireEvent.click(within(horrorCard!).getByRole("button", { name: /enter story/i }));
+    fireEvent.click(screen.getByRole("button", { name: /check every lock before answering/i }));
+
+    const stage = document.querySelector(".story-stage");
+    expect(stage).toHaveAttribute("data-art-source", "scene");
+    expect(stage).toHaveAttribute("data-camera", "drift-right");
+    expect(stage?.querySelector(".story-stage-art")).toHaveAttribute("src", expect.stringContaining("story-horror-extra-aisle-v3.webp"));
+    expect(screen.getByText(/do not spend that token/i)).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: /details visible in this scene/i })).toHaveTextContent(/impossible aisle/i);
+
+    fireEvent.click(screen.getByRole("button", { name: /view artwork/i }));
+    expect(stage).toHaveAttribute("data-frame-mode", "open");
+    expect(screen.getByRole("button", { name: /return to story/i })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(stage).toHaveAttribute("data-frame-mode", "closed");
   });
 
   it("uses the authorized family photograph and Catherine's program details", () => {

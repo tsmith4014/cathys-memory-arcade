@@ -11,7 +11,7 @@ import {
   type StoryGenre,
   type StoryStateView,
 } from "../data/stories";
-import { getStoryScene } from "../data/storyScenes";
+import { getStoryScene, STORY_REELS } from "../data/storyScenes";
 import "../story.css";
 
 type StoryHistory = {
@@ -32,6 +32,7 @@ const savePrefix = "cathy-arcade:story:";
 
 export function StoryArcade() {
   const [session, setSession] = useState<StorySession | null>(null);
+  const [showArtwork, setShowArtwork] = useState(false);
   const story = session ? getStory(session.storyId) : null;
   const node = story && session ? story.nodes[session.nodeId] : null;
 
@@ -43,6 +44,19 @@ export function StoryArcade() {
       // A hardened browser can block local storage; the current story remains playable.
     }
   }, [session]);
+
+  useEffect(() => {
+    setShowArtwork(false);
+  }, [session?.storyId, session?.nodeId]);
+
+  useEffect(() => {
+    if (!showArtwork) return;
+    const closeArtwork = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") setShowArtwork(false);
+    };
+    window.addEventListener("keydown", closeArtwork);
+    return () => window.removeEventListener("keydown", closeArtwork);
+  }, [showArtwork]);
 
   const enterStory = (definition: StoryDefinition): void => {
     const saved = readSession(definition);
@@ -104,6 +118,13 @@ export function StoryArcade() {
   const callbacks = story && session && node ? visibleStoryCallbacks(node.callbacks, session) : [];
   const choices = story && session && node ? availableStoryChoices(node.choices, session) : [];
   const scene = story && node ? getStoryScene(story.id, node.id) : null;
+  const sceneImage = story && scene
+    ? scene.image ?? (scene.art === "cast" ? story.castImage : story.image)
+    : null;
+  const sceneAlt = story && scene
+    ? scene.alt ?? (scene.art === "cast" ? story.castAlt : story.imageAlt)
+    : "";
+  const lastDecision = session?.history.at(-1)?.choice;
 
   return (
     <section className="story-arcade section-shell" id="story-arcade" aria-labelledby="story-arcade-title">
@@ -125,16 +146,23 @@ export function StoryArcade() {
           style={{ "--story-accent": story.accent } as CSSProperties}
           data-ending={node.ending?.rank}
           data-scene-art={scene.art}
+          data-art-source={scene.image ? "scene" : scene.art}
           data-text-side={scene.side ?? "left"}
+          data-effect={scene.effect ?? "still"}
+          data-camera={scene.camera ?? "push"}
+          data-frame-mode={showArtwork ? "open" : "closed"}
           tabIndex={-1}
         >
           <img
             className="story-stage-art"
-            src={`${import.meta.env.BASE_URL}art/${scene.art === "cast" ? story.castImage : story.image}`}
-            alt={scene.art === "cast" ? story.castAlt : story.imageAlt}
-            key={`${story.id}-${node.id}-${scene.art}`}
+            src={`${import.meta.env.BASE_URL}art/${sceneImage}`}
+            alt={sceneAlt}
+            decoding="async"
+            fetchPriority="high"
+            key={`${story.id}-${node.id}-${sceneImage}`}
           />
           <span className="story-stage-atmosphere" aria-hidden="true" />
+          <span className="story-scene-fx" aria-hidden="true"><i /><i /><i /></span>
           <StoryWorldmark genre={story.id} />
 
           <div className="story-scene">
@@ -155,15 +183,42 @@ export function StoryArcade() {
                 {Array.from({ length: 12 }, (_, index) => <i className={index < session.history.length ? "read" : ""} key={index} />)}
               </div>
               <div className="story-stage-actions">
+                <button type="button" onClick={() => setShowArtwork((visible) => !visible)} aria-pressed={showArtwork}>
+                  {showArtwork ? "Return to story" : "View artwork"}
+                </button>
                 <button type="button" onClick={returnToShelf}>Story shelf</button>
                 <button type="button" onClick={turnBack} disabled={!session.history.at(-1)?.snapshot} aria-label="Turn back one page">Turn back</button>
                 <button type="button" onClick={restartStory}>Start over</button>
               </div>
             </header>
 
+            {lastDecision ? (
+              <p className="story-last-choice" aria-label={`Your last choice was ${lastDecision}`}>
+                <span>Last page</span>
+                <strong>{lastDecision}</strong>
+              </p>
+            ) : null}
+
             <div className="story-scene-content">
+              <div className="story-scene-details">
+                {scene.voice ? (
+                  <blockquote className="story-scene-voice">
+                    <span>{scene.voice.speaker}</span>
+                    <p>{scene.voice.line}</p>
+                  </blockquote>
+                ) : null}
+                {scene.props?.length ? (
+                  <ul className="story-prop-strip" aria-label="Details visible in this scene">
+                    {scene.props.map((prop, index) => (
+                      <li key={prop}><i aria-hidden="true">{String(index + 1).padStart(2, "0")}</i>{prop}</li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
               <p className="story-art-caption">
-                {scene.art === "cast"
+                {scene.image
+                  ? `${story.shelfCode} // painted story frame`
+                  : scene.art === "cast"
                   ? `Fictional cast // ${story.cast.map((character) => character.name).join(" // ")}`
                   : `${story.shelfCode} // original scene artwork`}
               </p>
@@ -263,6 +318,18 @@ function StoryShelf({ onEnter }: { onEnter: (story: StoryDefinition) => void }) 
               <h3>{definition.title}</h3>
               <p className="story-subtitle">{definition.subtitle}</p>
               <p>{definition.teaser}</p>
+              <div className="story-card-reel" aria-label={`${definition.title} scene preview`} role="img">
+                {STORY_REELS[definition.id].map((image, index) => (
+                  <img
+                    src={`${import.meta.env.BASE_URL}art/${image}`}
+                    alt=""
+                    aria-hidden="true"
+                    loading="lazy"
+                    decoding="async"
+                    key={`${definition.id}-reel-${index}`}
+                  />
+                ))}
+              </div>
               <div className="story-card-cast" role="list" aria-label={`${definition.title} cast`}>
                 {definition.cast.map((character) => (
                   <span role="listitem" key={character.id}><i aria-hidden="true">{character.glyph}</i>{character.name}</span>

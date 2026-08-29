@@ -109,11 +109,13 @@ test("plays and restores a branching story file", async ({ page }) => {
 test("keeps story art in front while the narrative changes scenes", async ({ page, isMobile }) => {
   await page.goto("./#story-arcade");
   const actionCard = page.locator(".story-card").filter({ hasText: "Neon Runner 1986" });
+  await expect(actionCard.locator(".story-card-reel img")).toHaveCount(3);
   await actionCard.getByRole("button", { name: /enter story/i }).click();
 
   const stage = page.locator(".story-stage");
   const art = page.locator(".story-stage-art");
   await expect(stage).toHaveAttribute("data-scene-art", "world");
+  await expect(stage).toHaveAttribute("data-art-source", "world");
   await expect(art).toHaveAttribute("src", /story-action-neon-runner\.webp$/);
   await expect.poll(() => art.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(1000);
 
@@ -126,12 +128,23 @@ test("keeps story art in front while the narrative changes scenes", async ({ pag
   await page.getByRole("button", { name: /take the rooftops/i }).click();
   await page.getByRole("button", { name: /hack the billboard/i }).click();
   await expect(stage).toHaveAttribute("data-scene-art", "cast");
-  await expect(art).toHaveAttribute("src", /story-action-cast-v2\.webp$/);
+  await expect(stage).toHaveAttribute("data-art-source", "scene");
+  await expect(stage).toHaveAttribute("data-effect", "signal");
+  await expect(art).toHaveAttribute("src", /story-action-flood-channel-v3\.webp$/);
   await expect(page.getByRole("heading", { name: /eight stolen seconds/i })).toBeVisible();
+  await expect(page.getByText(/my objections remain fully operational/i)).toBeVisible();
+  await expect(page.getByRole("list", { name: /details visible in this scene/i })).toContainText(/jammed weapon/i);
+
+  await page.getByRole("button", { name: /view artwork/i }).click();
+  await expect(stage).toHaveAttribute("data-frame-mode", "open");
+  await expect(page.locator(".story-choices")).toBeHidden();
+  await expect(page.locator(".story-drawers")).toBeHidden();
+  await page.keyboard.press("Escape");
+  await expect(stage).toHaveAttribute("data-frame-mode", "closed");
 
   if (isMobile) {
     const focalPoint = await art.evaluate((image) => getComputedStyle(image).objectPosition);
-    expect(focalPoint).not.toBe("50% 50%");
+    expect(focalPoint).toBe("50% 50%");
   }
 });
 

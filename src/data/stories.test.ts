@@ -8,7 +8,7 @@ import {
   type StoryDefinition,
   type StoryStateView,
 } from "./stories";
-import { STORY_SCENES, getStoryScene } from "./storyScenes";
+import { STORY_REELS, STORY_SCENES, getStoryScene } from "./storyScenes";
 
 type CompletedPath = {
   ending: string;
@@ -31,12 +31,26 @@ describe("branching story catalog", () => {
         expect(wordCount, `${story.id}:${node.id} screen text is too thin`).toBeGreaterThanOrEqual(20);
         expect(wordCount, `${story.id}:${node.id} screen text obscures the art`).toBeLessThanOrEqual(45);
         expect(["world", "cast"]).toContain(scene.art);
+        expect(scene.voice?.speaker, `${story.id}:${node.id} needs a speaker`).toBeTruthy();
+        expect(scene.voice?.line.split(/\s+/).length, `${story.id}:${node.id} voice line is too long`).toBeLessThanOrEqual(24);
+        expect(scene.props, `${story.id}:${node.id} needs visible story details`).toHaveLength(3);
+        expect(scene.effect, `${story.id}:${node.id} needs an atmosphere direction`).toBeTruthy();
+        expect(scene.camera, `${story.id}:${node.id} needs a camera direction`).toBeTruthy();
+
+        if (scene.image) {
+          expect(scene.image).toMatch(/^story-.+-v3\.webp$/);
+          expect(scene.alt?.split(/\s+/).length, `${story.id}:${node.id} custom art needs useful alt text`).toBeGreaterThanOrEqual(12);
+        }
       }
 
       expect(scenes.some((scene) => scene.art === "world")).toBe(true);
       expect(scenes.some((scene) => scene.art === "cast")).toBe(true);
       expect(scenes.filter((scene) => scene.expanded).length).toBeGreaterThanOrEqual(2);
       expect(scenes.filter((scene) => scene.expanded).length).toBeLessThanOrEqual(3);
+      expect(new Set(scenes.flatMap((scene) => scene.image ?? [])).size).toBeGreaterThanOrEqual(3);
+      expect(scenes.filter((scene) => scene.image).length).toBeGreaterThanOrEqual(14);
+      expect(STORY_REELS[story.id]).toHaveLength(3);
+      expect(new Set(STORY_REELS[story.id]).size).toBe(3);
     }
   });
 
