@@ -1042,6 +1042,11 @@
   font-weight: 900;
 }
 
+.story-prop-strip:focus-visible {
+  outline: 2px solid var(--story-accent);
+  outline-offset: 0.25rem;
+}
+
 .story-stage[data-frame-mode="open"] .story-scene {
   min-height: clamp(34rem, 56.3vw, 50rem);
 }

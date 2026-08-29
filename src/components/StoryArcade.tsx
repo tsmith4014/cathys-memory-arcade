@@ -208,7 +208,7 @@ export function StoryArcade() {
                   </blockquote>
                 ) : null}
                 {scene.props?.length ? (
-                  <ul className="story-prop-strip" aria-label="Details visible in this scene">
+                  <ul className="story-prop-strip" aria-label="Details visible in this scene" tabIndex={0}>
                     {scene.props.map((prop, index) => (
                       <li key={prop}><i aria-hidden="true">{String(index + 1).padStart(2, "0")}</i>{prop}</li>
                     ))}

@@ -87,6 +87,7 @@ export const PET_ARENA_TUNING = {
   wardDuration: 4,
   wardCooldown: 12,
   beaconRepairTime: 2.8,
+  openingSpawnDelay: 0.25,
   waves: [8, 12, 8],
 } as const;
 
@@ -334,6 +335,7 @@ export function mountPetArena(canvas: HTMLCanvasElement, options: GameMountOptio
         enemy.health -= bolt.power;
         enemy.flash = 0.09;
         bolt.life = 0;
+        state.score += Math.max(10, Math.round(12 * bolt.power));
         burst(state.particles, bolt.x, bolt.y, enemy.kind === "warden" ? "#ffbf57" : "#8be58e", 7, 120);
         if (enemy.health <= 0) destroyEnemy(enemy);
       }
@@ -554,10 +556,10 @@ function createState(): PetArenaState {
     pickups: [],
     particles: [],
     stars,
-    wave: 0,
-    pendingSpawns: 0,
-    spawnCooldown: 0,
-    intermission: 2.8,
+    wave: 1,
+    pendingSpawns: PET_ARENA_TUNING.waves[0],
+    spawnCooldown: PET_ARENA_TUNING.openingSpawnDelay,
+    intermission: 3.2,
     nextEnemyId: 1,
     bossSpawned: false,
     bossDefeated: false,

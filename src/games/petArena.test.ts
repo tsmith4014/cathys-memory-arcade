@@ -14,4 +14,9 @@ describe("Dragon Crew guest cabinet", () => {
     expect(PET_ARENA_TUNING.waves[0]).toBeLessThanOrEqual(PET_ARENA_TUNING.waves[1]);
     expect(PET_ARENA_TUNING.wardDuration).toBeLessThan(PET_ARENA_TUNING.wardCooldown);
   });
+
+  it("starts with an active opening wave instead of an empty wait", () => {
+    expect(PET_ARENA_TUNING.waves[0]).toBeGreaterThan(0);
+    expect(PET_ARENA_TUNING.openingSpawnDelay).toBeLessThanOrEqual(0.5);
+  });
 });
