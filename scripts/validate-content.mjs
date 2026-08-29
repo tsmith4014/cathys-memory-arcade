@@ -12,6 +12,7 @@ const requiredFiles = [
   "dist/art/highrise-havoc-backdrop-v3.webp",
   "dist/art/sunset-run-backdrop-v3.webp",
   "dist/art/dragonfire-descent-backdrop-v3.webp",
+  "dist/art/pet-arena-guest-v1.webp",
   "dist/art/story-horror-last-token.webp",
   "dist/art/story-action-neon-runner.webp",
   "dist/art/story-mystery-memory-cabinet.webp",
@@ -64,7 +65,7 @@ const assetFiles = await readdir("dist/assets");
 const entryScript = assetFiles.find((file) => file.startsWith("index-") && file.endsWith(".js"));
 if (!entryScript) throw new Error("production bundle entry script is missing");
 const javascript = await readFile(`dist/assets/${entryScript}`, "utf8");
-for (const gameTitle of ["Skyline Smash", "Token Trail", "Dungeon Circuit", "Highrise Havoc", "Sunset Run", "Dragonfire Descent"]) {
+for (const gameTitle of ["Skyline Smash", "Token Trail", "Dungeon Circuit", "Highrise Havoc", "Sunset Run", "Dragonfire Descent", "Dragon Crew: Pet Arena"]) {
   if (!javascript.includes(gameTitle)) throw new Error(`production bundle is missing ${gameTitle}`);
 }
 for (const requiredCopy of [
@@ -81,6 +82,7 @@ for (const requiredCopy of [
   "Neon Runner 1986",
   "The Cabinet That Remembers",
   "Five-second ward",
+  "Same room. Same Wi-Fi. Four jobs.",
 ]) {
   if (!javascript.includes(requiredCopy)) throw new Error(`production bundle is missing required copy: ${requiredCopy}`);
 }

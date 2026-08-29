@@ -2,6 +2,7 @@ import type { GameDefinition } from "./catalog";
 import { mountDragonfireDescent } from "./dragonfireDescent";
 import { mountDungeonCircuit } from "./dungeonCircuit";
 import { mountHighriseHavoc } from "./highriseHavoc";
+import { mountPetArena } from "./petArena";
 import type { GameController, GameMountOptions } from "./runtime";
 import { mountSkylineSmash } from "./skylineSmash";
 import { mountSunsetRun } from "./sunsetRun";
@@ -17,5 +18,6 @@ export function mountGame(canvas: HTMLCanvasElement, game: GameDefinition, optio
   if (game.id === "dungeon-circuit") return mountDungeonCircuit(canvas, options);
   if (game.id === "highrise-havoc") return mountHighriseHavoc(canvas, options);
   if (game.id === "sunset-run") return mountSunsetRun(canvas, options);
-  return mountDragonfireDescent(canvas, options);
+  if (game.id === "dragonfire-descent") return mountDragonfireDescent(canvas, options);
+  return mountPetArena(canvas, options);
 }

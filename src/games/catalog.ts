@@ -4,7 +4,8 @@ export type GameId =
   | "dungeon-circuit"
   | "highrise-havoc"
   | "sunset-run"
-  | "dragonfire-descent";
+  | "dragonfire-descent"
+  | "pet-arena";
 
 export type GameDefinition = {
   id: GameId;
@@ -23,7 +24,7 @@ export type GameDefinition = {
   controls: string;
   primaryAction: string;
   secondaryAction: string;
-  series: "original" | "memory-remix";
+  series: "original" | "memory-remix" | "guest";
 };
 
 export const arcadeGames: GameDefinition[] = [
@@ -140,5 +141,24 @@ export const arcadeGames: GameDefinition[] = [
     primaryAction: "Fire dragon bolt",
     secondaryAction: "Activate ward",
     series: "memory-remix",
+  },
+  {
+    id: "pet-arena",
+    cabinet: "Guest Cabinet",
+    chapter: "Visiting Machine",
+    theme: "Crew",
+    keepsake: "Four stations. One impossible pet.",
+    title: "Dragon Crew: Pet Arena",
+    subtitle: "One Dragon. Four Stations. No Sensible Safety Rules.",
+    description: "Pilot a midnight dragon through a collapsing sky arena while a second player aims the fire. Solo pilots get a very opinionated auto-lock.",
+    objective: "Defend all four crew beacons through three waves, break the Null Warden, and close the breach before the arena falls out of the sky.",
+    briefing: "Moxie found a portal under the change machine. The dragon followed her through it. This is why the operations manual now has a whole page titled Please Stop Letting the Dog Lead.",
+    completion: "The breach folds shut. Four stations answer. Somewhere below, Moxie pretends this was the plan.",
+    difficulty: "Co-op ready",
+    tone: "cyan",
+    controls: "Pilot: WASD // Gunner: arrows + hold space // Ward: shift // Solo fire auto-locks",
+    primaryAction: "Fire",
+    secondaryAction: "Ward",
+    series: "guest",
   },
 ];

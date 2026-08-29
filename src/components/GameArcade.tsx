@@ -2,6 +2,9 @@ import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { arcadeGames, mountGame, type GameController, type GameDefinition, type GameHud } from "../games";
 import "../gameplay.css";
 
+const memorialGames = arcadeGames.filter((game) => game.series !== "guest");
+const guestGames = arcadeGames.filter((game) => game.series === "guest");
+
 type GameArcadeProps = {
   soundEnabled: boolean;
   onActiveChange: (active: boolean) => void;
@@ -37,10 +40,10 @@ export function GameArcade({ soundEnabled, onActiveChange }: GameArcadeProps) {
     <section className="lobby section-shell" id="lobby" aria-labelledby="lobby-title">
       <div className="section-heading split-heading">
         <div>
-          <p className="kicker">Free play // six cabinets humming</p>
+          <p className="kicker">Free play // seven cabinets humming</p>
           <h2 id="lobby-title">Pick a cabinet. Stay awhile.</h2>
         </div>
-        <p>Six small games made for this room. Nothing to install, nobody keeping score except the machine, and no quarter-eating nonsense.</p>
+        <p>Six memorial chapters and one visiting machine. Nothing to install, nobody keeping score except the browser, and no quarter-eating nonsense.</p>
       </div>
       <div className="game-series-heading">
         <span>The first three // quick and noisy</span>
@@ -60,9 +63,33 @@ export function GameArcade({ soundEnabled, onActiveChange }: GameArcadeProps) {
           <GameCard game={game} key={`${game.id}-${scoreVersion}-${progressVersion}`} onLaunch={() => launchGame(game)} />
         ))}
       </div>
+      <section className="guest-floor" aria-labelledby="guest-floor-title">
+        <div className="game-series-heading guest-heading">
+          <span id="guest-floor-title">Guest cabinet // dragon crew online</span>
+          <p>A clean-room web adaptation of a private native Mac game, rebuilt for this floor with couch co-op and no cloud account.</p>
+        </div>
+        <div className="guest-grid">
+          {guestGames.map((game) => (
+            <GameCard game={game} key={`${game.id}-${scoreVersion}-${progressVersion}`} onLaunch={() => launchGame(game)} />
+          ))}
+          <aside className="dragon-crew-callout">
+            <div className="crew-orbit" aria-hidden="true"><i /><i /><i /><i /><b>LAN</b></div>
+            <p className="kicker">The full cabinet // Mac + phones</p>
+            <h3>Same room. Same Wi-Fi. Four jobs.</h3>
+            <p>The native edition turns nearby phones into Pilot, Gunner, Warden, and Weaver stations. The Mac runs the arena; a QR code handles joining. No login, cloud lobby, or internet relay.</p>
+            <div className="crew-role-list" role="list" aria-label="Dragon Crew roles">
+              <span role="listitem"><i className="pilot" /> Pilot</span>
+              <span role="listitem"><i className="gunner" /> Gunner</span>
+              <span role="listitem"><i className="warden" /> Warden</span>
+              <span role="listitem"><i className="weaver" /> Weaver</span>
+            </div>
+            <small>This browser cabinet is self-contained. The private native build and its local-network room remain separate.</small>
+          </aside>
+        </div>
+      </section>
       <div className="floor-status" role="list" aria-label="Arcade floor status">
         <span role="listitem"><i className="status-light" /> Floor open</span>
-        <span role="listitem">6 handmade games</span>
+        <span role="listitem">6 chapters + 1 guest cabinet</span>
         <span role="listitem">Best scores stay here</span>
         <span role="listitem">Your place is kept on this browser</span>
       </div>
@@ -88,8 +115,10 @@ function GameCard({ game, onLaunch }: { game: GameDefinition; onLaunch: () => vo
     setCompleted(readCompletion(game.id));
   }, [game.id]);
 
+  const isGuest = game.series === "guest";
+
   return (
-    <article className={`game-card tone-${game.tone}`}>
+    <article className={`game-card tone-${game.tone}${isGuest ? " guest-game-card" : ""}`}>
       <button type="button" className="game-launch" onClick={onLaunch} aria-label={`Play ${game.title}`}>
         <div className={`attract-screen attract-${game.id}`} aria-hidden="true">
           <img className="attract-backdrop" src={`${import.meta.env.BASE_URL}art/${backdropFor(game.id)}`} alt="" />
@@ -100,7 +129,7 @@ function GameCard({ game, onLaunch }: { game: GameDefinition; onLaunch: () => vo
         <div className="game-card-copy">
           <div className="game-card-meta">
             <span className="game-cabinet">{game.cabinet} // {game.difficulty}</span>
-            <span className={completed ? "chapter-state recovered" : "chapter-state"}>{completed ? "Chapter kept" : game.chapter}</span>
+            <span className={completed ? "chapter-state recovered" : "chapter-state"}>{completed ? (isGuest ? "Breach sealed" : "Chapter kept") : game.chapter}</span>
           </div>
           <h3>{game.title}</h3>
           <p className="game-subtitle">{game.subtitle}</p>
@@ -125,6 +154,7 @@ function backdropFor(id: GameDefinition["id"]): string {
     "highrise-havoc": "highrise-havoc-backdrop-v3.webp",
     "sunset-run": "sunset-run-backdrop-v3.webp",
     "dragonfire-descent": "dragonfire-descent-backdrop-v3.webp",
+    "pet-arena": "pet-arena-guest-v1.webp",
   };
   return backdrops[id];
 }
@@ -144,6 +174,9 @@ function AttractArt({ id }: { id: GameDefinition["id"] }) {
   }
   if (id === "sunset-run") {
     return <><i className="sunset-orb" /><i className="sunset-ridge" /><i className="sunset-block one" /><i className="sunset-block two" /><i className="sunset-runner" /><i className="sunset-keepsake one" /><i className="sunset-keepsake two" /></>;
+  }
+  if (id === "pet-arena") {
+    return <><i className="pet-portal" /><i className="pet-station one" /><i className="pet-station two" /><i className="pet-station three" /><i className="pet-station four" /></>;
   }
   return <><i className="descent-vault" /><i className="descent-fog" /><i className="descent-hero" /><i className="descent-hoard" /><i className="descent-gate" /></>;
 }
@@ -257,7 +290,7 @@ function GameStage({
                 <div><dt>Mission</dt><dd>{game.objective}</dd></div>
                 <div><dt>Controls</dt><dd>{game.controls}</dd></div>
               </dl>
-              <button ref={startButtonRef} type="button" onClick={() => setStarted(true)}>Begin chapter</button>
+              <button ref={startButtonRef} type="button" onClick={() => setStarted(true)}>{game.series === "guest" ? "Enter arena" : "Begin chapter"}</button>
             </div>
           ) : null}
           <span className="bezel-glare" aria-hidden="true" />
@@ -280,8 +313,8 @@ function GameStage({
 }
 
 function MemoryRoute({ version }: { version: number }) {
-  const completed = arcadeGames.filter((game) => readCompletion(game.id));
-  const complete = completed.length === arcadeGames.length;
+  const completed = memorialGames.filter((game) => readCompletion(game.id));
+  const complete = completed.length === memorialGames.length;
 
   return (
     <section className="memory-route" id="memory-route" aria-labelledby="memory-route-title" data-version={version}>
@@ -290,17 +323,17 @@ function MemoryRoute({ version }: { version: number }) {
           <p className="kicker">Cathy route // local save file</p>
           <h3 id="memory-route-title">Six chapters. One way home.</h3>
         </div>
-        <div className="route-progress" role="group" aria-label={`${completed.length} of ${arcadeGames.length} chapters finished`}>
-          <strong>{completed.length}/{arcadeGames.length}</strong>
+        <div className="route-progress" role="group" aria-label={`${completed.length} of ${memorialGames.length} chapters finished`}>
+          <strong>{completed.length}/{memorialGames.length}</strong>
           <span>chapters carried home</span>
           <div className="route-progress-lights" aria-hidden="true">
-            {arcadeGames.map((game) => <i className={readCompletion(game.id) ? "recovered" : ""} key={game.id} />)}
+            {memorialGames.map((game) => <i className={readCompletion(game.id) ? "recovered" : ""} key={game.id} />)}
           </div>
         </div>
       </div>
       <p className="route-disclaimer">These cabinet stories are original metaphors inspired by known memories and Cathy's family-authorized program. They are not presented as additional biographical claims.</p>
       <div className="route-line">
-        {arcadeGames.map((game, index) => {
+        {memorialGames.map((game, index) => {
           const recovered = readCompletion(game.id);
           return (
             <article className={`route-stop tone-${game.tone}${recovered ? " recovered" : ""}`} key={game.id}>
@@ -328,7 +361,7 @@ function MemoryRoute({ version }: { version: number }) {
   );
 }
 
-const routePromise: Record<GameDefinition["id"], string> = {
+const routePromise: Partial<Record<GameDefinition["id"], string>> = {
   "skyline-smash": "Break the skyline and keep the part of you that is still standing.",
   "token-trail": "Cross the sunrise gate with the small things you found along the way.",
   "dungeon-circuit": "Outlast three rooms and earn the continue after the hard loss.",
@@ -348,10 +381,10 @@ function TouchControls({ onInput, game }: { onInput: (key: string, active: boole
   return (
     <div className="touch-controls" aria-label="Touch game controls">
       <div className="touch-dpad">
-        <button type="button" aria-label="Move up" {...bind("ArrowUp")}>UP</button>
-        <button type="button" aria-label="Move left" {...bind("ArrowLeft")}>LT</button>
-        <button type="button" aria-label="Move down" {...bind("ArrowDown")}>DN</button>
-        <button type="button" aria-label="Move right" {...bind("ArrowRight")}>RT</button>
+        <button type="button" aria-label="Move up" {...bind(game.id === "pet-arena" ? "w" : "ArrowUp")}>UP</button>
+        <button type="button" aria-label="Move left" {...bind(game.id === "pet-arena" ? "a" : "ArrowLeft")}>LT</button>
+        <button type="button" aria-label="Move down" {...bind(game.id === "pet-arena" ? "s" : "ArrowDown")}>DN</button>
+        <button type="button" aria-label="Move right" {...bind(game.id === "pet-arena" ? "d" : "ArrowRight")}>RT</button>
       </div>
       <div className="touch-actions">
         <button type="button" className="action-secondary" aria-label={game.secondaryAction} {...bind("Shift")}>B</button>

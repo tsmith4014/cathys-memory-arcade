@@ -25,7 +25,7 @@ type LocalProgress = {
 
 const FLOOR_STOPS: FloorStop[] = [
   { id: "top", code: "00", label: "Entrance", title: "Two tokens in", description: "Start with the coin drop and wake the whole floor." },
-  { id: "lobby", code: "01", label: "Games", title: "Six working cabinets", description: "Quick rounds, longer chapters, local scores, and real endings." },
+  { id: "lobby", code: "01", label: "Games", title: "Seven working cabinets", description: "Six memorial chapters, one guest machine, local scores, and real endings." },
   { id: "memory-route", code: "02", label: "Route 86", title: "Carry six chapters home", description: "A local save route that changes as each cabinet is cleared." },
   { id: "story-arcade", code: "03", label: "Stories", title: "After Closing", description: "Three illustrated branching stories that remember every choice." },
   { id: "jukebox", code: "04", label: "Jukebox", title: "Six browser-built records", description: "Long-form arrangements, live meters, and no borrowed game audio." },
@@ -81,6 +81,7 @@ export function useRevealMotion(): void {
       ".section-heading",
       ".game-series-heading",
       ".game-card",
+      ".dragon-crew-callout",
       ".memory-route",
       ".story-intro-heading",
       ".story-card",

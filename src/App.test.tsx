@@ -56,7 +56,7 @@ describe("Cathy's Memory Arcade", () => {
     vi.useRealTimers();
   });
 
-  it("offers six original playable cabinets and a connected memory route", () => {
+  it("offers six memorial chapters, a guest cabinet, and a connected memory route", () => {
     render(<App />);
     expect(screen.getByRole("button", { name: /play skyline smash/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /play token trail/i })).toBeInTheDocument();
@@ -64,6 +64,8 @@ describe("Cathy's Memory Arcade", () => {
     expect(screen.getByRole("button", { name: /play highrise havoc/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /play sunset run/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /play dragonfire descent/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /play dragon crew: pet arena/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /same room. same wi-fi. four jobs/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Route" })).toHaveAttribute("href", "#memory-route");
     expect(screen.getByRole("link", { name: "Stories" })).toHaveAttribute("href", "#story-arcade");
     expect(screen.getByRole("heading", { name: /six chapters. one way home/i })).toBeInTheDocument();
@@ -77,7 +79,7 @@ describe("Cathy's Memory Arcade", () => {
     fireEvent.click(trigger);
 
     const dialog = screen.getByRole("dialog", { name: /choose your next room/i });
-    expect(within(dialog).getByRole("link", { name: /six working cabinets/i })).toHaveAttribute("href", "#lobby");
+    expect(within(dialog).getByRole("link", { name: /seven working cabinets/i })).toHaveAttribute("href", "#lobby");
     expect(within(dialog).getByRole("link", { name: /after closing/i })).toHaveAttribute("href", "#story-arcade");
 
     fireEvent.keyDown(window, { key: "Escape" });

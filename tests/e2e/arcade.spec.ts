@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-test("enters the arcade and exposes six playable cabinets", async ({ page }) => {
+test("enters the arcade and exposes six chapters plus the guest cabinet", async ({ page }) => {
   await page.goto("./");
   await expect(page).toHaveTitle(/Cathy's Memory Arcade/);
   await expect(page.getByRole("button", { name: /insert two tokens/i })).toBeVisible();
@@ -14,20 +14,22 @@ test("enters the arcade and exposes six playable cabinets", async ({ page }) => 
   await expect(page.getByRole("button", { name: /play highrise havoc/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /play sunset run/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /play dragonfire descent/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /play dragon crew: pet arena/i })).toBeVisible();
   const backdropSources = await page.locator(".attract-backdrop").evaluateAll((images) => images.map((image) => (image as HTMLImageElement).src));
-  expect(new Set(backdropSources).size).toBe(6);
+  expect(new Set(backdropSources).size).toBe(7);
 });
 
 test("launches, pauses, and exits every game cabinet", async ({ page }) => {
   const runtimeErrors: string[] = [];
   page.on("pageerror", (error) => runtimeErrors.push(error.message));
   await page.goto("./#lobby");
-  for (const game of ["Skyline Smash", "Token Trail", "Dungeon Circuit", "Highrise Havoc", "Sunset Run", "Dragonfire Descent"]) {
+  for (const game of ["Skyline Smash", "Token Trail", "Dungeon Circuit", "Highrise Havoc", "Sunset Run", "Dragonfire Descent", "Dragon Crew: Pet Arena"]) {
     const trigger = page.getByRole("button", { name: `Play ${game}` });
     await trigger.click();
     await expect(page.getByRole("dialog", { name: game })).toBeVisible();
-    await expect(page.getByRole("button", { name: /begin chapter/i })).toBeFocused();
-    await page.getByRole("button", { name: /begin chapter/i }).click();
+    const start = page.getByRole("button", { name: /begin chapter|enter arena/i });
+    await expect(start).toBeFocused();
+    await start.click();
     await expect(page.getByLabel(new RegExp(`${game} game screen`, "i"))).toBeVisible();
     await page.keyboard.press("ArrowRight");
     await page.keyboard.press("Space");
@@ -38,6 +40,22 @@ test("launches, pauses, and exits every game cabinet", async ({ page }) => {
     await expect(trigger).toBeFocused();
   }
   expect(runtimeErrors).toEqual([]);
+});
+
+test("lets the guest cabinet split pilot and gunner controls", async ({ page }) => {
+  await page.goto("./?game=pet-arena#lobby");
+  await page.getByRole("button", { name: /enter arena/i }).click();
+  const canvas = page.getByLabel(/dragon crew: pet arena game screen/i);
+  await expect(canvas).toBeVisible();
+  await page.keyboard.down("d");
+  await page.waitForTimeout(220);
+  await page.keyboard.up("d");
+  await page.keyboard.press("ArrowUp");
+  await expect(page.locator(".game-instructions")).toContainText(/couch gunner linked/i);
+  await page.keyboard.down("Space");
+  await page.waitForTimeout(4800);
+  await page.keyboard.up("Space");
+  await expect.poll(async () => Number(await page.locator(".game-stage-score strong").textContent())).toBeGreaterThan(0);
 });
 
 test("held keyboard attacks repeat and blur releases the control", async ({ page }) => {
