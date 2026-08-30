@@ -77,7 +77,7 @@ export const STORY_SCENES = {
   horror: {
     h0: {
       title: "One Cabinet Stays On",
-      text: "Mae has shut down every cabinet except one. It has no plug, no title, and a warm token dated tomorrow. Three knocks sound behind its glass. Then the red phone rings, even though that phone was removed years ago.",
+      text: "Mae Torres is closing alone when an unplugged cabinet wakes at 11:47. Its screen counts down to a 12:30 reset and prints a warm token dated tomorrow. Three knocks answer behind the glass. Then a red phone removed in 1994 begins ringing.",
       art: "world",
       voice: { speaker: "Mae", line: "Closing time applies to the living, the dead, and anything with a coin slot." },
       props: ["Tomorrow's token", "Removed red phone", "Three knocks"],
@@ -104,7 +104,7 @@ export const STORY_SCENES = {
     },
     h3: {
       title: "The Extra Aisle",
-      text: "The building is locked, but its reflection contains an extra aisle. A tired man answers the phone inside the glass. His name is Cal, he knows Mae, and he begs her not to spend the token.",
+      text: "The locked building's reflection contains an extra aisle. Cal answers the phone from inside it. He says Cabinet Zero resets at 12:30, keeps a cleaner copy each time, and has already begun building one from Mae.",
       art: "cast",
       side: "right",
       ...HORROR_EXTRA_AISLE,
@@ -146,7 +146,7 @@ export const STORY_SCENES = {
     },
     h7: {
       title: "Thirty-Two Years Ringing",
-      text: "Cal built Cabinet Zero to soften painful memories. Each replay removed another difficult detail until the room became perfect and nobody inside could leave. Cal stayed to pull the plug. He has been trapped for thirty-two years.",
+      text: "Cal built Cabinet Zero to remove pain from memory. Each reset discarded difficult details, then inconvenient people. Cal became trapped trying to stop it. Player Two grew from what it erased. Mae must free them before 12:30 makes her part of the next replay.",
       art: "cast",
       side: "right",
       expanded: true,
@@ -310,7 +310,7 @@ export const STORY_SCENES = {
   action: {
     a0: {
       title: "Eleven Minutes",
-      text: "The city grid dies in three waves. Rook has eleven minutes to carry the last clean map from the arcade district to the mountain relay. Switch is on the radio. Forty-seven dark blocks are waiting below.",
+      text: "The grid dies in three waves. Rook Vega has eleven minutes to carry its last clean map from the arcade district to the mountain relay before floodgates, clinics, elevators, and forty-seven dark blocks lose reserve power.",
       art: "world",
       expanded: true,
       voice: { speaker: "Switch", line: "Eleven minutes. Enough time for one excellent plan or several of yours." },
@@ -392,7 +392,7 @@ export const STORY_SCENES = {
     },
     a8: {
       title: "Who the Map Erased",
-      text: "The clean map fractures into homes, clinics, elevators, and corner stores. Erasing those branches guarantees a faster upload. Keeping them means carrying every damaged block to the relay. Efficiency has revealed who it stopped counting.",
+      text: "The clean map restores downtown by deleting damaged neighborhood branches. Reaching the relay is no longer enough. Rook must deliver the old grid's priorities, carry a slower map that remembers every block, or let the neighborhoods route power together.",
       art: "world",
       expanded: true,
       ...ACTION_THREE_ON_RAIL,
@@ -434,7 +434,7 @@ export const STORY_SCENES = {
     },
     a12: {
       title: "Choose the Grid",
-      text: "The cartridge seats with eighteen seconds left. FASTEST restores downtown first. CAREFUL protects every damaged branch. SHARED lets neighborhoods negotiate power together. Security closes around the tower.",
+      text: "The cartridge seats with eighteen seconds left. FASTEST strands damaged edges. CAREFUL rebuilds branch by branch. SHARED creates a temporary neighborhood grid. Rook is no longer choosing a route; he is choosing who holds power after the emergency.",
       art: "world",
       ...ACTION_DISTRIBUTED_DAWN,
       voice: { speaker: "Switch", line: "Fast is a number. Careful is a promise. Shared is an argument we trust people to finish." },
@@ -498,7 +498,7 @@ export const STORY_SCENES = {
   mystery: {
     m0: {
       title: "The Seventh Investigation",
-      text: "Mara is cataloging a cabinet that rewrites its own history. Three doors lead to tape, photographs, and index cards. Her notebook contains six forgotten investigations. The final warning, in her handwriting, says not to enter purple first again.",
+      text: "Dr. Mara Ibarra must authenticate a cabinet that rewrites conflicting evidence. Her notebook records six investigations she cannot remember. Before dawn, she and Eli must preserve an outside record and find the erased Investigator Six.",
       art: "world",
       expanded: true,
       voice: { speaker: "Eli", line: "If your own note says 'not purple first again,' I vote we respect the adverb." },
@@ -548,7 +548,7 @@ export const STORY_SCENES = {
     },
     m5: {
       title: "Call Them Six",
-      text: "The hidden figure calls themself Six. They claim the cabinet kept a flawless conclusion and discarded the unreliable investigator who reached it. Six remembers Mara's first five visits. Mara remembers none of them.",
+      text: "The hidden figure calls themself Six. They formed from memories, objections, and evidence the cabinet removed from Mara's first six investigations. Six is not Mara or Eli; they are the witness every clean conclusion needed to erase.",
       art: "cast",
       voice: { speaker: "Six", line: "I was the part of your conclusion that refused to become tidy." },
       props: ["Flawless conclusion", "Discarded investigator", "Five remembered visits"],
@@ -556,8 +556,8 @@ export const STORY_SCENES = {
       camera: "drift-left",
     },
     m6: {
-      title: "Eli's Handwriting",
-      text: "The erased sixth file contains tomorrow's workshop, the other half-token, and a note in Eli's handwriting. Six says this is where Mara usually decides they are Eli. This time, both Eli and Mara can test that claim.",
+      title: "Borrowed Handwriting",
+      text: "The erased file contains tomorrow's workshop, the other half-token, and a note imitating Eli's hand. The cabinet wants Mara to conclude Six is Eli's future. Eli proposes a private-memory test instead of accepting its favorite theory.",
       art: "cast",
       expanded: true,
       voice: { speaker: "Eli", line: "If Six is me, they will know which lie I put on every chain-of-custody form." },
@@ -577,7 +577,7 @@ export const STORY_SCENES = {
     },
     m8: {
       title: "The Answer Cleans Up",
-      text: "The cabinet offers one elegant solution: Six is Eli's discarded future and the token controls every reset. Then the cyan room disappears, and Mara forgets its color. Eli writes CYAN outside the glass. The cabinet edits his C.",
+      text: "The cabinet claims Six is Eli's future and the token explains every reset. Then it deletes the cyan room while presenting that theory. Eli's outside notes preserve the missing color, proving the elegant answer is editing its own evidence.",
       art: "world",
       ...MYSTERY_FOURTH_DOOR,
       voice: { speaker: "Eli", line: "Any answer that cleans the room while we are standing in it is not finished." },

@@ -55,6 +55,22 @@ button { color: inherit; }
   background: repeating-linear-gradient(to bottom, transparent 0, transparent 3px, rgba(82, 231, 239, 0.1) 4px);
 }
 
+.attract-screen,
+.story-card-reel,
+.crew-orbit {
+  contain: layout paint style;
+}
+
+.site:not([data-active-floor="top"]) .hero .entry-bulbs i,
+.site:not([data-active-floor="top"]) .hero .entry-power-sweep,
+.site:not([data-active-floor="lobby"]):not([data-active-floor="memory-route"]) .lobby .attract-screen *,
+.site:not([data-active-floor="lobby"]):not([data-active-floor="memory-route"]) .lobby .crew-orbit,
+.site:not([data-active-floor="story-arcade"]) .story-arcade .story-worldmark *,
+.site:not([data-active-floor="story-arcade"]) .story-arcade .story-card-reel img,
+.site:not([data-active-floor="jukebox"]) .jukebox-machine * {
+  animation-play-state: paused !important;
+}
+
 .topbar {
   position: fixed;
   z-index: 30;
@@ -662,6 +678,14 @@ footer div { display: flex; gap: 1.5rem; }
 }
 
 @media (max-width: 720px) {
+  .site::before { display: none; }
+  .topbar,
+  .game-modal,
+  .story-card-copy,
+  .story-scene-voice,
+  .story-prop-strip li,
+  .story-choices button,
+  .story-drawer summary { backdrop-filter: none; }
   .topbar { min-height: 3.8rem; padding: 0.55rem 1rem; }
   .wordmark > span:last-child { display: none; }
   .hero { min-height: 100svh; align-items: end; }

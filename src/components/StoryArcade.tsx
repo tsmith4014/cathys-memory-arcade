@@ -125,15 +125,17 @@ export function StoryArcade() {
     ? scene.alt ?? (scene.art === "cast" ? story.castAlt : story.imageAlt)
     : "";
   const lastDecision = session?.history.at(-1)?.choice;
+  const openingPage = Boolean(story && node && session && node.id === story.start && session.history.length === 0);
+  const act = story && node ? storyAct(story.id, node.id, Boolean(node.ending)) : null;
 
   return (
     <section className="story-arcade section-shell" id="story-arcade" aria-labelledby="story-arcade-title">
       <div className="section-heading split-heading story-intro-heading">
         <div>
           <p className="kicker">After Closing // three playable paperbacks</p>
-          <h2 id="story-arcade-title">Pick your trouble. The lights are already out.</h2>
+          <h2 id="story-arcade-title">Three stories. Three bad nights. You decide who gets home.</h2>
         </div>
-        <p>One cabinet is haunted. One city is running out of time. One case keeps rewriting its witnesses. Each story remembers who you trusted, what you carried, and what you left behind.</p>
+        <p>Meet the cast, learn the job, then choose. Every route remembers who you trusted, what you carried, and what your ending cost.</p>
       </div>
       <p className="story-disclaimer">Everything in After Closing is original fiction. These characters and events are separate from Cathy's life and from the documented history of the Fillmore arcade.</p>
 
@@ -150,6 +152,7 @@ export function StoryArcade() {
           data-text-side={scene.side ?? "left"}
           data-effect={scene.effect ?? "still"}
           data-camera={scene.camera ?? "push"}
+          data-opening={openingPage ? "true" : "false"}
           data-frame-mode={showArtwork ? "open" : "closed"}
           tabIndex={-1}
         >
@@ -200,6 +203,7 @@ export function StoryArcade() {
             ) : null}
 
             <div className="story-scene-content">
+              {openingPage ? <StoryBriefing story={story} /> : null}
               <div className="story-scene-details">
                 {scene.voice ? (
                   <blockquote className="story-scene-voice">
@@ -223,7 +227,10 @@ export function StoryArcade() {
                   : `${story.shelfCode} // original scene artwork`}
               </p>
               <div className="story-copy" aria-live="polite">
-                <span>{node.chapter}</span>
+                <div className="story-act-line">
+                  {act ? <strong>{act.label}</strong> : null}
+                  <span>{node.chapter}</span>
+                </div>
                 <h4>{scene.title}</h4>
                 <p className="story-scene-beat">{scene.text}</p>
 
@@ -238,6 +245,7 @@ export function StoryArcade() {
                   <div className={`story-ending rank-${node.ending.rank}`}>
                     <span>{story.ui.endingTitle}</span>
                     <strong>{node.ending.label}</strong>
+                    <p>{node.ending.outro}</p>
                     <button type="button" onClick={returnToShelf}>Choose another story</button>
                     <button type="button" onClick={restartStory}>Read this one again</button>
                   </div>
@@ -387,11 +395,50 @@ function StoryState({ story, session }: { story: StoryDefinition; session: Story
       <details className="story-cast-notes">
         <summary>Cast notes</summary>
         {story.cast.map((character) => (
-          <p key={character.id}><strong>{character.name}</strong>{character.voice}</p>
+          <p key={character.id}><strong>{character.name}</strong>{character.voice} <em>Wants: {character.want}</em></p>
         ))}
       </details>
     </aside>
   );
+}
+
+function StoryBriefing({ story }: { story: StoryDefinition }) {
+  const briefing = [
+    ["You are", story.orientation.player],
+    ["Tonight", story.orientation.situation],
+    ["Your job", story.orientation.objective],
+    ["If you fail", story.orientation.stakes],
+  ];
+
+  return (
+    <aside className="story-briefing" aria-label="Story introduction and objective">
+      <span className="story-briefing-title">Before you begin</span>
+      <div>
+        {briefing.map(([label, text]) => (
+          <p key={label}><strong>{label}</strong><span>{text}</span></p>
+        ))}
+      </div>
+    </aside>
+  );
+}
+
+function storyAct(storyId: StoryGenre, nodeId: string, ending: boolean): { label: string } {
+  if (ending) return { label: "OUTRO // AFTERMATH" };
+
+  const number = Number(nodeId.match(/\d+/)?.[0] ?? 0);
+  if (storyId === "horror") {
+    if (number <= 3) return { label: "ACT I // THE LOCK-IN" };
+    if (number <= 12) return { label: "ACT II // CABINET ZERO" };
+    return { label: "ACT III // CLOSING TIME" };
+  }
+  if (storyId === "action") {
+    if (number <= 3) return { label: "ACT I // THE RUN" };
+    if (number <= 11) return { label: "ACT II // WHO THE MAP FORGOT" };
+    return { label: "ACT III // THE UPLOAD" };
+  }
+  if (number <= 3) return { label: "ACT I // THE EVIDENCE" };
+  if (number <= 11) return { label: "ACT II // THE MISSING WITNESS" };
+  return { label: "ACT III // THE FINDING" };
 }
 
 function StoryWorldmark({ genre }: { genre: StoryGenre }) {

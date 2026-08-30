@@ -63,6 +63,8 @@ const fallbackSignals: SignalPayload = {
 
 type EntryPhase = "idle" | "token-one" | "token-two" | "free-play" | "complete";
 
+const freePlayKey = "cathy-arcade:free-play";
+
 const entryCopy: Record<EntryPhase, string> = {
   idle: "Coin sound, cabinet lights, then the whole floor wakes up.",
   "token-one": "First token drops. The old counter remembers the sound.",
@@ -74,7 +76,7 @@ const entryCopy: Record<EntryPhase, string> = {
 const silentMeter: MeterLevels = { low: 0, mid: 0, high: 0, overall: 0 };
 
 function App() {
-  const [entryPhase, setEntryPhase] = useState<EntryPhase>("idle");
+  const [entryPhase, setEntryPhase] = useState<EntryPhase>(readEntryPhase);
   const [soundOn, setSoundOn] = useState(false);
   const [jukeboxTrack, setJukeboxTrack] = useState<JukeboxTrackId>("fillmore-drive");
   const [signals, setSignals] = useState<SignalPayload>(fallbackSignals);
@@ -115,6 +117,7 @@ function App() {
   function enterArcade() {
     if (entryPhase !== "idle" && entryPhase !== "complete") return;
 
+    rememberFreePlay();
     entryTimers.current.forEach((timer) => window.clearTimeout(timer));
     entryTimers.current = [];
     const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
@@ -381,6 +384,22 @@ function App() {
       </footer>
     </div>
   );
+}
+
+function readEntryPhase(): EntryPhase {
+  try {
+    return window.localStorage.getItem(freePlayKey) === "true" ? "complete" : "idle";
+  } catch {
+    return "idle";
+  }
+}
+
+function rememberFreePlay(): void {
+  try {
+    window.localStorage.setItem(freePlayKey, "true");
+  } catch {
+    // The entrance remains usable when a hardened browser blocks local storage.
+  }
 }
 
 function TokenLedger() {

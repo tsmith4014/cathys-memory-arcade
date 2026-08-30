@@ -99,9 +99,16 @@ describe("branching story catalog", () => {
       expect(narrative.split(/\s+/).length).toBeGreaterThan(1500);
       expect((narrative.match(/"/g) ?? []).length).toBeGreaterThan(14);
 
+      expect(Object.values(story.orientation).every((line) => line.trim().split(/\s+/).length >= 7)).toBe(true);
+
       for (const character of story.cast) {
         const storyName = characterMention[character.id] ?? character.name.split(" ")[0];
         expect(narrative.match(new RegExp(storyName, "g"))?.length ?? 0, `${story.id}:${character.id} recurs in the prose`).toBeGreaterThanOrEqual(2);
+        expect(character.want.split(/\s+/).length, `${story.id}:${character.id} needs a concrete motive`).toBeGreaterThanOrEqual(8);
+      }
+
+      for (const ending of endings) {
+        expect(ending.ending?.outro.split(/\s+/).length, `${story.id}:${ending.id} needs an aftermath`).toBeGreaterThanOrEqual(14);
       }
     }
   });

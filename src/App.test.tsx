@@ -56,6 +56,14 @@ describe("Cathy's Memory Arcade", () => {
     vi.useRealTimers();
   });
 
+  it("restores free play after a browser reload instead of replaying first visit", () => {
+    window.localStorage.setItem("cathy-arcade:free-play", "true");
+    render(<App />);
+
+    expect(screen.getByRole("button", { name: /free play unlocked/i })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: /insert two tokens/i })).not.toBeInTheDocument();
+  });
+
   it("offers six memorial chapters, a guest cabinet, and a connected memory route", () => {
     render(<App />);
     expect(screen.getByRole("button", { name: /play skyline smash/i })).toBeInTheDocument();

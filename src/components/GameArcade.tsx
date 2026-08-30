@@ -121,7 +121,7 @@ function GameCard({ game, onLaunch }: { game: GameDefinition; onLaunch: () => vo
     <article className={`game-card tone-${game.tone}${isGuest ? " guest-game-card" : ""}`}>
       <button type="button" className="game-launch" onClick={onLaunch} aria-label={`Play ${game.title}`}>
         <div className={`attract-screen attract-${game.id}`} aria-hidden="true">
-          <img className="attract-backdrop" src={`${import.meta.env.BASE_URL}art/${backdropFor(game.id)}`} alt="" />
+          <img className="attract-backdrop" src={`${import.meta.env.BASE_URL}art/${backdropFor(game.id)}`} alt="" loading="lazy" decoding="async" />
           <span className="attract-scan" />
           <AttractArt id={game.id} />
           <span className="attract-prompt">Press start</span>

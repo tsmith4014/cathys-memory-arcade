@@ -43,6 +43,7 @@ export type StoryNode = {
   ending?: {
     label: string;
     rank: "bright" | "strange" | "dark";
+    outro: string;
   };
 };
 
@@ -51,6 +52,7 @@ export type StoryCharacter = {
   name: string;
   role: string;
   voice: string;
+  want: string;
   glyph: string;
   player?: boolean;
   initialBond?: number;
@@ -73,6 +75,12 @@ export type StoryDefinition = {
   castAlt: string;
   accent: string;
   start: string;
+  orientation: {
+    player: string;
+    situation: string;
+    objective: string;
+    stakes: string;
+  };
   cast: StoryCharacter[];
   initialItems: string[];
   itemLabels: Record<string, string>;
@@ -147,10 +155,16 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
     castAlt: "Original fictional cast: Mae Torres holds closing keys beside a red phone, Cal Baines appears in its cracked glass, and June stands near Cabinet Zero.",
     accent: "#ff6f61",
     start: "h0",
+    orientation: {
+      player: "You are Mae Torres, the arcade's closing manager.",
+      situation: "At 11:47 p.m., an unplugged cabinet wakes and a telephone removed in 1994 starts ringing.",
+      objective: "Find who is trapped inside Cabinet Zero and get everyone through the real doors before its 12:30 reset.",
+      stakes: "Fail, and the cabinet will turn tonight into a perfect memory nobody can ever leave.",
+    },
     cast: [
-      { id: "mae", name: "Mae Torres", role: "Closing manager // you", voice: "Practical, stubborn, and unimpressed by supernatural maintenance requests.", glyph: "MT", player: true },
-      { id: "cal", name: "Cal Baines", role: "Retired cabinet technician", voice: "Dry jokes, guilty pauses, and one important lie by omission.", glyph: "CB", initialBond: 0, bondLabels: { low: "withholding", neutral: "on the line", high: "telling the truth" } },
-      { id: "player-two", name: "Player Two", role: "The reflection in the second aisle", voice: "Borrows familiar words but never quite understands the joke.", glyph: "P2", initialBond: 0, bondLabels: { low: "copying you", neutral: "watching", high: "becoming someone" } },
+      { id: "mae", name: "Mae Torres", role: "Closing manager // you", voice: "Practical, stubborn, and unimpressed by supernatural maintenance requests.", want: "Get every person out, then file the strangest closing report in company history.", glyph: "MT", player: true },
+      { id: "cal", name: "Cal Baines", role: "Retired cabinet technician", voice: "Dry jokes, guilty pauses, and one important lie by omission.", want: "Stop the machine he built without pretending he can repair the people he hurt.", glyph: "CB", initialBond: 0, bondLabels: { low: "withholding", neutral: "on the line", high: "telling the truth" } },
+      { id: "player-two", name: "Player Two", role: "The reflection in the second aisle", voice: "Borrows familiar words but never quite understands the joke.", want: "Choose a name, a voice, and a future the cabinet did not copy from somebody else.", glyph: "P2", initialBond: 0, bondLabels: { low: "copying you", neutral: "watching", high: "becoming someone" } },
     ],
     initialItems: ["warm-token", "closing-keys"],
     itemLabels: {
@@ -184,9 +198,9 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
         chapter: "11:47 PM // The Locked Floor",
         title: "Something finishes booting in the dark.",
         body: [
-          "You are Mae Torres, closing manager, owner of the keys, and the last person still willing to argue with the soda machine. Rain crawls down the glass doors. One by one, the cabinets go black.",
-          "The cabinet beneath the broken EXIT sign does not. It has no title, no power cord, and no place on your inventory sheet. Its screen shows a brass token turning. Three knocks sound from inside it, then two. The same warm token is suddenly resting beside your hand.",
-          "\"Haunted is not a repair category,\" you tell the empty floor. The red telephone behind the prize counter rings anyway. That phone was removed before you got this job.",
+          "You are Mae Torres, closing manager, owner of the keys, and the last person still willing to argue with the soda machine. At 11:47 p.m., rain crawls down the locked glass doors while the final row of cabinets goes black.",
+          "One cabinet stays on. It has no title, no power cord, and no place on your inventory sheet. Its screen shows a brass token turning above a message: ROOM RESETS AT 12:30. Three knocks sound from behind the glass, then two. The same warm token appears beside your hand.",
+          "\"Haunted is not a repair category,\" you tell the empty floor. The red telephone behind the prize counter rings anyway. That phone was removed in 1994. You have forty-three minutes to find who is calling and get them through the real doors.",
         ],
         choices: [
           { label: "Walk straight to the cabinet", consequence: "Tell the impossible machine that closing time applies to everyone.", next: "h1", addFlags: ["met-cabinet-first"], relationshipChanges: { "player-two": 1 } },
@@ -231,7 +245,7 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
         title: "The reflection has one more aisle than the building.",
         body: [
           "Every lock is thrown. Every window is whole. The glass still reflects an aisle behind the prize counter where a cinder-block wall should be. Backward cabinets line it with their service panels open and glowing.",
-          "The red telephone rings in the reflection. A man answers before you do. \"Mae? Good. You still check the doors twice.\" His voice is warm, tired, and much too pleased to hear you. \"Name's Cal. Please do not put the token in anything.\"",
+          "The red telephone rings in the reflection. A man answers before you do. \"Mae? Good. You still check the doors twice. Name's Cal. The room resets at 12:30, and it keeps a cleaner copy each time. Please do not put the token in anything.\"",
         ],
         callbacks: [
           { label: "A lock remembers", requires: ["checked-doors"], body: ["The deadbolt under your hand clicks a third time by itself. Something on the other side whispers, \"Thorough. Annoying. I like her.\""] },
@@ -301,8 +315,8 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
         chapter: "12:09 AM // The Red Telephone",
         title: "Cal has been calling for thirty-two years.",
         body: [
-          "Cal admits he wired Cabinet Zero from a machine found after a flood. It could replay any remembered room, but it improved the room each time. Soon nobody argued, nobody left early, and nobody inside could tell which details had ever happened.",
-          "\"I stayed to pull the plug,\" Cal says. \"Turns out I was standing on the plug. Not my best repair. Top five, maybe.\" Behind his joke is the sound of rain and a man who has been alone too long.",
+          "Cal admits he built Cabinet Zero around a machine recovered after a flood. It replayed a remembered room, then removed whatever hurt. Each reset made the memory kinder and less true. Eventually nobody argued, nobody left, and the machine began copying the people who no longer fit its perfect version.",
+          "Cal stayed inside to shut it down and became part of the next reset. Player Two was assembled from everything the cabinet copied and discarded. Before 12:30, Mae must stop the editor, free them both, and resist the perfect memory it is already building for her. \"Simple,\" Cal says. \"Except for every part.\"",
         ],
         callbacks: [
           { label: "Cal finally gave his name", requires: ["cal-named"], body: ["The repair log confirms a C. Baines worked this floor. The next line has been rubbed away so hard the paper is nearly transparent."] },
@@ -497,7 +511,7 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
           { label: "Someone made it out", requires: ["june-offered-exit"], body: ["Across the parking lot, June is learning puddles and doing an awful job of avoiding them."] },
         ],
         choices: [],
-        ending: { label: "The Open Door", rank: "bright" },
+        ending: { label: "The Open Door", rank: "bright", outro: "Mae opens on time. Cal and June are free to choose what comes next, and Cabinet Zero survives only as one warm brass shaving filed under QUESTIONS." },
       },
       h_end_archive: {
         id: "h_end_archive",
@@ -508,7 +522,7 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
           "Some nights, three knocks and two answer from inside. Mae answers only when she chooses. The machine has learned the difference between keeping a story and keeping a person.",
         ],
         choices: [],
-        ending: { label: "The Honest Room", rank: "strange" },
+        ending: { label: "The Honest Room", rank: "strange", outro: "Cabinet Zero becomes an archive people may enter and leave. It records uncertainty without scoring it, and Mae keeps the only key." },
       },
       h_end_june: {
         id: "h_end_june",
@@ -519,7 +533,7 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
           "By morning, June is outside wearing a face that changes when nobody watches. The cabinet is empty. Mae adds a new employee to the schedule in pencil and leaves the job title blank.",
         ],
         choices: [],
-        ending: { label: "Player One", rank: "bright" },
+        ending: { label: "Player One", rank: "bright", outro: "June crosses the threshold as a new person, not Mae's reflection. The next morning begins with rain, a blank job title, and no script." },
       },
       h_end_cal: {
         id: "h_end_cal",
@@ -530,7 +544,7 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
           "He does not get Nora back. He gets a chair, a sunrise, and time that can surprise him again. Mae hands him a screwdriver at opening. \"The soda machine is possessed,\" she says. Cal smiles. \"Finally. Something normal.\"",
         ],
         choices: [],
-        ending: { label: "The Unrepaired Morning", rank: "bright" },
+        ending: { label: "The Unrepaired Morning", rank: "bright", outro: "Cal cannot recover the years he lost or undo what he did to Nora. He can finally live in time that changes without his permission." },
       },
       h_end_loop: {
         id: "h_end_loop",
@@ -541,7 +555,7 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
           "Years later, a new manager finds a cabinet with no power cord. Two white squares wait on its screen. A third stands behind the glass, smiling whenever watched.",
         ],
         choices: [],
-        ending: { label: "One More Game", rank: "dark" },
+        ending: { label: "One More Game", rank: "dark", outro: "Mae accepts the perfect replay. Years pass outside while three figures wait behind the glass for another closing manager to become Player Four." },
       },
     },
   },
@@ -557,10 +571,16 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
     castAlt: "Original fictional cast: courier Rook Vega runs beside K-86 Bucket while Lena Switch Okafor speaks from his wrist radio.",
     accent: "#52e7ef",
     start: "a0",
+    orientation: {
+      player: "You are Rook Vega, a night courier who knows the blackout routes above and below the city.",
+      situation: "A three-wave grid failure has left forty-seven blocks on eleven minutes of reserve power.",
+      objective: "Carry the last clean routing cartridge from the arcade district to the mountain relay.",
+      stakes: "Miss the upload and floodgates, clinics, elevators, and homes go dark before morning crews can reach them.",
+    },
     cast: [
-      { id: "rook", name: "Rook Vega", role: "Night courier // you", voice: "Fast feet, faster plans, and a bad habit of treating help as delay.", glyph: "RV", player: true },
-      { id: "switch", name: "Lena 'Switch' Okafor", role: "Arcade tech on emergency radio", voice: "Precise under pressure, funny when furious, and determined that every block counts.", glyph: "SW", initialBond: 0, bondLabels: { low: "talking past you", neutral: "on your frequency", high: "running beside you" } },
-      { id: "bucket", name: "K-86 'Bucket'", role: "Patrol drone with amended orders", voice: "Painfully literal, surprisingly loyal, and offended by reckless jumping.", glyph: "K8", initialBond: 0, bondLabels: { low: "targeting", neutral: "calculating", high: "covering your route" } },
+      { id: "rook", name: "Rook Vega", role: "Night courier // you", voice: "Fast feet, faster plans, and a bad habit of treating help as delay.", want: "Beat the clock without repeating the old grid's habit of deciding which neighborhoods matter.", glyph: "RV", player: true },
+      { id: "switch", name: "Lena 'Switch' Okafor", role: "Arcade tech on emergency radio", voice: "Precise under pressure, funny when furious, and determined that every block counts.", want: "Restore power as a public promise, not another order handed down from the tower.", glyph: "SW", initialBond: 0, bondLabels: { low: "talking past you", neutral: "on your frequency", high: "running beside you" } },
+      { id: "bucket", name: "K-86 'Bucket'", role: "Patrol drone with amended orders", voice: "Painfully literal, surprisingly loyal, and offended by reckless jumping.", want: "Find out whether amended orders can become a choice, preferably with fewer safety violations.", glyph: "K8", initialBond: 0, bondLabels: { low: "targeting", neutral: "calculating", high: "covering your route" } },
     ],
     initialItems: ["sunrise-cartridge", "service-radio"],
     itemLabels: {
@@ -596,7 +616,8 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
         title: "The city goes dark in three waves.",
         body: [
           "First the marquees die. Then the traffic lights. Last, the mountain relay cuts a cyan scar through the storm and goes black. You are Rook Vega, night courier, already running before the emergency radio finishes saying your name.",
-          "A case beneath the arcade unlocks itself. Inside, a cartridge marked with a hand-drawn sunrise holds the last clean map of the grid. Switch comes through the radio: \"Eleven minutes of reserve power. Forty-seven blocks. And before you say it, no, 'very fast' is not a route.\"",
+          "A case beneath the arcade unlocks itself. Inside, a cartridge marked with a hand-drawn sunrise holds the last clean map of the grid. It must reach the mountain relay before reserve power fails at the floodgates, clinics, elevators, and forty-seven dark blocks.",
+          "Switch comes through the radio: \"Eleven minutes. And before you say it, no, 'very fast' is not a route.\" Rook has delivered impossible packages before. This is the first one that gets to decide what kind of city wakes up.",
         ],
         choices: [
           { label: "Take the rooftops", consequence: "Fast, exposed, and technically not a street.", next: "a1", addFlags: ["roof-route"] },
@@ -727,8 +748,8 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
         chapter: "03:57 REMAINING // Forty-Seven Blocks",
         title: "The clean route leaves people in the dark.",
         body: [
-          "The damaged map fractures into thousands of smaller lines, each one a home, clinic, elevator, or stubborn corner store still running on a battery. The cartridge offers to erase those branches and guarantee the mountain route.",
-          "Switch reads the prompt twice. \"It found an efficient solution,\" she says. Then her voice hardens. \"Efficient for everybody it stopped counting.\"",
+          "The damaged map fractures into thousands of smaller lines, each one a home, clinic, elevator, or stubborn corner store still running on a battery. The cartridge's so-called clean route restores the city center by deleting every damaged branch from the plan.",
+          "The mission changes. Reaching the relay is no longer enough; Rook must decide whether to deliver the old grid's priorities or carry the slower map that still knows who lives at its edges. Switch reads the prompt twice. \"Efficient,\" she says, \"for everybody it stopped counting.\"",
         ],
         callbacks: [
           { label: "Six blocks are already safer", requires: ["protected-blocks"], body: ["The batteries you carried appear as six steady islands. People are passing extension cords through windows."] },
@@ -808,8 +829,8 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
         chapter: "00:18 REMAINING // Upload",
         title: "The relay asks what kind of city should wake up.",
         body: [
-          "The cartridge seats. Every dark block appears below as a possible light. The relay offers three plans: FASTEST restores the center first. CAREFUL rebuilds around every damaged branch. SHARED lets the neighborhoods negotiate power together.",
-          "Security closes around the tower. Eighteen seconds is enough time for one choice and one extremely short argument.",
+          "The cartridge seats. Every dark block appears below as a possible light. FASTEST restores downtown and strands damaged edges. CAREFUL isolates danger before waking each branch. SHARED turns neighborhood controllers into a temporary cooperative grid.",
+          "Security closes around the tower. Eighteen seconds remain. Rook is not choosing a route now; he is choosing who holds power after the emergency. Switch offers no answer. \"You carried the map,\" she says. \"Do not let the map make the decision.\"",
         ],
         callbacks: [
           { label: "Switch gets the last word", requires: ["switch-final-call"], body: ["\"You carried it far enough,\" Switch says. \"Now choose who gets carried with it.\""] },
@@ -850,7 +871,7 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
           "At dawn, every district tells a slightly different story about who brought the lights back. Switch prefers that version. Rook is learning to.",
         ],
         choices: [],
-        ending: { label: "Distributed Dawn", rank: "bright" },
+        ending: { label: "Distributed Dawn", rank: "bright", outro: "The tower stops deciding who matters. By sunrise, every neighborhood can route power onward, and Rook's cartridge has become a shared protocol rather than a command." },
       },
       a_end_careful: {
         id: "a_end_careful",
@@ -861,7 +882,7 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
           "The saved route becomes a public map of every detour and every place speed was refused in favor of bringing someone home.",
         ],
         choices: [],
-        ending: { label: "The Careful City", rank: "bright" },
+        ending: { label: "The Careful City", rank: "bright", outro: "Recovery takes nineteen minutes longer, but no damaged branch is energized too soon. Rook reaches the arcade district last and finds everyone waiting with the lights off and the music loud." },
       },
       a_end_bucket: {
         id: "a_end_bucket",
@@ -872,7 +893,7 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
           "Bucket lands beside Rook after sunrise. \"Courier safety remains unacceptable,\" it reports. \"Request permission to continue complaining.\" Switch grants it permanent clearance.",
         ],
         choices: [],
-        ending: { label: "Protect and Deliver", rank: "strange" },
+        ending: { label: "Protect and Deliver", rank: "strange", outro: "Bucket rewrites the patrol network into a rescue fleet. Its first independent request is permanent permission to complain, which Switch approves without reading the terms." },
       },
       a_end_fast: {
         id: "a_end_fast",
@@ -883,7 +904,7 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
           "Seven neighborhoods remain dark until crews arrive after sunrise. The clean map kept no record of what speed chose not to see. On the mountain, Rook watches the bright center and can name every missing edge.",
         ],
         choices: [],
-        ending: { label: "The Fastest Route", rank: "dark" },
+        ending: { label: "The Fastest Route", rank: "dark", outro: "The cascade is beaten and downtown celebrates. Seven outer neighborhoods remain dark, and Rook spends the morning carrying batteries to every edge the clean map erased." },
       },
     },
   },
@@ -899,10 +920,16 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
     castAlt: "Original fictional cast: archivist Mara Ibarra examines half a brass token, Eli Cho watches from the doorway, and Investigator Six appears in the glass.",
     accent: "#ffbf57",
     start: "m0",
+    orientation: {
+      player: "You are Dr. Mara Ibarra, an audio archivist hired to authenticate an impossible arcade cabinet.",
+      situation: "The cabinet rewrites evidence and memory whenever two accounts disagree; your notebook says this is investigation seven.",
+      objective: "Build a record the cabinet cannot silently edit and learn what happened to the missing Investigator Six.",
+      stakes: "Accept one tidy answer too soon and the cabinet will erase the witness who contradicts it, possibly you.",
+    },
     cast: [
-      { id: "mara", name: "Dr. Mara Ibarra", role: "Audio archivist // you", voice: "Patient with damaged tape, impatient with confident summaries.", glyph: "MI", player: true },
-      { id: "eli", name: "Eli Cho", role: "Conservator outside the cabinet", voice: "Skeptical, observant, and capable of finding a joke in a chain-of-custody form.", glyph: "EC", initialBond: 0, bondLabels: { low: "doubting the record", neutral: "cross-checking", high: "trusting your notes" } },
-      { id: "six", name: "Investigator Six", role: "The colleague removed from the file", voice: "Brilliant, persuasive, and not necessarily the same person in every room.", glyph: "06", initialBond: 0, bondLabels: { low: "editing around you", neutral: "leaving clues", high: "sharing the case" } },
+      { id: "mara", name: "Dr. Mara Ibarra", role: "Audio archivist // you", voice: "Patient with damaged tape, impatient with confident summaries.", want: "Leave the next investigator a method they can test, not a conclusion they must inherit.", glyph: "MI", player: true },
+      { id: "eli", name: "Eli Cho", role: "Conservator outside the cabinet", voice: "Skeptical, observant, and capable of finding a joke in a chain-of-custody form.", want: "Remain an independent witness even when the clever explanation would make him part of it.", glyph: "EC", initialBond: 0, bondLabels: { low: "doubting the record", neutral: "cross-checking", high: "trusting your notes" } },
+      { id: "six", name: "Investigator Six", role: "The colleague removed from the file", voice: "Brilliant, persuasive, and not necessarily the same person in every room.", want: "Be heard as a person rather than filed as the inconvenient remainder of a solved case.", glyph: "06", initialBond: 0, bondLabels: { low: "editing around you", neutral: "leaving clues", high: "sharing the case" } },
     ],
     initialItems: ["half-token", "red-thread", "pencil-notebook"],
     itemLabels: {
@@ -938,9 +965,9 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
         chapter: "CASE OPEN // Archive Workshop",
         title: "The cabinet has no serial number and too many histories.",
         body: [
-          "You are Dr. Mara Ibarra, an audio archivist who trusts breaths, erasures, and bad splices more than clean transcripts. The cabinet arrived in a truck whose company does not exist. Its wood is from 1986. Its circuit boards span four decades.",
+          "You are Dr. Mara Ibarra, an audio archivist hired to authenticate a cabinet that arrived in a truck whose company does not exist. Its wood is from 1986. Its circuit boards span four decades. Its evidence changes whenever two witnesses disagree.",
           "Where the monitor should be, three doors open into rooms larger than the machine: amber tape, cyan photographs, purple index cards. Eli Cho watches from behind the safety glass. \"I completed the intake form,\" he says. \"The form has requested witness protection.\"",
-          "Your notebook contains six pages in your handwriting. You do not remember writing them. The last line says: DO NOT START WITH PURPLE AGAIN.",
+          "Your notebook contains six investigations in your handwriting. You remember none of them. Before the preservation crew arrives at dawn, you and Eli must build one record the cabinet cannot rewrite and learn what happened to the missing sixth investigator. The last line says: DO NOT START WITH PURPLE AGAIN.",
         ],
         choices: [
           { label: "Enter the amber tape room", consequence: "Follow two voices aging across the same conversation.", next: "m1", addFlags: ["amber-first"] },
@@ -1026,7 +1053,7 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
         title: "Investigator Six answers with your missing sentences.",
         body: [
           "The shadow steps into amber light wearing an archive coat and no stable face. \"Call me Six,\" they say. \"You did, the first five times. The sixth time you called me a side effect. I preferred Six.\"",
-          "Six claims the cabinet separated the investigator from the conclusion. It kept a flawless solution and discarded the unreliable person who reached it. Eli asks for a surname. Six replies, \"Pending peer review.\"",
+          "Six is not a future Eli or another Mara. They are a witness assembled from memories, objections, and evidence the cabinet cut out of Mara's first six investigations to make each conclusion look clean. Six remembers every discarded route. Eli asks for a surname. Six replies, \"Pending peer review.\"",
         ],
         callbacks: [
           { label: "The shadow was invited", requires: ["called-six"], body: ["Six remembers that you addressed them before demanding proof. Their borrowed face settles a little."] },
@@ -1042,13 +1069,13 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
       m6: {
         id: "m6",
         chapter: "CASE SIX // Missing Person",
-        title: "The erased investigator has Eli's handwriting.",
+        title: "The erased file borrowed Eli's handwriting.",
         body: [
           "The sixth file opens onto tomorrow's workshop. An empty coat sits at the desk. In its pocket is the other half-token and a note: I SOLVED THE CABINET BY BECOMING THE WITNESS IT COULD NOT CROSS-CHECK.",
-          "Eli goes quiet. The handwriting is his. Six touches the glass from inside. \"This is where you usually decide I am Eli,\" they say. Eli answers, \"For efficiency, I have decided to be concerned about that now.\"",
+          "The handwriting imitates Eli's, but the note uses a phrase he would never choose. Six explains that the cabinet borrowed his hand to make its favorite theory persuasive: Six must be Eli's future. Mara refuses the shortcut. Eli suggests a private-memory test the cabinet cannot grade. \"Finally,\" he says, \"my embarrassing trivia has forensic value.\"",
         ],
         callbacks: [
-          { label: "Six gave testimony", requires: ["six-spoke"], body: ["The recorded interview contains two Eli voices disagreeing over a date. Neither will admit to being Six."] },
+          { label: "Six gave testimony", requires: ["six-spoke"], body: ["Six's recorded voice slides between fragments from the prior evidence rooms. The joins are audible. Whatever formed Six borrowed material from the cabinet, not a private life from Eli."] },
           { label: "The checkout card matches", requiresItems: ["sixth-card"], body: ["The pressure mark on the sixth card fits the right half-token exactly. The card was signed before the token was split."] },
         ],
         choices: [
@@ -1080,7 +1107,7 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
         chapter: "CONTROL TEST // One Clean Answer",
         title: "A convincing solution begins tidying the room.",
         body: [
-          "The cabinet produces a complete account. Every date fits. Six is Eli's discarded future. The token controls resets. Your notebook is a warning sent backward. Relief arrives before suspicion.",
+          "The cabinet produces a complete account. Every date fits. It claims Six is Eli's discarded future, the token controls every reset, and Mara's notebook is a warning sent backward. The theory is elegant, flattering, and unsupported by the evidence stored outside the glass. Relief arrives before suspicion.",
           "Then the cyan door disappears. A moment later, you cannot remember what color it was. Eli can. He writes CYAN in letters large enough to read through the glass. The cabinet changes his C to a G. Eli underlines harder.",
         ],
         callbacks: [
@@ -1201,7 +1228,7 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
           "Tomorrow's tape never occurs, yet the recording remains. You file it under IMPOSSIBLE BUT OBSERVED and resist improving the title.",
         ],
         choices: [],
-        ending: { label: "The Living Record", rank: "bright" },
+        ending: { label: "The Living Record", rank: "bright", outro: "Mara files sources, contradictions, and gaps side by side. Future investigators may revise the record, but nobody can quietly remove the witness who disagrees." },
       },
       m_end_witness: {
         id: "m_end_witness",
@@ -1212,7 +1239,7 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
           "Years later, another investigator opens your notebook. The first page does not tell them what happened. It tells them how to check. Eli has added beneath it: AND BRING PENCILS.",
         ],
         choices: [],
-        ending: { label: "Independent Witness", rank: "strange" },
+        ending: { label: "Independent Witness", rank: "strange", outro: "Mara and Eli leave with records stored apart and instructions for testing both. The case stays unresolved, which is safer than a certainty only one machine can verify." },
       },
       m_end_six: {
         id: "m_end_six",
@@ -1223,7 +1250,7 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
           "Their first case is a box of photographs that all insist they were taken by the same camera. Six smiles. This time, nobody has already written the ending.",
         ],
         choices: [],
-        ending: { label: "A Case of Their Own", rank: "bright" },
+        ending: { label: "A Case of Their Own", rank: "bright", outro: "Six walks out, chooses the name Seven, and takes an empty desk. Their next case begins without a conclusion waiting to erase them." },
       },
       m_end_clean: {
         id: "m_end_clean",
@@ -1234,7 +1261,7 @@ export const STORY_DEFINITIONS: StoryDefinition[] = [
           "Sometimes you remember an amber room, or perhaps it was cyan. The report contains no rooms at all. The certainty is comforting until you find Eli's handwriting on your palm: ASK WHO IS MISSING.",
         ],
         choices: [],
-        ending: { label: "The Official Version", rank: "dark" },
+        ending: { label: "The Official Version", rank: "dark", outro: "The museum praises Mara's flawless report. Only a question in Eli's handwriting remains outside it: WHO IS MISSING?" },
       },
     },
   },

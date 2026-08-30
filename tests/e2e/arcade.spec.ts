@@ -19,6 +19,16 @@ test("enters the arcade and exposes six chapters plus the guest cabinet", async 
   expect(new Set(backdropSources).size).toBe(7);
 });
 
+test("keeps free play unlocked after a browser reload", async ({ page }) => {
+  await page.goto("./");
+  await page.getByRole("button", { name: /insert two tokens/i }).click();
+  await expect.poll(() => page.evaluate(() => window.localStorage.getItem("cathy-arcade:free-play"))).toBe("true");
+
+  await page.reload();
+  await expect(page.getByRole("button", { name: /free play unlocked/i })).toBeEnabled();
+  await expect(page.getByRole("button", { name: /insert two tokens/i })).toHaveCount(0);
+});
+
 test("launches, pauses, and exits every game cabinet", async ({ page }) => {
   const runtimeErrors: string[] = [];
   page.on("pageerror", (error) => runtimeErrors.push(error.message));
@@ -111,6 +121,10 @@ test("plays and restores a branching story file", async ({ page }) => {
   await horrorCard.getByRole("button", { name: /enter story/i }).click();
   await expect(page.locator(".story-stage")).toBeFocused();
   await expect(page.locator(".story-stage")).toHaveAttribute("data-scene-art", "world");
+  const briefing = page.getByRole("complementary", { name: /story introduction and objective/i });
+  await expect(briefing).toContainText(/you are mae torres/i);
+  await expect(briefing).toContainText(/before its 12:30 reset/i);
+  await expect(page.locator(".story-act-line")).toContainText(/act i.*lock-in/i);
   await expect(page.getByRole("heading", { name: /one cabinet stays on/i })).toBeVisible();
   await expect(page.locator(".story-scene-beat")).toContainText(/warm token dated tomorrow/i);
   await page.getByRole("button", { name: /walk straight to the cabinet/i }).click();
