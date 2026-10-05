@@ -115,6 +115,18 @@ test("shows the corrected admission timeline and jukebox credits", async ({ page
   await expect(page.getByText(/long-form arrangements/i)).toBeVisible();
 });
 
+test("opens the Signal Theater without contacting Instagram until requested", async ({ page }) => {
+  await page.route("https://www.instagram.com/**", (route) => route.abort());
+  await page.goto("./#signal-theater");
+  await expect(page.getByRole("heading", { name: /one signal we made/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /play signal 86/i })).toBeVisible();
+  await expect(page.locator("iframe[title*='Instagram Reel']")).toHaveCount(0);
+  await page.getByRole("button", { name: /load official reel/i }).click();
+  await expect(page.locator("iframe[title*='Instagram Reel']")).toHaveAttribute("src", "https://www.instagram.com/reel/Dd_tbbsNrvu/embed/");
+  await page.getByRole("button", { name: /close reel/i }).click();
+  await expect(page.locator("iframe[title*='Instagram Reel']")).toHaveCount(0);
+});
+
 test("plays and restores a branching story file", async ({ page }) => {
   await page.goto("./#story-arcade");
   const horrorCard = page.locator(".story-card").filter({ hasText: "The Last Token" });
@@ -288,7 +300,7 @@ test("renders the mobile entrance without horizontal overflow", async ({ page, i
   const dimensions = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
   expect(dimensions.scroll).toBeLessThanOrEqual(dimensions.client);
   await expect(page.getByRole("heading", { name: /cathy's memory arcade/i })).toBeVisible();
-  for (const hash of ["#lobby", "#memory-route", "#story-arcade", "#jukebox", "#memory-core", "#origin-terminal"]) {
+  for (const hash of ["#lobby", "#memory-route", "#story-arcade", "#jukebox", "#signal-theater", "#memory-core", "#origin-terminal"]) {
     await page.goto(`./${hash}`);
     const sectionDimensions = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
     expect(sectionDimensions.scroll).toBeLessThanOrEqual(sectionDimensions.client);
@@ -309,7 +321,7 @@ test("keeps the mobile floor controls visible and room-aware", async ({ page, is
   await floorNav.getByRole("button", { name: /open mobile floor map/i }).click();
   const map = page.getByRole("dialog", { name: /choose your next room/i });
   await expect(map).toBeVisible();
-  await expect(map.getByRole("link")).toHaveCount(8);
+  await expect(map.getByRole("link")).toHaveCount(9);
   await page.keyboard.press("Escape");
   await expect(map).toBeHidden();
 });

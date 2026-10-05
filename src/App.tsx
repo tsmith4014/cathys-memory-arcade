@@ -7,6 +7,7 @@ import {
 } from "./components/FloorNavigation";
 import { GameArcade } from "./components/GameArcade";
 import { StoryArcade } from "./components/StoryArcade";
+import { SignalTheater } from "./components/SignalTheater";
 import { lifeDetails, memorialCopy, rememberedGames, terminalPrompts } from "./data/content";
 import {
   ArcadeSoundscape,
@@ -180,6 +181,7 @@ function App() {
           <a href="#memory-route" aria-current={activeFloor === "memory-route" ? "location" : undefined}>Route</a>
           <a href="#story-arcade" aria-current={activeFloor === "story-arcade" ? "location" : undefined}>Stories</a>
           <a href="#jukebox" aria-current={activeFloor === "jukebox" ? "location" : undefined}>Jukebox</a>
+          <a href="#signal-theater" aria-current={activeFloor === "signal-theater" ? "location" : undefined}>Theater</a>
           <a href="#memory-core" aria-current={activeFloor === "memory-core" || activeFloor === "origin-terminal" ? "location" : undefined}>Memory</a>
           <a href="#signal-machine" aria-current={activeFloor === "signal-machine" ? "location" : undefined}>Signals</a>
         </nav>
@@ -248,6 +250,8 @@ function App() {
           onSelect={selectJukeboxTrack}
           onToggle={toggleSound}
         />
+
+        <SignalTheater />
 
         <section className="memory-section" id="memory-core" aria-labelledby="memory-title">
           <div className="section-shell memory-layout">

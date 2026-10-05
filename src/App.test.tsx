@@ -120,6 +120,17 @@ describe("Cathy's Memory Arcade", () => {
     expect(screen.getByText(/long-form arrangements/i)).toBeInTheDocument();
   });
 
+  it("keeps the visiting Reel opt-in and presents the original Signal 86 film", () => {
+    render(<App />);
+    expect(screen.getByRole("heading", { name: /one signal we made/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /play signal 86/i })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryByTitle(/instagram reel by/i)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /load official reel/i }));
+    expect(screen.getByTitle(/instagram reel by/i)).toHaveAttribute("src", "https://www.instagram.com/reel/Dd_tbbsNrvu/embed/");
+    expect(screen.getByRole("button", { name: /close reel/i })).toBeInTheDocument();
+  });
+
   it("shows each record's form before the listener powers up the jukebox", () => {
     render(<App />);
     const fillmoreForm = screen.getByRole("list", { name: /fillmore after dark arrangement/i });

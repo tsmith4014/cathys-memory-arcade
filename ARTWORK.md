@@ -22,6 +22,14 @@ Seven original game environments were generated with the built-in OpenAI image-g
 
 The generated sources are preserved by Codex. The optimized WebP files are the only versions shipped to visitors.
 
+## Signal Theater
+
+Signal 86 uses two original AI-assisted paintings generated with the built-in OpenAI image-generation tool. `public/art/signal-86-vertical-v1.webp` is the 9:16 moving frame; `public/art/signal-theater-wide-v1.webp` is a separately composed wide establishing view for the theater entrance and profile link. Both depict an empty after-hours arcade, two brass tokens, original cabinet silhouettes, and a moonlit Colorado mountain portal.
+
+The production direction called for a richly detailed 35mm practical-effects science-fiction look, midnight navy with cyan, coral, and warm amber light, tactile carpet and metal, strong foreground-to-horizon depth, and no people, family likenesses, text, logos, commercial characters, recognizable cabinet art, watermarks, or visible grid overlays. The wide image was generated as a matching companion rather than mechanically stretching or cropping the vertical frame.
+
+Camera movement, light sweeps, dust, captions, and timing are code-native CSS. The visiting Instagram Reel is not artwork input, is not copied into the repository, and was not used as an image reference for these paintings.
+
 ## Branching story illustrations
 
 The fictional After Closing cabinet begins with two original art layers per story. The first three 1280 by 720 environments establish each room:

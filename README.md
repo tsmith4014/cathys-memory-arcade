@@ -16,6 +16,7 @@ This is a living 1986-meets-AI memorial for Cathy and a real browser arcade. It 
 - The real Cathy-and-Chad photo-booth portraits and a life file sourced from her family-authorized program
 - Seven unique AI-assisted Colorado and fantasy game backplates plus sixteen original story environment, cast, and turning-point paintings
 - An after-hours signal booth refreshed daily by GitHub Actions from a small set of respected sources
+- A Signal Theater with an original 24-second Web Audio micro-film and an opt-in, attributed Instagram guest Reel
 - A six-track adaptive browser score with a visible live transport, forms up to 32 bars, a patient rave build, synthetic formant voice, drums, sub-bass, pads, leads, echo, generated reverb, room ambience, and game effects synthesized locally with the Web Audio API
 - Keyboard, touch, focus restoration, direct section links, reduced-motion, and screen-reader support
 
@@ -38,6 +39,8 @@ All browser game systems, collision geometry, characters, and foreground graphic
 The jukebox contains five original procedural compositions and a Web Audio arrangement of Edvard Grieg's public-domain composition "In the Hall of the Mountain King." Fillmore After Dark uses a restrained lower lead and a single low last-light note. Moxie's Midnight Run takes 32 bars and more than 25 seconds to reach its first 12-bar, sub-heavy drop. Free Play Forever uses six formant call-and-response phrases for a deliberately artificial club voice. Garden Static's approved arrangement remains unchanged. No voice recording, music recording, or commercial game sound is included.
 
 Every track exposes its named sections and current bar while it plays. The analyser drives the jukebox meter from the actual browser mix, record changes fade through the shared music bus, and the score ducks while a cabinet is open.
+
+Signal 86: The Room Remembers is an original 24-second browser micro-film. Its two AI-assisted paintings were art-directed for this project, its camera and light choreography are CSS, and its original 112 BPM score is synthesized at playback time without samples. The neighboring visiting Reel is not downloaded or bundled: it loads from Instagram only after a visitor asks for it, retains the original creator and music attribution, and can be removed from the page again with one click.
 
 ## Local development
 
@@ -62,6 +65,8 @@ The MIT license covers source code only. Family photographs, memorial materials,
 The six memorial cabinet narratives are original metaphors inspired by known memories and the family-authorized program. They are not presented as additional facts about Cathy's life. The Guest Cabinet is separate from that route. The After Closing horror, action, and mystery stories are entirely fictional and are explicitly separated from the factual memory archive.
 
 Period Nickels & Dimes photographs are available on Artie Romero's historical site, but are copyrighted. This project links to that source instead of copying the images. They should only be incorporated after explicit permission and with full attribution.
+
+The visiting Instagram Reel and its commercial soundtrack remain the property of their respective creators and rights holders. They are excluded from this repository and its license; only Instagram's public embed URL is used.
 
 Historical context is documented in [`public/credits.html`](public/credits.html).
 The generated hero direction and source disclosure are documented in [`ARTWORK.md`](ARTWORK.md).
