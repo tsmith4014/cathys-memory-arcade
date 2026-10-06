@@ -14,9 +14,9 @@ This is a living 1986-meets-AI memorial for Cathy and a real browser arcade. It 
 - Local high scores and story progress that never leave the visitor's browser
 - A memory core that separates personal recollection from sourced historical context
 - The real Cathy-and-Chad photo-booth portraits and a life file sourced from her family-authorized program
-- Seven unique AI-assisted Colorado and fantasy game backplates plus sixteen original story environment, cast, and turning-point paintings
+- Seven unique AI-assisted game backplates, sixteen branching-story paintings, and eight original Signal Theater chapter frames
 - An after-hours signal booth refreshed daily by GitHub Actions from a small set of respected sources
-- A Signal Theater with an original 24-second Web Audio micro-film and an opt-in, attributed Instagram guest Reel
+- A Signal Theater with an original 24-second micro-film, an eight-chapter fantasy music serial, and an opt-in, attributed Instagram guest Reel
 - A six-track adaptive browser score with a visible live transport, forms up to 32 bars, a patient rave build, synthetic formant voice, drums, sub-bass, pads, leads, echo, generated reverb, room ambience, and game effects synthesized locally with the Web Audio API
 - Keyboard, touch, focus restoration, direct section links, reduced-motion, and screen-reader support
 
@@ -40,7 +40,11 @@ The jukebox contains five original procedural compositions and a Web Audio arran
 
 Every track exposes its named sections and current bar while it plays. The analyser drives the jukebox meter from the actual browser mix, record changes fade through the shared music bus, and the score ducks while a cabinet is open.
 
-Signal 86: The Room Remembers is an original 24-second browser micro-film. Its two AI-assisted paintings were art-directed for this project, its camera and light choreography are CSS, and its original 112 BPM score is synthesized at playback time without samples. The neighboring visiting Reel is not downloaded or bundled: it loads from Instagram only after a visitor asks for it, retains the original creator and music attribution, and can be removed from the page again with one click.
+Signal 86: The Room Remembers is an original 24-second browser micro-film and the prologue to **The Road Beyond Free Play: Season One: Cat & Runt**. The eight following chapter films have distinct 1672-by-941 artwork, timed story beats, CSS camera and atmosphere direction, and chapter-specific procedural scores. Full-story mode carries one chapter into the next through audible key changes and comic-book `BUT / THEREFORE` page turns. Its first family arc discovers Cat and Runt, then closes in the Six-Lamp Booth with four sibling signals intentionally unopened until their names, memories, and authorized references are ready.
+
+Cat and Runt are fantasy characters made from family-authorized likeness references supplied by Chad. Their magical actions are original fiction, while Cat's connection with animals, plants, children, and nicknames and the real irony behind Runt's nickname are grounded in Chad's account. The serial's continuity, causal writing rules, and truth boundary live in [`STORY_BIBLE.md`](STORY_BIBLE.md).
+
+The neighboring visiting Reel is not downloaded or bundled. It loads from Instagram only after a visitor asks for it, retains the original creator and music attribution, and can be closed or restarted inside the page. Restarting remounts Instagram's official public player; Instagram does not provide the host page with reliable playback-end or loop controls, and Instagram may still apply its own access or sign-in rules.
 
 ## Local development
 
@@ -62,7 +66,7 @@ npm run test:e2e
 
 The MIT license covers source code only. Family photographs, memorial materials, and generated art remain all rights reserved by the Thompson-Smith family. Commercial game titles are referenced only as personal memories; no commercial character or cabinet artwork is reproduced.
 
-The six memorial cabinet narratives are original metaphors inspired by known memories and the family-authorized program. They are not presented as additional facts about Cathy's life. The Guest Cabinet is separate from that route. The After Closing horror, action, and mystery stories are entirely fictional and are explicitly separated from the factual memory archive.
+The six memorial cabinet narratives are original metaphors inspired by known memories and the family-authorized program. They are not presented as additional facts about Cathy's life. The Guest Cabinet is separate from that route. The After Closing horror, action, and mystery stories are entirely fictional. The Signal Theater serial is also fantasy, but it uniquely uses the explicitly authorized Cat and Runt likenesses and the limited family details described above.
 
 Period Nickels & Dimes photographs are available on Artie Romero's historical site, but are copyrighted. This project links to that source instead of copying the images. They should only be incorporated after explicit permission and with full attribution.
 

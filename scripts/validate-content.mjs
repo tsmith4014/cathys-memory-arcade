@@ -13,6 +13,14 @@ const requiredFiles = [
   "dist/art/sunset-run-backdrop-v3.webp",
   "dist/art/dragonfire-descent-backdrop-v3.webp",
   "dist/art/pet-arena-guest-v1.webp",
+  "dist/art/signal-story-01-cabinet-v1.webp",
+  "dist/art/signal-story-02-tollkeeper-v1.webp",
+  "dist/art/signal-story-03-cat-v1.webp",
+  "dist/art/signal-story-04-runt-v1.webp",
+  "dist/art/signal-story-03-garden-v1.webp",
+  "dist/art/signal-story-04-dragon-v1.webp",
+  "dist/art/signal-story-05-dawn-v1.webp",
+  "dist/art/signal-story-06-six-lamp-booth-v1.webp",
   "dist/art/story-horror-last-token.webp",
   "dist/art/story-action-neon-runner.webp",
   "dist/art/story-mystery-memory-cabinet.webp",
@@ -83,6 +91,10 @@ for (const requiredCopy of [
   "The Cabinet That Remembers",
   "Five-second ward",
   "Same room. Same Wi-Fi. Four jobs.",
+  "The Road Beyond Free Play",
+  "Cat, Who Named the Wild Things",
+  "The Biggest One Was Runt",
+  "The Six-Lamp Booth",
 ]) {
   if (!javascript.includes(requiredCopy)) throw new Error(`production bundle is missing required copy: ${requiredCopy}`);
 }

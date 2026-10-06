@@ -124,10 +124,18 @@ describe("Cathy's Memory Arcade", () => {
     render(<App />);
     expect(screen.getByRole("heading", { name: /one signal we made/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /play signal 86/i })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("heading", { name: /road beyond free play/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /open chapter iii: cat/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /open chapter iv: the biggest one was runt/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /open chapter viii: the six-lamp booth/i })).toBeInTheDocument();
+    expect(screen.getAllByText("Story protected")).toHaveLength(4);
     expect(screen.queryByTitle(/instagram reel by/i)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /load official reel/i }));
-    expect(screen.getByTitle(/instagram reel by/i)).toHaveAttribute("src", "https://www.instagram.com/reel/Dd_tbbsNrvu/embed/");
+    const firstPlayer = screen.getByTitle(/instagram reel by/i);
+    expect(firstPlayer).toHaveAttribute("src", "https://www.instagram.com/reel/Dd_tbbsNrvu/embed/");
+    fireEvent.click(screen.getByRole("button", { name: /restart reel here/i }));
+    expect(screen.getByTitle(/instagram reel by/i)).not.toBe(firstPlayer);
     expect(screen.getByRole("button", { name: /close reel/i })).toBeInTheDocument();
   });
 

@@ -107,12 +107,36 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const targetId = window.location.hash.slice(1);
-    if (!targetId) return undefined;
-    const frame = window.requestAnimationFrame(() => {
+    let frame: number | null = null;
+    let settleTimers: number[] = [];
+
+    const restoreTarget = (): void => {
+      const targetId = window.location.hash.slice(1);
+      if (!targetId) return;
       document.getElementById(targetId)?.scrollIntoView({ block: "start" });
-    });
-    return () => window.cancelAnimationFrame(frame);
+    };
+
+    const scheduleRestore = (longSettle: boolean): void => {
+      if (frame !== null) window.cancelAnimationFrame(frame);
+      settleTimers.forEach((timer) => window.clearTimeout(timer));
+      frame = window.requestAnimationFrame(restoreTarget);
+      settleTimers = [
+        window.setTimeout(restoreTarget, 180),
+        window.setTimeout(restoreTarget, longSettle ? 900 : 420),
+      ];
+    };
+
+    const restoreInitialTarget = (): void => scheduleRestore(true);
+    const restoreChangedTarget = (): void => scheduleRestore(false);
+    restoreInitialTarget();
+    window.addEventListener("load", restoreInitialTarget, { once: true });
+    window.addEventListener("hashchange", restoreChangedTarget);
+    return () => {
+      if (frame !== null) window.cancelAnimationFrame(frame);
+      settleTimers.forEach((timer) => window.clearTimeout(timer));
+      window.removeEventListener("load", restoreInitialTarget);
+      window.removeEventListener("hashchange", restoreChangedTarget);
+    };
   }, []);
 
   function enterArcade() {

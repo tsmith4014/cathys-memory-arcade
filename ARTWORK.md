@@ -30,6 +30,21 @@ The production direction called for a richly detailed 35mm practical-effects sci
 
 Camera movement, light sweeps, dust, captions, and timing are code-native CSS. The visiting Instagram Reel is not artwork input, is not copied into the repository, and was not used as an image reference for these paintings.
 
+### The Road Beyond Free Play
+
+Eight 1672-by-941 chapter paintings extend Signal 86 into the original fantasy music serial **Season One: Cat & Runt**. The shared production prompt calls for a continuous handcrafted world: premium tactile stop-motion clay, practical miniatures, selective gouache and cel-animation energy, midnight navy and cyan against warm amber and aged brass, strong foreground-to-horizon depth, original characters, no commercial designs, no readable text, no watermarks, and no visible grid overlays.
+
+- `public/art/signal-story-01-cabinet-v1.webp`: Coda, an adult terra-cotta clay wanderer in a coral aviator jacket and cyan scarf, wakes inside Cabinet 86 with two tokens while the brass raven Rook watches a moonlit mountain road appear.
+- `public/art/signal-story-02-tollkeeper-v1.webp`: Coda and Rook cross a miniature brass bridge where the immense clay-and-stone tollkeeper Tallow laughs a golden doorway into his chest.
+- `public/art/signal-story-03-cat-v1.webp`: Cat laughs in an impossible greenhouse among luminous plants, friendly animals, fantasy children, Coda, and Rook. The adult woman in Chad's authorized photo-booth source was the sole real-person identity reference; the boy in that source was explicitly excluded.
+- `public/art/signal-story-04-runt-v1.webp`: Runt repairs a root-covered mountain gate while protecting a tiny nest; Cat rides his shoulder and Coda watches below. Chad's separately supplied portrait is the sole identity reference for Runt's round face, smiling eyes, white beard, and dark cap. The approved Cat greenhouse frame is the Cat identity anchor.
+- `public/art/signal-story-03-garden-v1.webp`: Coda plants a brass token among luminous moth-folk and a garden whose forgotten songs grow as glassy flowers.
+- `public/art/signal-story-04-dragon-v1.webp`: Coda offers the lonely midnight dragon Vesper a place in the next verse instead of fighting for the glowing final bass note.
+- `public/art/signal-story-05-dawn-v1.webp`: Coda opens a sunrise arcade festival to wanderers, moth-folk, Tallow, Rook, and Vesper, leaving space for the family world to continue.
+- `public/art/signal-story-06-six-lamp-booth-v1.webp`: Cat, Runt, and Coda find six signal lamps in a sunrise projection booth. Cat and Runt retain their approved likeness anchors; two lamps glow while four remain deliberately unnamed.
+
+Cat and Runt are authorized likeness-based fantasy characters, not synthetic historical photographs. Their environments, costumes, scale, companions, dialogue, and magical actions are imagined. The two private source photographs are not bundled as Signal Theater assets. The approved greenhouse Cat frame and refined Runt chapter frame are the visual continuity anchors for later scenes; any frame that drifts from those identities must be regenerated rather than accepted as a loose resemblance. All other recurring figures are original fictional designs. The chapter images were generated with the built-in OpenAI image-generation tool and optimized to WebP for the site.
+
 ## Branching story illustrations
 
 The fictional After Closing cabinet begins with two original art layers per story. The first three 1280 by 720 environments establish each room:

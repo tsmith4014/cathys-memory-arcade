@@ -4,6 +4,7 @@ import {
   SIGNAL_TRANSMISSION_DURATION_MS,
   SignalTransmissionScore,
 } from "../lib/signalTransmission";
+import { FantasySignalStory } from "./FantasySignalStory";
 
 const reelUrl = "https://www.instagram.com/reel/Dd_tbbsNrvu/";
 const reelEmbedUrl = `${reelUrl}embed/`;
@@ -12,6 +13,7 @@ type FilmState = "idle" | "playing" | "complete";
 
 export function SignalTheater() {
   const [reelLoaded, setReelLoaded] = useState(false);
+  const [reelNonce, setReelNonce] = useState(0);
   const [filmState, setFilmState] = useState<FilmState>("idle");
   const [elapsedMs, setElapsedMs] = useState(0);
   const [scoreAvailable, setScoreAvailable] = useState<boolean | null>(null);
@@ -110,6 +112,7 @@ export function SignalTheater() {
                 <span aria-hidden="true">{filmState === "playing" ? "■" : "▶"}</span>
                 {filmState === "playing" ? "Stop transmission" : filmState === "complete" ? "Replay Signal 86" : "Play Signal 86"}
               </button>
+              <a className="signal-story-link" href="#road-beyond-free-play">Continue into Chapter I</a>
               <p className="signal-status" role="status" aria-live="polite">
                 {filmState === "playing"
                   ? scoreAvailable === false ? "Visual transmission running. Web Audio is unavailable in this browser." : "Transmission live. Original score is building in the room."
@@ -126,14 +129,19 @@ export function SignalTheater() {
             <div className="instagram-stage">
               {reelLoaded ? (
                 <div className="instagram-player">
-                  <button type="button" onClick={() => setReelLoaded(false)}>Close Reel</button>
+                  <div className="instagram-player-controls">
+                    <button type="button" onClick={() => setReelNonce((current) => current + 1)}>Restart Reel here</button>
+                    <button type="button" onClick={() => setReelLoaded(false)}>Close Reel</button>
+                  </div>
                   <iframe
+                    key={reelNonce}
                     src={reelEmbedUrl}
                     title="Instagram Reel by bellvtrix.ai with mr_unvrs"
                     allow="autoplay; encrypted-media; picture-in-picture; web-share"
                     referrerPolicy="strict-origin-when-cross-origin"
                     allowFullScreen
                   />
+                  <small>Restart reloads Instagram's public player in this page. Instagram does not expose reliable end or loop controls to the host page.</small>
                 </div>
               ) : (
                 <div className="instagram-gate">
@@ -153,6 +161,8 @@ export function SignalTheater() {
             </div>
           </article>
         </div>
+
+        <FantasySignalStory />
       </div>
     </section>
   );

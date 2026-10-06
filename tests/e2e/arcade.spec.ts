@@ -123,8 +123,29 @@ test("opens the Signal Theater without contacting Instagram until requested", as
   await expect(page.locator("iframe[title*='Instagram Reel']")).toHaveCount(0);
   await page.getByRole("button", { name: /load official reel/i }).click();
   await expect(page.locator("iframe[title*='Instagram Reel']")).toHaveAttribute("src", "https://www.instagram.com/reel/Dd_tbbsNrvu/embed/");
+  await expect(page.getByRole("button", { name: /restart reel here/i })).toBeVisible();
+  await page.getByRole("button", { name: /restart reel here/i }).click();
+  await expect(page.locator("iframe[title*='Instagram Reel']")).toHaveCount(1);
   await page.getByRole("button", { name: /close reel/i }).click();
   await expect(page.locator("iframe[title*='Instagram Reel']")).toHaveCount(0);
+});
+
+test("plays the Cat and Runt fantasy serial without leaving the theater", async ({ page }) => {
+  await page.goto("./#road-beyond-free-play");
+  await expect(page.getByRole("heading", { name: /road beyond free play/i })).toBeVisible();
+  await expect(page.locator(".fantasy-chapter-reel button")).toHaveCount(8);
+  await page.getByRole("button", { name: /open chapter iii: cat/i }).click();
+  await expect(page.locator(".fantasy-story-stage")).toHaveAttribute("data-effect", "bloom");
+  await expect(page.getByRole("img", { name: /young cat.*family likeness/i })).toBeVisible();
+  await page.getByRole("button", { name: /play chapter iii/i }).click();
+  await expect(page.locator(".fantasy-story-stage")).toHaveClass(/is-playing/);
+  await expect(page.getByRole("status").filter({ hasText: /chapter live|running silently/i })).toBeVisible();
+  await page.getByRole("button", { name: /stop chapter/i }).click();
+  await page.getByRole("button", { name: /open chapter iv: the biggest one was runt/i }).click();
+  await expect(page.getByRole("img", { name: /runt.*cat.*shoulder/i })).toBeVisible();
+  await page.getByRole("button", { name: /open chapter viii: the six-lamp booth/i }).click();
+  await expect(page.getByRole("img", { name: /cat and runt.*authorized family likenesses/i })).toBeVisible();
+  await expect(page.getByText("Two lights found.", { exact: false })).toBeVisible();
 });
 
 test("plays and restores a branching story file", async ({ page }) => {
@@ -194,9 +215,16 @@ test("keeps story art in front while the narrative changes scenes", async ({ pag
 
 test("restores direct section links after the React page mounts", async ({ page }) => {
   await page.goto("./#memory-route");
+  await page.waitForTimeout(1_000);
   await expect(page.locator("#memory-route")).toBeInViewport();
   const top = await page.locator("#memory-route").evaluate((element) => element.getBoundingClientRect().top);
   expect(top).toBeGreaterThanOrEqual(60);
+
+  await page.goto("./?view=serial#road-beyond-free-play");
+  await page.waitForTimeout(1_000);
+  await expect(page.getByRole("heading", { name: /road beyond free play/i })).toBeInViewport();
+  const serialTop = await page.locator("#road-beyond-free-play").evaluate((element) => element.getBoundingClientRect().top);
+  expect(serialTop).toBeGreaterThanOrEqual(60);
 });
 
 test("uses the floor map as a keyboard-safe route through the arcade", async ({ page }) => {

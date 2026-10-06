@@ -30,7 +30,7 @@ const FLOOR_STOPS: FloorStop[] = [
   { id: "memory-route", code: "02", label: "Route 86", title: "Carry six chapters home", description: "A local save route that changes as each cabinet is cleared." },
   { id: "story-arcade", code: "03", label: "Stories", title: "After Closing", description: "Three illustrated branching stories that remember every choice." },
   { id: "jukebox", code: "04", label: "Jukebox", title: "Six browser-built records", description: "Long-form arrangements, live meters, and no borrowed game audio." },
-  { id: "signal-theater", code: "05", label: "Theater", title: "House film and visiting signal", description: "An original scored micro-film beside a credited Instagram Reel." },
+  { id: "signal-theater", code: "05", label: "Theater", title: "Films, family, and visiting signal", description: "Signal 86 opens an eight-chapter fantasy serial beside a credited Instagram Reel." },
   { id: "memory-core", code: "06", label: "Memory", title: "The five-dollar summer", description: "Family photographs, sourced history, and the person behind the tokens." },
   { id: "signal-machine", code: "07", label: "Signals", title: "The after-hours reel", description: "Five fresh links from independent technical and preservation sources." },
   { id: "origin-terminal", code: "08", label: "Ask", title: "The memory terminal", description: "Four honest answers stored locally in the page." },
@@ -91,6 +91,10 @@ export function useRevealMotion(): void {
       ".jukebox-machine",
       ".signal-theater-banner",
       ".signal-cabinet",
+      ".fantasy-story-heading",
+      ".fantasy-story-console",
+      ".fantasy-chapter-reel",
+      ".sibling-signal-map",
       ".memory-story",
       ".token-ledger",
       ".photo-booth-card",
@@ -268,7 +272,7 @@ function statusFor(id: FloorStopId, progress: LocalProgress): string {
   if (id === "lobby" || id === "memory-route") return `${progress.completedGames}/6 chapters kept`;
   if (id === "story-arcade") return `${progress.savedStories}/3 files opened`;
   if (id === "jukebox") return "6 records ready";
-  if (id === "signal-theater") return "2 transmissions ready";
+  if (id === "signal-theater") return "9 house reels + 1 guest";
   if (id === "signal-machine") return "5 fresh signals";
   if (id === "origin-terminal") return "4 local answers";
   if (id === "memory-core") return "Family archive";
