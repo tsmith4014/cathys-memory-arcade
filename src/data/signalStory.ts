@@ -24,7 +24,17 @@ export type FantasyStoryChapter = {
   moments: readonly FantasyStoryMoment[];
 };
 
-export const FANTASY_STORY_TRANSITION_MS = 12_000;
+export const FANTASY_STORY_TRANSITION_MS = 6_000;
+export const FANTASY_NARRATION_VOICE = "Danielle";
+export const FANTASY_NARRATION_PREVIEW_PATH = "audio/fantasy/voice-check.mp3";
+
+export function getFantasyMomentNarrationPath(chapterId: FantasyStoryChapter["id"], momentId: string): string {
+  return `audio/fantasy/${chapterId}-${momentId}.mp3`;
+}
+
+export function getFantasyBridgeNarrationPath(chapterId: FantasyStoryChapter["id"]): string {
+  return `audio/fantasy/${chapterId}-bridge.mp3`;
+}
 
 export const FANTASY_STORY_CHAPTERS: readonly FantasyStoryChapter[] = [
   {
@@ -33,6 +43,7 @@ export const FANTASY_STORY_CHAPTERS: readonly FantasyStoryChapter[] = [
     title: "The Girl in Cabinet 86",
     subtitle: "A door opens from the wrong side.",
     art: "art/signal-story-01-cabinet-v1.webp",
+    animationFrames: ["art/signal-story-01-cabinet-v2.webp"],
     alt: "Coda steps from a glowing arcade cabinet onto a moonlit mountain road while her brass raven companion Rook watches above",
     durationMs: 44_000,
     bpm: 96,
@@ -57,6 +68,7 @@ export const FANTASY_STORY_CHAPTERS: readonly FantasyStoryChapter[] = [
     title: "The Tollkeeper of Soft Stone",
     subtitle: "The truth can face forward.",
     art: "art/signal-story-02-tollkeeper-v1.webp",
+    animationFrames: ["art/signal-story-02-tollkeeper-v2.webp"],
     alt: "Coda and Rook meet the laughing stone giant Tallow on a tiny brass bridge above a moonlit canyon",
     durationMs: 44_000,
     bpm: 88,
@@ -131,6 +143,7 @@ export const FANTASY_STORY_CHAPTERS: readonly FantasyStoryChapter[] = [
     title: "The Garden That Hums Back",
     subtitle: "Nothing grows in a closed hand.",
     art: "art/signal-story-03-garden-v1.webp",
+    animationFrames: ["art/signal-story-03-garden-v2.webp"],
     alt: "Coda plants a glowing token in a luminous garden as Rook and a gathering of moth-folk watch the musical plant grow",
     durationMs: 46_000,
     bpm: 82,
@@ -155,6 +168,7 @@ export const FANTASY_STORY_CHAPTERS: readonly FantasyStoryChapter[] = [
     title: "The Dragon Who Swallowed Midnight",
     subtitle: "The monster is guarding the ending.",
     art: "art/signal-story-04-dragon-v1.webp",
+    animationFrames: ["art/signal-story-04-dragon-v2.webp"],
     alt: "Coda reaches toward the enormous midnight dragon Vesper, who gently guards a glowing bass note above a mountain of speakers",
     durationMs: 48_000,
     bpm: 132,
@@ -178,8 +192,9 @@ export const FANTASY_STORY_CHAPTERS: readonly FantasyStoryChapter[] = [
     number: "VII",
     title: "The Last Token Is a Door",
     subtitle: "No lost song leaves alone.",
-    art: "art/signal-story-05-dawn-v1.webp",
-    alt: "Coda welcomes a joyful gathering of wanderers, moth-folk, Tallow, Rook, and Vesper into an open-air arcade at sunrise",
+    art: "art/signal-story-05-door-v1.webp",
+    animationFrames: ["art/signal-story-05-door-v2.webp"],
+    alt: "Coda turns two glowing tokens into the hinges of a doorway at dawn while Cat steadies her, Runt holds the collapsing roof, and Vesper guards the final note",
     durationMs: 48_000,
     bpm: 120,
     medium: "miniature",
@@ -203,6 +218,7 @@ export const FANTASY_STORY_CHAPTERS: readonly FantasyStoryChapter[] = [
     title: "The Six-Lamp Booth",
     subtitle: "Some doors are opened by waiting well.",
     art: "art/signal-story-06-six-lamp-booth-v1.webp",
+    animationFrames: ["art/signal-story-06-six-lamp-booth-v2.webp"],
     alt: "Cat and Runt, created from authorized family likenesses, sit with Coda beneath six signal lamps in a sunlit projection booth",
     durationMs: 46_000,
     bpm: 106,

@@ -602,7 +602,8 @@ kbd { margin-left: 0.35rem; color: var(--tone); font-family: ui-monospace, monos
 .fantasy-story-deck p { margin: 0; color: var(--cyan-soft); font-size: clamp(1rem, 1.55vw, 1.25rem); line-height: 1.55; }
 .fantasy-story-deck span { display: block; margin-top: 1rem; color: #78969d; font: 600 0.55rem/1.5 ui-monospace, monospace; letter-spacing: 0.08em; text-transform: uppercase; }
 .fantasy-story-console { display: grid; grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem); min-width: 0; overflow: hidden; border: 1px solid rgba(151, 244, 239, 0.25); background: #02070b; box-shadow: 0 2.5rem 9rem rgba(0, 0, 0, 0.46); }
-.fantasy-story-stage { position: relative; min-width: 0; min-height: 32rem; overflow: hidden; isolation: isolate; background: #02070b; --story-accent: var(--amber); --story-progress: 0%; --story-duration: 46s; --story-beat-duration: 7.5s; --story-transition-duration: 12s; }
+.fantasy-story-visual { min-width: 0; display: grid; grid-template-rows: minmax(32rem, 1fr) auto; align-content: start; background: #02070b; --story-accent: var(--amber); --story-progress: 0%; --story-duration: 46s; --story-beat-duration: 7.5s; --story-transition-duration: 6s; }
+.fantasy-story-stage { position: relative; min-width: 0; min-height: 32rem; overflow: hidden; isolation: isolate; background: #02070b; }
 .fantasy-story-art { position: absolute; z-index: -4; inset: -4%; width: 108%; height: 108%; filter: saturate(0.94) contrast(1.05) brightness(0.84); transform: scale(1.04); transform-origin: 50% 50%; will-change: transform, filter; }
 .fantasy-story-art > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .fantasy-story-art.has-living-frames > img:first-child { z-index: 1; }
@@ -630,12 +631,13 @@ kbd { margin-left: 0.35rem; color: var(--tone); font-family: ui-monospace, monos
 .fantasy-story-stage.is-playing[data-shot="1"] .fantasy-story-art { animation: fantasy-shot-push var(--story-beat-duration) cubic-bezier(.2,.62,.24,1) both; }
 .fantasy-story-stage.is-playing[data-shot="2"] .fantasy-story-art { animation: fantasy-shot-right var(--story-beat-duration) cubic-bezier(.2,.62,.24,1) both; }
 .fantasy-story-scope { position: absolute; z-index: 3; top: 1rem; right: 1rem; left: 1rem; display: flex; justify-content: space-between; color: rgba(234, 246, 242, 0.8); font: 700 0.52rem/1 ui-monospace, monospace; letter-spacing: 0.12em; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.7); }
-.fantasy-story-caption { position: absolute; z-index: 4; right: clamp(1rem, 4vw, 3rem); bottom: clamp(1rem, 3vw, 2.5rem); left: clamp(1rem, 4vw, 3rem); width: min(43rem, calc(100% - 2rem)); padding: clamp(0.85rem, 2.1vw, 1.4rem); border-left: 3px solid var(--story-accent); background: linear-gradient(90deg, rgba(2, 7, 11, 0.88), rgba(2, 7, 11, 0.61)); backdrop-filter: blur(0.8rem); box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.24); transition: opacity 180ms ease; }
+.fantasy-story-caption { position: relative; z-index: 4; width: 100%; min-height: 7rem; display: grid; align-content: center; padding: clamp(1rem, 2.1vw, 1.45rem) clamp(1.1rem, 4vw, 3rem); border-top: 3px solid var(--story-accent); background: radial-gradient(circle at 100% 0, color-mix(in srgb, var(--story-accent) 12%, transparent), transparent 42%), linear-gradient(100deg, #07131d, #0a1c27); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04); transition: opacity 180ms ease, border-color 250ms ease; }
 .fantasy-story-caption span { color: var(--story-accent); font: 800 0.52rem/1 ui-monospace, monospace; letter-spacing: 0.12em; text-transform: uppercase; }
-.fantasy-story-caption p { max-width: 36ch; margin: 0.5rem 0 0; font-family: var(--display); font-size: clamp(0.86rem, 1.65vw, 1.28rem); line-height: 1.3; text-wrap: balance; }
+.fantasy-story-caption p { max-width: 52ch; margin: 0.55rem 0 0; font-family: var(--display); font-size: clamp(0.86rem, 1.4vw, 1.16rem); line-height: 1.35; text-wrap: balance; }
 .fantasy-story-progress { position: absolute; z-index: 5; right: 0; bottom: 0; left: 0; height: 0.28rem; background: rgba(234, 246, 242, 0.14); }
 .fantasy-story-progress i { display: block; width: var(--story-progress); height: 100%; background: linear-gradient(90deg, var(--story-accent), var(--cyan)); box-shadow: 0 0 1rem var(--story-accent); transition: width 100ms linear; }
-.fantasy-story-stage.is-turning .fantasy-story-caption, .fantasy-story-stage.is-turning .fantasy-story-scope { opacity: 0; }
+.fantasy-story-stage.is-turning .fantasy-story-scope { opacity: 0; }
+.fantasy-story-visual.is-turning .fantasy-story-caption { border-color: var(--cyan); }
 .fantasy-comic-break { position: absolute; z-index: 8; inset: 0; display: grid; grid-template-columns: 1fr 0.16fr 1fr; align-items: stretch; overflow: hidden; color: #07131d; background: #f4d486; animation: fantasy-page-turn var(--story-transition-duration) cubic-bezier(.2,.72,.16,1) both; }
 .fantasy-comic-break::before { content: ""; position: absolute; inset: 0; opacity: 0.16; background: radial-gradient(circle, #07131d 0 1px, transparent 1.5px); background-size: 9px 9px; }
 .fantasy-comic-break > div { position: relative; z-index: 1; display: grid; align-content: center; gap: 0.65rem; padding: clamp(1.3rem, 5vw, 4.5rem); }
@@ -871,6 +873,7 @@ footer div { display: flex; gap: 1.5rem; }
   .signal-theater-grid { grid-template-columns: 1fr; }
   .instagram-stage { min-height: 44rem; }
   .fantasy-story-console { grid-template-columns: 1fr; }
+  .fantasy-story-visual { grid-template-rows: auto auto; }
   .fantasy-story-stage { min-height: 0; aspect-ratio: 16 / 9; }
   .fantasy-story-controls { border-top: 1px solid var(--line); border-left: 0; }
   .fantasy-story-specs { margin-bottom: 0; }
@@ -1592,7 +1595,7 @@ main > section[id],
   .fantasy-story-heading h3 { font-size: clamp(2.2rem, 12vw, 4rem); }
   .fantasy-story-deck { padding: 1rem 0 0; border-top: 2px solid var(--coral); border-left: 0; }
   .fantasy-story-stage { aspect-ratio: 4 / 3; }
-  .fantasy-story-caption { right: 0.7rem; bottom: 0.8rem; left: 0.7rem; width: calc(100% - 1.4rem); padding: 0.72rem; }
+  .fantasy-story-caption { width: 100%; min-height: 6.5rem; padding: 0.85rem 1rem; }
   .fantasy-story-caption p { font-size: 0.79rem; line-height: 1.25; }
   .fantasy-story-scope { top: 0.65rem; right: 0.65rem; left: 0.65rem; }
   .fantasy-story-controls { padding: 1.2rem; }

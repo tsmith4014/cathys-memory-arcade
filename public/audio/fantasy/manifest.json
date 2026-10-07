@@ -1,0 +1,354 @@
+{
+  "engine": "generative",
+  "voice": "Danielle",
+  "region": "us-east-1",
+  "sampleRate": 24000,
+  "pricePerMillionCharactersUsd": 30,
+  "pricingSource": "https://aws.amazon.com/polly/pricing/",
+  "totalCharacters": 4922,
+  "maximumEstimatedCostUsd": 0.1477,
+  "clips": [
+    {
+      "id": "cabinet-wake",
+      "path": "audio/fantasy/cabinet-wake.mp3",
+      "characters": 83,
+      "textSha256": "06b667552783e10f51d2bd0f635b40210afded2438ca516d275083d46d585407"
+    },
+    {
+      "id": "cabinet-tokens",
+      "path": "audio/fantasy/cabinet-tokens.mp3",
+      "characters": 86,
+      "textSha256": "86b9929411f9afd86bf17ca5c62103f5d6005d38ae7aa1c8a9d575bf5f78b53f"
+    },
+    {
+      "id": "cabinet-name",
+      "path": "audio/fantasy/cabinet-name.mp3",
+      "characters": 77,
+      "textSha256": "d5bd2f0c1c197e13c9a56e08e6f879a295afa8f4a23d3ae15e61457670b1ff78"
+    },
+    {
+      "id": "cabinet-vanish",
+      "path": "audio/fantasy/cabinet-vanish.mp3",
+      "characters": 82,
+      "textSha256": "351b939cafb5e116122ae92e44c5e3c3228ceedc19e43dbac7359580f405254c"
+    },
+    {
+      "id": "cabinet-call",
+      "path": "audio/fantasy/cabinet-call.mp3",
+      "characters": 80,
+      "textSha256": "07f5c2786e9e5778f839d63fd0305ff7871a483b323750954ec6ed4306b0233a"
+    },
+    {
+      "id": "cabinet-choice",
+      "path": "audio/fantasy/cabinet-choice.mp3",
+      "characters": 89,
+      "textSha256": "4c4bc67fff03915d855c69836df407217e3747ec185ce23f4c87a2bcf4a7d475"
+    },
+    {
+      "id": "cabinet-bridge",
+      "path": "audio/fantasy/cabinet-bridge.mp3",
+      "characters": 94,
+      "textSha256": "47501636129a97773ecc31527063a641c5082e66b6ef6f68912d360b83c41580"
+    },
+    {
+      "id": "tollkeeper-toll",
+      "path": "audio/fantasy/tollkeeper-toll.mp3",
+      "characters": 77,
+      "textSha256": "ab75d48138a11da9cc349d9e894da2e6ad105edb69566c64bc9415c7b6abfde4"
+    },
+    {
+      "id": "tollkeeper-empty",
+      "path": "audio/fantasy/tollkeeper-empty.mp3",
+      "characters": 85,
+      "textSha256": "50fe873879332105ee474c8c96bf004f7812dcb490212fbf80a329b033e771e0"
+    },
+    {
+      "id": "tollkeeper-receipt",
+      "path": "audio/fantasy/tollkeeper-receipt.mp3",
+      "characters": 89,
+      "textSha256": "aac902a009c06478af9cd2606f76ff91af441174629356605271a170c3c63b8d"
+    },
+    {
+      "id": "tollkeeper-forward",
+      "path": "audio/fantasy/tollkeeper-forward.mp3",
+      "characters": 78,
+      "textSha256": "5f80ab939379bee1042b120c32903e9e237482cf71619bac5d3797ef05250795"
+    },
+    {
+      "id": "tollkeeper-promise",
+      "path": "audio/fantasy/tollkeeper-promise.mp3",
+      "characters": 70,
+      "textSha256": "93d4f2f87d03139b8269dd5d6ffcfc3f737985b73f71b63fd519fb088e2eab1c"
+    },
+    {
+      "id": "tollkeeper-door",
+      "path": "audio/fantasy/tollkeeper-door.mp3",
+      "characters": 94,
+      "textSha256": "be02730d30bcdb7848cf1043b9dd227ac7e38b99890bc6d5eb713c54cfdbf127"
+    },
+    {
+      "id": "tollkeeper-bridge",
+      "path": "audio/fantasy/tollkeeper-bridge.mp3",
+      "characters": 112,
+      "textSha256": "03bcbfa82620c715dbbadba515555cf89fc2758858abbc7246f3a87f125c94c5"
+    },
+    {
+      "id": "cat-greenhouse",
+      "path": "audio/fantasy/cat-greenhouse.mp3",
+      "characters": 101,
+      "textSha256": "2b698acdb5561dc452225443a855f11b08dd8fec8841d4a3bf771435b9885782"
+    },
+    {
+      "id": "cat-names",
+      "path": "audio/fantasy/cat-names.mp3",
+      "characters": 90,
+      "textSha256": "fd87b65d8d187daf082866c70846bf3cc7dbea189434e93d2e12f5930b9a0b93"
+    },
+    {
+      "id": "cat-frost",
+      "path": "audio/fantasy/cat-frost.mp3",
+      "characters": 81,
+      "textSha256": "2c58371e722a19de79a1600ec812ee18ba0b9c96e555e84a092b5b8a217af778"
+    },
+    {
+      "id": "cat-silence",
+      "path": "audio/fantasy/cat-silence.mp3",
+      "characters": 86,
+      "textSha256": "0bdd1d9d576a2192bf3ba46a7cb23da496d573341457f01e53b43130b6bbea67"
+    },
+    {
+      "id": "cat-choice",
+      "path": "audio/fantasy/cat-choice.mp3",
+      "characters": 85,
+      "textSha256": "1b9745791a3203847b4e81c86998b5ef853f6413bf053b7e8054a4d2637972fa"
+    },
+    {
+      "id": "cat-runt",
+      "path": "audio/fantasy/cat-runt.mp3",
+      "characters": 99,
+      "textSha256": "5c5b6c567a19e520fabf1c2299078b5c3d38e7c09118b09292aa61ab50aa78e8"
+    },
+    {
+      "id": "cat-bridge",
+      "path": "audio/fantasy/cat-bridge.mp3",
+      "characters": 97,
+      "textSha256": "d5e616b8d3d728c38f7cb5d4146a1fd3f3525dadfca9809f809c384b1ea36606"
+    },
+    {
+      "id": "runt-search",
+      "path": "audio/fantasy/runt-search.mp3",
+      "characters": 87,
+      "textSha256": "7359699d85cab610d9cdb3b913b430afbdbc4ab6ff3bd42a20f17801bc639b30"
+    },
+    {
+      "id": "runt-joke",
+      "path": "audio/fantasy/runt-joke.mp3",
+      "characters": 84,
+      "textSha256": "156f0153facf31337b9dff6b9b88ddffe407cf6d5640f4e360f5daac96915fbf"
+    },
+    {
+      "id": "runt-gate",
+      "path": "audio/fantasy/runt-gate.mp3",
+      "characters": 90,
+      "textSha256": "fecb3b5c290a459bb3c611fc50868b113c851a4250982ee832d080ed5aec99db"
+    },
+    {
+      "id": "runt-nest",
+      "path": "audio/fantasy/runt-nest.mp3",
+      "characters": 73,
+      "textSha256": "f6d1342efa13f973b33312edce20ccd2d37931313c724361e7792d668ad264ae"
+    },
+    {
+      "id": "runt-rescue",
+      "path": "audio/fantasy/runt-rescue.mp3",
+      "characters": 83,
+      "textSha256": "39d60186816a47771c3ffa1bc7aa8288a8eff292d76deda9e18864a7f236548b"
+    },
+    {
+      "id": "runt-lift",
+      "path": "audio/fantasy/runt-lift.mp3",
+      "characters": 87,
+      "textSha256": "a02eacfc5e5827c27dd86ab63c11a5cf029d0b26ed275e13110d306790891b9b"
+    },
+    {
+      "id": "runt-bridge",
+      "path": "audio/fantasy/runt-bridge.mp3",
+      "characters": 102,
+      "textSha256": "356a6423a25ff2f7fb9942812ec826833e275ea04ea6943a7b4b1dbf9c80df28"
+    },
+    {
+      "id": "garden-garden",
+      "path": "audio/fantasy/garden-garden.mp3",
+      "characters": 82,
+      "textSha256": "5a395a47375a7279e91838d6c668419f3da74e3204a56e0420fc011f2c2d66c1"
+    },
+    {
+      "id": "garden-hunger",
+      "path": "audio/fantasy/garden-hunger.mp3",
+      "characters": 83,
+      "textSha256": "453b646e83f5be7ac5039e67b987e059634f037316d76f9e6879d12e3d6dc6a3"
+    },
+    {
+      "id": "garden-roots",
+      "path": "audio/fantasy/garden-roots.mp3",
+      "characters": 77,
+      "textSha256": "db78a5334cb3758381fee0e8adb2a1abd91f51701c332e1f1427df5911157744"
+    },
+    {
+      "id": "garden-lesson",
+      "path": "audio/fantasy/garden-lesson.mp3",
+      "characters": 73,
+      "textSha256": "cab7d510600304a3d6ce1a99db5fb3b6efe4a5ea82c42ca3a198d2acd6236af2"
+    },
+    {
+      "id": "garden-memory",
+      "path": "audio/fantasy/garden-memory.mp3",
+      "characters": 92,
+      "textSha256": "f4673a358e09ee17b51f906a2beaef87d358fb0e0577cdf32db6f5203ca51945"
+    },
+    {
+      "id": "garden-chorus",
+      "path": "audio/fantasy/garden-chorus.mp3",
+      "characters": 88,
+      "textSha256": "9468b6af52ba9d19458b0db49e89456e043b7698e4a73a284caeff5921ac0bf1"
+    },
+    {
+      "id": "garden-bridge",
+      "path": "audio/fantasy/garden-bridge.mp3",
+      "characters": 110,
+      "textSha256": "00014a8d94e3fb556cd77feb32cdb37b2da9832750e4a663bd602c38d7cce4cd"
+    },
+    {
+      "id": "dragon-vesper",
+      "path": "audio/fantasy/dragon-vesper.mp3",
+      "characters": 84,
+      "textSha256": "fa8ac7e5a008866e4a45605f3dc69b3101ccd8ec451eb6ae5965832c337c861e"
+    },
+    {
+      "id": "dragon-misread",
+      "path": "audio/fantasy/dragon-misread.mp3",
+      "characters": 86,
+      "textSha256": "59625daf4eb2439ad33d6d22c3807209f638a16f96a3b10655835972e1c3fa2e"
+    },
+    {
+      "id": "dragon-truth",
+      "path": "audio/fantasy/dragon-truth.mp3",
+      "characters": 72,
+      "textSha256": "5e1c272c4296b06ae50714459a2ddd977ed392369fbe3f9721a92ec8cfbf3219"
+    },
+    {
+      "id": "dragon-wound",
+      "path": "audio/fantasy/dragon-wound.mp3",
+      "characters": 96,
+      "textSha256": "02c72d585e095904fcbcca797aec618381e5f4731231c711f1f4a046af9c6c44"
+    },
+    {
+      "id": "dragon-offer",
+      "path": "audio/fantasy/dragon-offer.mp3",
+      "characters": 88,
+      "textSha256": "1d0ac206e230f9aacb916fc9d46488ce6098bdc7e4e10782920ff73e9ad50c0a"
+    },
+    {
+      "id": "dragon-release",
+      "path": "audio/fantasy/dragon-release.mp3",
+      "characters": 95,
+      "textSha256": "ad91dffb5cfaa4411a80361e3ce90b4364cfb87f95b8beea2739cf45c958c306"
+    },
+    {
+      "id": "dragon-bridge",
+      "path": "audio/fantasy/dragon-bridge.mp3",
+      "characters": 103,
+      "textSha256": "670ab86fced0aaf6688c078d00605f99c7cb9da8cf7dd930da7d0d00ef0fd384"
+    },
+    {
+      "id": "dawn-escape",
+      "path": "audio/fantasy/dawn-escape.mp3",
+      "characters": 82,
+      "textSha256": "676599640ff44239ee968f5fd5783e70d8af73f97f208a41fc7d77a67c4602ba"
+    },
+    {
+      "id": "dawn-arrival",
+      "path": "audio/fantasy/dawn-arrival.mp3",
+      "characters": 80,
+      "textSha256": "5ec13bd0fc5c6fa7621c4b2360130978645747b0f9e2b5041bbb11a7a9c000ac"
+    },
+    {
+      "id": "dawn-hinges",
+      "path": "audio/fantasy/dawn-hinges.mp3",
+      "characters": 86,
+      "textSha256": "65cb8bcb103a8f29a38c14ed361a3b5fff4de4051f689ccc315635b39ec8ed07"
+    },
+    {
+      "id": "dawn-cost",
+      "path": "audio/fantasy/dawn-cost.mp3",
+      "characters": 88,
+      "textSha256": "23418cdb0c5bd3386ec7437018882a58f079aea8c0f7395f07f7bca3bf88117b"
+    },
+    {
+      "id": "dawn-company",
+      "path": "audio/fantasy/dawn-company.mp3",
+      "characters": 77,
+      "textSha256": "ca882cf2584ec469147062da6582855f82dd2d8219e75221b49c5e2abcea8b82"
+    },
+    {
+      "id": "dawn-free-play",
+      "path": "audio/fantasy/dawn-free-play.mp3",
+      "characters": 85,
+      "textSha256": "458df9dbec1d7e4b95df79fe39710ac6ecca3a251b4380ff39761f2fe7dc5a60"
+    },
+    {
+      "id": "dawn-bridge",
+      "path": "audio/fantasy/dawn-bridge.mp3",
+      "characters": 111,
+      "textSha256": "af8ba82b6e956177ca69f335c3f598035bdbe6e6aeb2408c74132c9681257519"
+    },
+    {
+      "id": "six-lamp-tones",
+      "path": "audio/fantasy/six-lamp-tones.mp3",
+      "characters": 71,
+      "textSha256": "44d352432c5eb04433b8b7ca10f4311ac66997460f7899d54ca7809a7bda1793"
+    },
+    {
+      "id": "six-lamp-lamps",
+      "path": "audio/fantasy/six-lamp-lamps.mp3",
+      "characters": 79,
+      "textSha256": "01324173d3aea929c6cdd4e4e8e9a128d3e3ca15585e2b26353dae70a0b9664a"
+    },
+    {
+      "id": "six-lamp-guess",
+      "path": "audio/fantasy/six-lamp-guess.mp3",
+      "characters": 73,
+      "textSha256": "e4793370e1052511be5a8302f621ad93ad0d129309c2decadb08f8b997f219c4"
+    },
+    {
+      "id": "six-lamp-repair",
+      "path": "audio/fantasy/six-lamp-repair.mp3",
+      "characters": 82,
+      "textSha256": "96571f471bde27707021cbfda923944c50e5fb50fde5e4381b36319e06b83f52"
+    },
+    {
+      "id": "six-lamp-waiting",
+      "path": "audio/fantasy/six-lamp-waiting.mp3",
+      "characters": 86,
+      "textSha256": "212b409d2f2a042937ee97fb052140c98ac3bd2ca25fe5e02570a45f75f6f590"
+    },
+    {
+      "id": "six-lamp-home",
+      "path": "audio/fantasy/six-lamp-home.mp3",
+      "characters": 79,
+      "textSha256": "dffab25477f4ac5bc3539afbc297fddff802688079b3754149a6b63958df39b2"
+    },
+    {
+      "id": "six-lamp-bridge",
+      "path": "audio/fantasy/six-lamp-bridge.mp3",
+      "characters": 114,
+      "textSha256": "edd13ca7b652ff54a2206714739e0231e8518ba8bbee733887e0b7d244343b07"
+    },
+    {
+      "id": "voice-check",
+      "path": "audio/fantasy/voice-check.mp3",
+      "characters": 59,
+      "textSha256": "2138a9f996a645278f21e525d23a5f34dfdd70877c6e95368b47d8b26b68ff1b"
+    }
+  ]
+}

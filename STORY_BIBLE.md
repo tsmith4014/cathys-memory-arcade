@@ -94,10 +94,12 @@ Each chapter is a six-beat miniature: orientation, want, pressure, reversal, cho
 
 - Spoken narration must match the visible subtitle exactly. Do not create a second, longer script that makes a visitor choose between listening and reading.
 - Narration begins only after a visitor presses Play. It never speaks over an idle page.
-- On a static GitHub Pages build, choose the best natural English voice available on the visitor’s device and identify it honestly as device narration, not a recorded human performance.
+- The primary performance is the prerecorded Danielle generative voice. Its 57 static MP3 clips ship with the site, so playback never sends story text or credentials to AWS. Device speech is an honestly labeled fallback if a recording cannot play.
 - Duck the procedural score under speech, then restore it gently. Dialogue and music should feel mixed, not stacked.
-- Comic-book `BUT / THEREFORE` transitions hold for 12 full seconds, with an explicit reading timer. The page remains fully visible for nearly the entire hold instead of spending the interval entering or leaving.
-- Cat and Runt use clear two-frame living illustrations. Their approved identity anchors remain visible throughout, but the expression and gesture change must be noticeable within three seconds.
+- Comic-book `BUT / THEREFORE` transitions hold for six full seconds, with an explicit reading timer. The page remains fully visible for nearly the entire hold instead of spending the interval entering or leaving.
+- Captions occupy a dedicated banner below the frame. They may not cover faces, props, or the lower edge of a painting.
+- Every chapter uses a clear two-frame living illustration. The second frame must advance a character, prop, light source, or piece of weather rather than merely recolor the first frame.
+- Cat and Runt retain their approved identity anchors throughout, and their expression or gesture change must be noticeable within three seconds.
 - Every chapter uses a deliberate moving camera shot and scene-specific light pass. Particle effects support the shot; they are never the only visible motion.
 - Reduced-motion visitors receive the approved still frame with no crossfade, camera move, or particle layer.
 

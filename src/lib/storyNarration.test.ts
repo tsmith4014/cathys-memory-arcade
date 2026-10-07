@@ -72,6 +72,36 @@ describe("browser story narrator", () => {
     expect(speakingStates).toEqual([true, false]);
     narrator.dispose();
   });
+
+  it("plays a recorded narration clip before falling back to device speech", async () => {
+    const speakingStates: boolean[] = [];
+    const voices: string[] = [];
+    const recordings: FakeAudio[] = [];
+    class TestAudio extends FakeAudio {
+      constructor() {
+        super();
+        recordings.push(this);
+      }
+    }
+    vi.stubGlobal("Audio", TestAudio);
+
+    const narrator = new BrowserStoryNarrator({
+      onSpeakingChange: (speaking) => speakingStates.push(speaking),
+      onVoiceChange: (voiceName) => voices.push(voiceName),
+    });
+
+    expect(narrator.speak("The road is open.", 0.92, "/audio/fantasy/cabinet-wake.mp3")).toBe(true);
+    expect(recordings).toHaveLength(1);
+    expect(recordings[0].src).toBe("/audio/fantasy/cabinet-wake.mp3");
+    expect(recordings[0].play).toHaveBeenCalledOnce();
+    expect(voices).toEqual(["Danielle // recorded generative voice"]);
+
+    recordings[0].onplay?.();
+    recordings[0].onended?.();
+    await Promise.resolve();
+    expect(speakingStates).toEqual([true, false]);
+    narrator.dispose();
+  });
 });
 
 class FakeUtterance {
@@ -88,4 +118,16 @@ class FakeUtterance {
   constructor(text: string) {
     this.text = text;
   }
+}
+
+class FakeAudio {
+  currentTime = 0;
+  onended: (() => void) | null = null;
+  onerror: (() => void) | null = null;
+  onplay: (() => void) | null = null;
+  playbackRate = 1;
+  preload = "";
+  src = "";
+  pause = vi.fn();
+  play = vi.fn(() => Promise.resolve());
 }

@@ -11,21 +11,24 @@ type ActiveScore = {
 type ScorePalette = {
   roots: readonly number[];
   mode: readonly number[];
+  chord: readonly number[];
+  motif: readonly number[];
   lead: OscillatorType;
   bass: OscillatorType;
   shimmer: number;
   drive: number;
+  air: number;
 };
 
 const PALETTES: Record<FantasyStoryChapter["id"], ScorePalette> = {
-  cabinet: { roots: [45, 41, 48, 43], mode: [0, 3, 7, 10, 12], lead: "triangle", bass: "sawtooth", shimmer: 0.7, drive: 0.38 },
-  tollkeeper: { roots: [38, 41, 36, 43], mode: [0, 3, 5, 7, 10], lead: "square", bass: "triangle", shimmer: 0.38, drive: 0.58 },
-  cat: { roots: [50, 45, 53, 48], mode: [0, 2, 4, 7, 9, 12], lead: "sine", bass: "triangle", shimmer: 0.92, drive: 0.32 },
-  runt: { roots: [36, 43, 38, 41], mode: [0, 2, 5, 7, 10, 12], lead: "triangle", bass: "sawtooth", shimmer: 0.46, drive: 0.64 },
-  garden: { roots: [53, 48, 55, 50], mode: [0, 2, 5, 7, 9, 12], lead: "sine", bass: "triangle", shimmer: 1, drive: 0.26 },
-  dragon: { roots: [34, 37, 41, 32], mode: [0, 3, 5, 7, 10, 12], lead: "sawtooth", bass: "square", shimmer: 0.52, drive: 1 },
-  dawn: { roots: [45, 50, 53, 48], mode: [0, 4, 7, 9, 12], lead: "triangle", bass: "sawtooth", shimmer: 0.88, drive: 0.76 },
-  "six-lamp": { roots: [45, 52, 50, 48], mode: [0, 2, 4, 7, 9, 12], lead: "sine", bass: "triangle", shimmer: 0.94, drive: 0.42 },
+  cabinet: { roots: [45, 41, 48, 43], mode: [0, 3, 7, 10, 12], chord: [0, 3, 7, 10], motif: [0, 7, 10, 7, 3, 12], lead: "triangle", bass: "sawtooth", shimmer: 0.7, drive: 0.38, air: 0.62 },
+  tollkeeper: { roots: [38, 41, 36, 43], mode: [0, 3, 5, 7, 10], chord: [0, 5, 7, 10], motif: [0, 5, 3, 7, 10, 5], lead: "square", bass: "triangle", shimmer: 0.38, drive: 0.58, air: 0.28 },
+  cat: { roots: [50, 45, 53, 48], mode: [0, 2, 4, 7, 9, 12], chord: [0, 4, 7, 9], motif: [0, 4, 7, 14, 9, 7], lead: "sine", bass: "triangle", shimmer: 0.92, drive: 0.32, air: 0.94 },
+  runt: { roots: [36, 43, 38, 41], mode: [0, 2, 5, 7, 10, 12], chord: [0, 5, 7, 10], motif: [0, 7, 5, 2, 12, 7], lead: "triangle", bass: "sawtooth", shimmer: 0.46, drive: 0.64, air: 0.36 },
+  garden: { roots: [53, 48, 55, 50], mode: [0, 2, 5, 7, 9, 12], chord: [0, 5, 9, 12], motif: [0, 2, 7, 9, 14, 12], lead: "sine", bass: "triangle", shimmer: 1, drive: 0.26, air: 1 },
+  dragon: { roots: [34, 37, 41, 32], mode: [0, 3, 5, 7, 10, 12], chord: [0, 3, 7, 10], motif: [0, 3, 12, 7, 5, 10], lead: "sawtooth", bass: "square", shimmer: 0.52, drive: 1, air: 0.48 },
+  dawn: { roots: [45, 50, 53, 48], mode: [0, 4, 7, 9, 12], chord: [0, 4, 7, 9], motif: [0, 7, 9, 12, 16, 19], lead: "triangle", bass: "sawtooth", shimmer: 0.88, drive: 0.76, air: 0.82 },
+  "six-lamp": { roots: [45, 52, 50, 48], mode: [0, 2, 4, 7, 9, 12], chord: [0, 4, 7, 11], motif: [0, 4, 7, 2, 9, 7], lead: "sine", bass: "triangle", shimmer: 0.94, drive: 0.42, air: 0.9 },
 };
 
 export class FantasyTransmissionScore {
@@ -52,6 +55,7 @@ export class FantasyTransmissionScore {
     this.silence();
     const bus = context.createGain();
     const color = context.createBiquadFilter();
+    const air = context.createBiquadFilter();
     const delay = context.createDelay(1.2);
     const feedback = context.createGain();
     const wet = context.createGain();
@@ -62,12 +66,16 @@ export class FantasyTransmissionScore {
     color.type = "lowpass";
     color.frequency.value = chapter.id === "dragon" ? 5_200 : chapter.id === "garden" || chapter.id === "cat" ? 7_800 : 6_400;
     color.Q.value = 0.8;
+    air.type = "highshelf";
+    air.frequency.value = 2_400;
+    air.gain.value = -1.5 + PALETTES[chapter.id].air * 4.5;
     delay.delayTime.value = chapter.id === "garden" || chapter.id === "cat" ? 0.42 : 0.25;
     feedback.gain.value = chapter.id === "garden" || chapter.id === "cat" ? 0.32 : 0.2;
     wet.gain.value = chapter.id === "dragon" ? 0.12 : 0.2;
 
     bus.connect(color);
-    color.connect(master);
+    color.connect(air);
+    air.connect(master);
     color.connect(delay);
     delay.connect(feedback);
     feedback.connect(delay);
@@ -98,7 +106,8 @@ export class FantasyTransmissionScore {
     const bus = context.createGain();
     const sources: ScheduledSource[] = [];
     const noise = makeNoise(context, 0.25);
-    const root = PALETTES[nextChapter.id].roots[0];
+    const palette = PALETTES[nextChapter.id];
+    const root = palette.roots[0];
     const start = context.currentTime + 0.03;
     const duration = FANTASY_STORY_TRANSITION_MS / 1_000 - 0.1;
     bus.connect(master);
@@ -120,12 +129,12 @@ export class FantasyTransmissionScore {
         attack: 0.025,
       });
     });
-    [1.55, 2.75, 3.95, 5.1].forEach((offset, phrase) => {
-      [0, 7].forEach((interval, index) => {
+    [1.35, 2.45, 3.55, 4.65].forEach((offset, phrase) => {
+      [palette.motif[phrase], palette.motif[phrase + 1]].forEach((interval, index) => {
         tone(context, bus, sources, {
           start: start + offset + index * 0.1,
           duration: 1.15,
-          midi: root + interval + 12 + (phrase % 2 ? 2 : 0),
+          midi: root + interval + 12,
           volume: 0.026,
           type: "sine",
           pan: index ? 0.45 : -0.45,
@@ -214,15 +223,16 @@ function scheduleChapter(
   for (let bar = 0; bar * beat * 4 < duration; bar += 1) {
     const barStart = start + bar * beat * 4;
     const root = palette.roots[bar % palette.roots.length];
-    [0, 7, 12].forEach((interval, voice) => {
+    palette.chord.forEach((interval, voice) => {
       tone(context, output, sources, {
         start: barStart,
         duration: Math.min(beat * 4.4, start + duration - barStart),
-        midi: root + interval + 12,
-        volume: 0.018 + palette.shimmer * 0.008,
-        type: voice === 1 ? "sine" : "triangle",
-        pan: -0.55 + voice * 0.55,
-        attack: 0.65,
+        midi: root + interval + 12 + (bar % 4 === 3 && voice === 0 ? 12 : 0),
+        volume: 0.014 + palette.shimmer * 0.006,
+        type: voice % 2 ? "sine" : "triangle",
+        pan: -0.72 + voice * 0.48,
+        attack: 0.72,
+        detune: voice % 2 ? 4 : -4,
       });
     });
   }
@@ -231,11 +241,12 @@ function scheduleChapter(
   for (let step = 0; step < totalBeats; step += 1) {
     const time = start + step * beat;
     const root = palette.roots[Math.floor(step / 4) % palette.roots.length];
+    const arc = 0.68 + 0.32 * Math.sin(Math.min(1, step / Math.max(1, totalBeats - 1)) * Math.PI);
     tone(context, output, sources, {
       start: time,
       duration: beat * 0.74,
       midi: root - 12 + (step % 4 === 3 ? 7 : 0),
-      volume: 0.045 + palette.drive * 0.035,
+      volume: (0.04 + palette.drive * 0.032) * arc,
       type: palette.bass,
       pan: step % 2 ? 0.08 : -0.08,
       attack: 0.025,
@@ -243,6 +254,7 @@ function scheduleChapter(
 
     if (step % 4 === 0 || (palette.drive > 0.7 && step % 2 === 0)) kick(context, output, sources, time, 0.065 + palette.drive * 0.055);
     if (step % 4 === 2) noiseHit(context, output, sources, noise, time, 0.045 + palette.drive * 0.025, 2_100);
+    if (step % 2 === 1) noiseHit(context, output, sources, noise, time, 0.012 + palette.shimmer * 0.011, 7_200);
   }
 
   const subdivision = chapter.id === "dragon" ? 0.5 : chapter.id === "garden" ? 1 : 0.75;
@@ -251,19 +263,61 @@ function scheduleChapter(
     if (time >= start + duration - 0.5) break;
     const root = palette.roots[Math.floor((time - start) / (beat * 4)) % palette.roots.length];
     const interval = palette.mode[(step * 3 + Math.floor(step / 5)) % palette.mode.length];
-    const build = Math.min(1, (time - start) / 10);
+    const build = Math.min(1, (time - start) / 14);
     tone(context, output, sources, {
       start: time,
       duration: beat * (chapter.id === "garden" ? 1.7 : 0.38),
       midi: root + interval + 24,
-      volume: (0.014 + palette.shimmer * 0.018) * (0.55 + build * 0.45),
+      volume: (0.01 + palette.shimmer * 0.014) * (0.5 + build * 0.5),
       type: palette.lead,
       pan: Math.sin(step * 1.7) * 0.68,
       attack: chapter.id === "garden" ? 0.2 : 0.018,
     });
   }
 
+  scheduleMotif(context, output, chapter, start, beat, sources);
+  chapter.moments.forEach((moment, index) => {
+    const root = palette.roots[index % palette.roots.length];
+    bell(
+      context,
+      output,
+      sources,
+      start + moment.startsAt / 1_000 + 0.08,
+      root + palette.motif[index % palette.motif.length] + 24,
+      0.028 + palette.shimmer * 0.015,
+      index % 2 ? 0.4 : -0.4,
+    );
+  });
   scheduleSignature(context, output, chapter, start, beat, noise, sources);
+}
+
+function scheduleMotif(
+  context: AudioContext,
+  output: AudioNode,
+  chapter: FantasyStoryChapter,
+  start: number,
+  beat: number,
+  sources: ScheduledSource[],
+): void {
+  const palette = PALETTES[chapter.id];
+  const duration = chapter.durationMs / 1_000;
+  for (let phrase = beat * 4; phrase < duration - beat * 4; phrase += beat * 8) {
+    const phraseIndex = Math.floor(phrase / (beat * 8));
+    const root = palette.roots[phraseIndex % palette.roots.length];
+    palette.motif.forEach((interval, index) => {
+      const noteStart = start + phrase + index * beat * 0.5;
+      tone(context, output, sources, {
+        start: noteStart,
+        duration: beat * (index === palette.motif.length - 1 ? 1.7 : 0.72),
+        midi: root + interval + 24,
+        volume: 0.022 + palette.shimmer * 0.013,
+        type: palette.lead,
+        pan: Math.sin((index + phraseIndex) * 1.2) * 0.58,
+        attack: 0.025,
+        detune: phraseIndex % 2 ? 3 : -3,
+      });
+    });
+  }
 }
 
 function scheduleSignature(
@@ -333,6 +387,24 @@ function scheduleSignature(
     return;
   }
 
+  if (chapter.id === "dawn") {
+    [6.8, 14.4, 22.1, 30.2, 38.1].forEach((offset, phrase) => {
+      [0, 4, 7, 9, 12].forEach((interval, index) => {
+        tone(context, output, sources, {
+          start: start + offset + index * beat * 0.2,
+          duration: beat * (2.6 - index * 0.18),
+          midi: 69 + interval + (phrase > 2 ? 2 : 0),
+          volume: 0.026 + index * 0.002,
+          type: index % 2 ? "sine" : "triangle",
+          pan: -0.76 + index * 0.38,
+          attack: 0.04 + index * 0.025,
+          detune: index % 2 ? 4 : -4,
+        });
+      });
+    });
+    return;
+  }
+
   if (chapter.id === "six-lamp") {
     [1.2, 7.4, 14.8, 22.3].forEach((offset, phrase) => {
       [69, 76].forEach((midi, index) => {
@@ -360,6 +432,7 @@ type ToneOptions = {
   type: OscillatorType;
   pan: number;
   attack: number;
+  detune?: number;
 };
 
 function tone(context: AudioContext, output: AudioNode, sources: ScheduledSource[], options: ToneOptions): void {
@@ -369,6 +442,7 @@ function tone(context: AudioContext, output: AudioNode, sources: ScheduledSource
   const panner = context.createStereoPanner();
   oscillator.type = options.type;
   oscillator.frequency.value = 440 * 2 ** ((options.midi - 69) / 12);
+  oscillator.detune.value = options.detune ?? 0;
   panner.pan.value = options.pan;
   envelope.gain.setValueAtTime(0.0001, options.start);
   envelope.gain.exponentialRampToValueAtTime(options.volume, options.start + Math.min(options.attack, options.duration * 0.4));
@@ -379,6 +453,33 @@ function tone(context: AudioContext, output: AudioNode, sources: ScheduledSource
   oscillator.start(options.start);
   oscillator.stop(options.start + options.duration + 0.03);
   sources.push(oscillator);
+}
+
+function bell(
+  context: AudioContext,
+  output: AudioNode,
+  sources: ScheduledSource[],
+  start: number,
+  midi: number,
+  volume: number,
+  pan: number,
+): void {
+  [
+    { interval: 0, volume: 1, duration: 2.4 },
+    { interval: 12, volume: 0.42, duration: 1.7 },
+    { interval: 19, volume: 0.2, duration: 1.15 },
+  ].forEach((partial, index) => {
+    tone(context, output, sources, {
+      start: start + index * 0.012,
+      duration: partial.duration,
+      midi: midi + partial.interval,
+      volume: volume * partial.volume,
+      type: "sine",
+      pan: pan + (index - 1) * 0.08,
+      attack: 0.008,
+      detune: index === 1 ? 3 : index === 2 ? -5 : 0,
+    });
+  });
 }
 
 function kick(context: AudioContext, output: AudioNode, sources: ScheduledSource[], start: number, volume: number): void {

@@ -2,7 +2,11 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   FANTASY_STORY_CHAPTERS,
   FANTASY_STORY_DURATION_MS,
+  FANTASY_NARRATION_PREVIEW_PATH,
+  FANTASY_NARRATION_VOICE,
   FANTASY_STORY_TRANSITION_MS,
+  getFantasyBridgeNarrationPath,
+  getFantasyMomentNarrationPath,
   getFantasyStoryMoment,
 } from "../data/signalStory";
 import { FantasyTransmissionScore } from "../lib/fantasyTransmission";
@@ -21,7 +25,7 @@ export function FantasySignalStory() {
   const [scoreAvailable, setScoreAvailable] = useState<boolean | null>(null);
   const [narrationEnabled, setNarrationEnabled] = useState(true);
   const [narrationAvailable, setNarrationAvailable] = useState<boolean | null>(null);
-  const [narratorVoice, setNarratorVoice] = useState("Best available English voice");
+  const [narratorVoice, setNarratorVoice] = useState(`${FANTASY_NARRATION_VOICE} // recorded generative voice`);
   const [narrationSpeaking, setNarrationSpeaking] = useState(false);
   const [narrationIssue, setNarrationIssue] = useState<string | null>(null);
   const timerRef = useRef<number | null>(null);
@@ -44,6 +48,11 @@ export function FantasySignalStory() {
     "--story-transition-duration": `${FANTASY_STORY_TRANSITION_MS}ms`,
   } as CSSProperties;
   const isRunning = playback === "playing" || playback === "transitioning";
+  const isBridge = playback === "transitioning" && transitionIndex !== null;
+  const captionLine = isBridge
+    ? `But ${chapter.bridge.but} Therefore ${chapter.bridge.therefore}`
+    : moment.line;
+  const captionLabel = isBridge ? "page turn // but therefore" : `${moment.timecode} // subtitles // ${moment.id}`;
 
   useEffect(() => {
     const narrator = new BrowserStoryNarrator({
@@ -79,7 +88,6 @@ export function FantasySignalStory() {
       return;
     }
 
-    const isBridge = playback === "transitioning" && transitionIndex !== null;
     const spokenBeat = isBridge
       ? `${chapter.id}:bridge:${transitionIndex}`
       : `${chapter.id}:${moment.id}`;
@@ -89,7 +97,14 @@ export function FantasySignalStory() {
     const text = isBridge
       ? `But ${chapter.bridge.but} Therefore ${chapter.bridge.therefore}`
       : moment.line;
-    const available = narrator.speak(text, isBridge ? 1.02 : 0.92);
+    const recordingPath = isBridge
+      ? getFantasyBridgeNarrationPath(chapter.id)
+      : getFantasyMomentNarrationPath(chapter.id, moment.id);
+    const available = narrator.speak(
+      text,
+      isBridge ? 1.02 : 0.92,
+      `${import.meta.env.BASE_URL}${recordingPath}`,
+    );
     if (!available) setNarrationAvailable(false);
   }, [chapter, moment, narrationEnabled, playback, transitionIndex]);
 
@@ -130,7 +145,11 @@ export function FantasySignalStory() {
     if (fromUserGesture && narrationEnabled && narrationAvailable !== false) {
       const firstMoment = nextChapter.moments[0];
       spokenBeatRef.current = `${nextChapter.id}:${firstMoment.id}`;
-      const available = narratorRef.current?.speak(firstMoment.line, 0.92) ?? false;
+      const available = narratorRef.current?.speak(
+        firstMoment.line,
+        0.92,
+        `${import.meta.env.BASE_URL}${getFantasyMomentNarrationPath(nextChapter.id, firstMoment.id)}`,
+      ) ?? false;
       if (!available) setNarrationAvailable(false);
     }
 
@@ -191,10 +210,17 @@ export function FantasySignalStory() {
     const text = playback === "playing"
       ? moment.line
       : "Narration is ready. Press play when you are ready to begin.";
+    const recordingPath = playback === "playing"
+      ? getFantasyMomentNarrationPath(chapter.id, moment.id)
+      : FANTASY_NARRATION_PREVIEW_PATH;
     spokenBeatRef.current = playback === "playing"
       ? `${chapter.id}:${moment.id}`
       : "voice-preview";
-    const available = narratorRef.current?.speak(text, playback === "playing" ? 0.92 : 0.96) ?? false;
+    const available = narratorRef.current?.speak(
+      text,
+      playback === "playing" ? 0.92 : 0.96,
+      `${import.meta.env.BASE_URL}${recordingPath}`,
+    ) ?? false;
     if (!available) setNarrationAvailable(false);
   }
 
@@ -218,13 +244,16 @@ export function FantasySignalStory() {
 
       <div className="fantasy-story-console">
         <div
-          className={`fantasy-story-stage ${playback === "playing" ? "is-playing" : ""} ${playback === "transitioning" ? "is-turning" : ""}`}
-          data-effect={chapter.effect}
-          data-medium={chapter.medium}
-          data-shot={momentIndex % 3}
-          data-transition-ms={FANTASY_STORY_TRANSITION_MS}
+          className={`fantasy-story-visual ${playback === "transitioning" ? "is-turning" : ""}`}
           style={stageStyle}
         >
+          <div
+            className={`fantasy-story-stage ${playback === "playing" ? "is-playing" : ""} ${playback === "transitioning" ? "is-turning" : ""}`}
+            data-effect={chapter.effect}
+            data-medium={chapter.medium}
+            data-shot={momentIndex % 3}
+            data-transition-ms={FANTASY_STORY_TRANSITION_MS}
+          >
           <div
             key={`${chapter.id}-${moment.id}`}
             className={`fantasy-story-art ${storyFrames.length > 1 ? "has-living-frames" : ""}`}
@@ -260,14 +289,6 @@ export function FantasySignalStory() {
             <span>CH {chapter.number}</span>
             <span>{chapter.bpm} BPM</span>
           </div>
-          <div
-            className="fantasy-story-caption"
-            aria-atomic="true"
-            aria-live={narrationEnabled && narrationAvailable ? "off" : "polite"}
-          >
-            <span>{moment.timecode} // subtitles // {moment.id}</span>
-            <p>{moment.line}</p>
-          </div>
           {transitionIndex !== null ? (
             <div
               className="fantasy-comic-break"
@@ -282,12 +303,22 @@ export function FantasySignalStory() {
                 <strong>Next // Chapter {FANTASY_STORY_CHAPTERS[transitionIndex].number}</strong>
               </div>
               <aside className="fantasy-comic-hold" aria-hidden="true">
-                <span>12-second reading hold</span>
+                <span>6-second reading hold</span>
                 <b><i /></b>
               </aside>
             </div>
           ) : null}
           <div className="fantasy-story-progress" aria-hidden="true"><i /></div>
+          </div>
+          <div
+            key={`caption-${chapter.id}-${isBridge ? "bridge" : moment.id}`}
+            className="fantasy-story-caption"
+            aria-atomic="true"
+            aria-live={narrationEnabled && narrationAvailable ? "off" : "polite"}
+          >
+            <span>{captionLabel}</span>
+            <p>{captionLine}</p>
+          </div>
         </div>
 
         <aside className="fantasy-story-controls" aria-label="Fantasy serial controls">
@@ -298,7 +329,7 @@ export function FantasySignalStory() {
           <dl className="fantasy-story-specs">
             <div><dt>Runtime</dt><dd>{formatTime(chapter.durationMs)}</dd></div>
             <div><dt>Pulse</dt><dd>{chapter.bpm} BPM</dd></div>
-            <div><dt>Score</dt><dd>Live synthesis</dd></div>
+            <div><dt>Score</dt><dd>Adaptive suite</dd></div>
           </dl>
           <div className="fantasy-story-actions">
             {!seriesRunning ? (
@@ -339,13 +370,13 @@ export function FantasySignalStory() {
             </div>
             <p aria-live="polite" data-speaking={narrationSpeaking || undefined}>
               {narrationAvailable === false
-                ? "Spoken narration is unavailable in this browser; synchronized captions remain on."
+                ? "Spoken narration is unavailable in this browser; synchronized captions remain below the film."
                 : narrationIssue
                   ? narrationIssue
                 : narrationEnabled
                   ? narrationSpeaking
                     ? `${narratorVoice} is speaking now. The score is lowered beneath the voice.`
-                    : `${narratorVoice} ready. If you hear nothing, press Hear voice once to unlock it.`
+                    : `${narratorVoice} ready. Press Hear voice once if your browser has not unlocked audio.`
                   : "Narration is off. Captions and the original score remain on."}
             </p>
           </div>
@@ -358,8 +389,8 @@ export function FantasySignalStory() {
             {playback === "playing"
               ? scoreAvailable === false
                 ? "The procedural score is unavailable; narration, captions, and cinematic motion continue."
-                : seriesRunning ? "Full-story mode is live. Narration, captions, and score are moving together." : "Chapter live. Narration and the original score are being performed by your browser."
-              : playback === "transitioning" ? "Turning the page. This comic panel holds for twelve full seconds." : playback === "complete" ? "Chapter complete. Replay it or choose the next reel." : "Press play for synchronized motion, spoken captions, and an original procedural score."}
+                : seriesRunning ? "Full-story mode is live. Recorded narration, captions, living frames, and score are moving together." : "Chapter live. Recorded narration and an adaptive original score are playing together."
+              : playback === "transitioning" ? "Turning the page. This comic panel holds for six measured seconds." : playback === "complete" ? "Chapter complete. Replay it or choose the next reel." : "Press play for living artwork, recorded narration, clear captions, and an adaptive original score."}
           </p>
         </aside>
       </div>

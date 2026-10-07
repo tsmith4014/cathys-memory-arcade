@@ -25,6 +25,7 @@ export class BrowserStoryNarrator {
   private generation = 0;
   private speaking = false;
   private utterance: SpeechSynthesisUtterance | null = null;
+  private recording: HTMLAudioElement | null = null;
   private startWatchdog: number | null = null;
 
   constructor(callbacks: NarratorCallbacks = {}) {
@@ -33,12 +34,68 @@ export class BrowserStoryNarrator {
 
   static isSupported(): boolean {
     return typeof window !== "undefined"
+      && (typeof window.Audio !== "undefined" || BrowserStoryNarrator.hasDeviceSpeech());
+  }
+
+  private static hasDeviceSpeech(): boolean {
+    return typeof window !== "undefined"
       && "speechSynthesis" in window
       && typeof window.SpeechSynthesisUtterance !== "undefined";
   }
 
-  speak(text: string, rate = 0.92): boolean {
-    if (!BrowserStoryNarrator.isSupported()) return false;
+  speak(text: string, rate = 0.92, recordingUrl?: string): boolean {
+    if (recordingUrl && typeof window !== "undefined" && typeof window.Audio !== "undefined") {
+      this.cancel();
+      return this.playRecording(text, rate, recordingUrl);
+    }
+
+    return this.speakWithDevice(text, rate);
+  }
+
+  private playRecording(text: string, fallbackRate: number, recordingUrl: string): boolean {
+    const generation = ++this.generation;
+    const recording = this.recording ?? new window.Audio();
+    let fallbackStarted = false;
+    this.recording = recording;
+    recording.preload = "auto";
+    recording.src = recordingUrl;
+    recording.playbackRate = 1;
+    recording.currentTime = 0;
+    this.callbacks.onError?.(null);
+    this.callbacks.onVoiceChange?.("Danielle // recorded generative voice");
+
+    const fallbackToDevice = () => {
+      if (generation !== this.generation || fallbackStarted) return;
+      fallbackStarted = true;
+      this.clearRecordingHandlers(recording);
+      this.recording = null;
+      this.setSpeaking(false);
+      if (!this.speakWithDevice(text, fallbackRate)) {
+        this.callbacks.onError?.("Recorded narration could not start in this browser. Captions remain available below the film.");
+      }
+    };
+
+    recording.onplay = () => {
+      if (generation === this.generation) this.setSpeaking(true);
+    };
+    recording.onended = () => {
+      if (generation !== this.generation) return;
+      this.clearRecordingHandlers(recording);
+      this.setSpeaking(false);
+    };
+    recording.onerror = fallbackToDevice;
+
+    try {
+      const playback = recording.play();
+      void playback?.catch(fallbackToDevice);
+    } catch {
+      fallbackToDevice();
+    }
+    return true;
+  }
+
+  private speakWithDevice(text: string, rate: number): boolean {
+    if (!BrowserStoryNarrator.hasDeviceSpeech()) return false;
 
     const synthesis = window.speechSynthesis;
     this.clearWatchdog();
@@ -103,7 +160,13 @@ export class BrowserStoryNarrator {
   cancel(): void {
     this.generation += 1;
     this.clearWatchdog();
-    if (BrowserStoryNarrator.isSupported()) window.speechSynthesis.cancel();
+    if (this.recording) {
+      this.clearRecordingHandlers(this.recording);
+      this.recording.pause();
+      this.recording.currentTime = 0;
+      this.recording = null;
+    }
+    if (BrowserStoryNarrator.hasDeviceSpeech()) window.speechSynthesis.cancel();
     this.utterance = null;
     this.setSpeaking(false);
   }
@@ -121,6 +184,12 @@ export class BrowserStoryNarrator {
   private clearWatchdog(): void {
     if (this.startWatchdog !== null) window.clearTimeout(this.startWatchdog);
     this.startWatchdog = null;
+  }
+
+  private clearRecordingHandlers(recording: HTMLAudioElement): void {
+    recording.onplay = null;
+    recording.onended = null;
+    recording.onerror = null;
   }
 }
 

@@ -137,10 +137,12 @@ test("plays the Cat and Runt fantasy serial without leaving the theater", async 
   await page.getByRole("button", { name: /open chapter iii: cat/i }).click();
   const fantasyStage = page.locator(".fantasy-story-stage");
   await expect(fantasyStage).toHaveAttribute("data-effect", "bloom");
-  await expect(fantasyStage).toHaveAttribute("data-transition-ms", "12000");
+  await expect(fantasyStage).toHaveAttribute("data-transition-ms", "6000");
   await expect(page.getByRole("img", { name: /young cat.*family likeness/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /hear voice/i })).toBeVisible();
+  const narrationRequest = page.waitForRequest(/audio\/fantasy\/cat-greenhouse\.mp3$/);
   await page.getByRole("button", { name: /play chapter iii/i }).click();
+  await narrationRequest;
   await expect(fantasyStage).toHaveClass(/is-playing/);
   await expect(page.locator(".fantasy-story-cinema")).toBeVisible();
   const storyArt = page.locator(".fantasy-story-art");
@@ -150,6 +152,13 @@ test("plays the Cat and Runt fantasy serial without leaving the theater", async 
   expect(movingTransform).not.toBe(startingTransform);
   expect(await storyArt.evaluate((element) => getComputedStyle(element).animationName)).toMatch(/fantasy-shot/);
   expect(await storyArt.locator("img").nth(1).evaluate((element) => getComputedStyle(element).animationName)).toBe("fantasy-living-frame-alt");
+  const [stageBox, captionBox] = await Promise.all([
+    fantasyStage.boundingBox(),
+    page.locator(".fantasy-story-caption").boundingBox(),
+  ]);
+  expect(stageBox).not.toBeNull();
+  expect(captionBox).not.toBeNull();
+  expect(captionBox!.y).toBeGreaterThanOrEqual(stageBox!.y + stageBox!.height - 1);
   await expect(page.getByRole("status").filter({ hasText: /chapter live|running silently/i })).toBeVisible();
   await page.getByRole("button", { name: /stop chapter/i }).click();
   await page.getByRole("button", { name: /open chapter iv: the biggest one was runt/i }).click();

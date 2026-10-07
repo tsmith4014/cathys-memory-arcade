@@ -14,13 +14,22 @@ const requiredFiles = [
   "dist/art/dragonfire-descent-backdrop-v3.webp",
   "dist/art/pet-arena-guest-v1.webp",
   "dist/art/signal-story-01-cabinet-v1.webp",
+  "dist/art/signal-story-01-cabinet-v2.webp",
   "dist/art/signal-story-02-tollkeeper-v1.webp",
+  "dist/art/signal-story-02-tollkeeper-v2.webp",
   "dist/art/signal-story-03-cat-v1.webp",
+  "dist/art/signal-story-03-cat-v2.webp",
   "dist/art/signal-story-04-runt-v1.webp",
+  "dist/art/signal-story-04-runt-v2.webp",
   "dist/art/signal-story-03-garden-v1.webp",
+  "dist/art/signal-story-03-garden-v2.webp",
   "dist/art/signal-story-04-dragon-v1.webp",
-  "dist/art/signal-story-05-dawn-v1.webp",
+  "dist/art/signal-story-04-dragon-v2.webp",
+  "dist/art/signal-story-05-door-v1.webp",
+  "dist/art/signal-story-05-door-v2.webp",
   "dist/art/signal-story-06-six-lamp-booth-v1.webp",
+  "dist/art/signal-story-06-six-lamp-booth-v2.webp",
+  "dist/audio/fantasy/manifest.json",
   "dist/art/story-horror-last-token.webp",
   "dist/art/story-action-neon-runner.webp",
   "dist/art/story-mystery-memory-cabinet.webp",
@@ -65,6 +74,7 @@ await Promise.all(familyImages.map(assertNoPrivateJpegMetadata));
 
 const html = await readFile("dist/index.html", "utf8");
 const signals = JSON.parse(await readFile("dist/data/signals.json", "utf8"));
+const narration = JSON.parse(await readFile("dist/audio/fantasy/manifest.json", "utf8"));
 
 if (!html.includes("Cathy's Memory Arcade")) {
   throw new Error("production HTML is missing the memorial title");
@@ -109,5 +119,12 @@ for (const signal of signals.signals) {
     throw new Error(`invalid signal payload: ${JSON.stringify(signal)}`);
   }
 }
+if (narration.voice !== "Danielle" || narration.engine !== "generative" || narration.clips.length !== 57) {
+  throw new Error("fantasy narration manifest is incomplete or uses the wrong recorded voice");
+}
+if (narration.maximumEstimatedCostUsd >= 5) {
+  throw new Error("fantasy narration exceeds the authorized synthesis budget");
+}
+await Promise.all(narration.clips.map((clip) => access(`dist/${clip.path}`, constants.R_OK)));
 
-console.log(`Validated ${requiredFiles.length} artifacts and ${signals.signals.length} signal tracks.`);
+console.log(`Validated ${requiredFiles.length} artifacts, ${narration.clips.length} narration clips, and ${signals.signals.length} signal tracks.`);

@@ -14,7 +14,7 @@ This is a living 1986-meets-AI memorial for Cathy and a real browser arcade. It 
 - Local high scores and story progress that never leave the visitor's browser
 - A memory core that separates personal recollection from sourced historical context
 - The real Cathy-and-Chad photo-booth portraits and a life file sourced from her family-authorized program
-- Seven unique AI-assisted game backplates, sixteen branching-story paintings, and eight original Signal Theater chapter frames
+- Seven unique AI-assisted game backplates, sixteen branching-story paintings, and sixteen paired Signal Theater chapter frames
 - An after-hours signal booth refreshed daily by GitHub Actions from a small set of respected sources
 - A Signal Theater with an original 24-second micro-film, an eight-chapter fantasy music serial, and an opt-in, attributed Instagram guest Reel
 - A six-track adaptive browser score with a visible live transport, forms up to 32 bars, a patient rave build, synthetic formant voice, drums, sub-bass, pads, leads, echo, generated reverb, room ambience, and game effects synthesized locally with the Web Audio API
@@ -36,11 +36,15 @@ The first six games form the memorial route. Dragon Crew is deliberately labeled
 
 All browser game systems, collision geometry, characters, and foreground graphics are code-native. Seven unique AI-assisted original environment backplates add atmosphere without reproducing commercial game art. No commercial sprites, cabinet art, characters, or sound recordings are included.
 
-The jukebox contains five original procedural compositions and a Web Audio arrangement of Edvard Grieg's public-domain composition "In the Hall of the Mountain King." Fillmore After Dark uses a restrained lower lead and a single low last-light note. Moxie's Midnight Run takes 32 bars and more than 25 seconds to reach its first 12-bar, sub-heavy drop. Free Play Forever uses six formant call-and-response phrases for a deliberately artificial club voice. Garden Static's approved arrangement remains unchanged. No voice recording, music recording, or commercial game sound is included.
+The jukebox contains five original procedural compositions and a Web Audio arrangement of Edvard Grieg's public-domain composition "In the Hall of the Mountain King." Fillmore After Dark uses a restrained lower lead and a single low last-light note. Moxie's Midnight Run takes 32 bars and more than 25 seconds to reach its first 12-bar, sub-heavy drop. Free Play Forever uses six formant call-and-response phrases for a deliberately artificial club voice. Garden Static's approved arrangement remains unchanged. No human voice recording, music recording, or commercial game sound is included.
 
 Every track exposes its named sections and current bar while it plays. The analyser drives the jukebox meter from the actual browser mix, record changes fade through the shared music bus, and the score ducks while a cabinet is open.
 
-Signal 86: The Room Remembers is an original 24-second browser micro-film and the prologue to **The Road Beyond Free Play: Season One: Cat & Runt**. The eight following chapter films have distinct 1672-by-941 artwork, timed story beats, CSS camera and atmosphere direction, and chapter-specific procedural scores. Full-story mode carries one chapter into the next through audible key changes and comic-book `BUT / THEREFORE` page turns. Its first family arc discovers Cat and Runt, then closes in the Six-Lamp Booth with four sibling signals intentionally unopened until their names, memories, and authorized references are ready.
+Signal 86: The Room Remembers is an original 24-second browser micro-film and the prologue to **The Road Beyond Free Play: Season One: Cat & Runt**. The eight following chapter films use sixteen paired 1672-by-941 paintings, timed story beats, scene-specific camera and atmosphere choreography, and a richer adaptive score with recurring motifs, chord movement, bells, air, bass, and a deliberate dawn arc. Full-story mode carries one chapter into the next through audible key changes and six-second comic-book `BUT / THEREFORE` page turns. Captions sit in a dedicated banner below the artwork so the paintings remain unobstructed.
+
+All 56 story lines and page turns, plus one voice-check clip, were prerecorded once with Amazon Polly's Danielle generative voice and ship as static MP3 files. The complete script is 4,922 characters; the maximum synthesis estimate at the published $30-per-million-character rate was $0.1477, below the authorized $5 ceiling. Replays use those local files and make no AWS request. Device speech remains a fallback when a browser cannot play the recordings.
+
+The first family arc discovers Cat and Runt, then closes in the Six-Lamp Booth with four sibling signals intentionally unopened until their names, memories, and authorized references are ready.
 
 Cat and Runt are fantasy characters made from family-authorized likeness references supplied by Chad. Their magical actions are original fiction, while Cat's connection with animals, plants, children, and nicknames and the real irony behind Runt's nickname are grounded in Chad's account. The serial's continuity, causal writing rules, and truth boundary live in [`STORY_BIBLE.md`](STORY_BIBLE.md).
 
