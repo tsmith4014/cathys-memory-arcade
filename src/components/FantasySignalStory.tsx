@@ -22,6 +22,8 @@ export function FantasySignalStory() {
   const [narrationEnabled, setNarrationEnabled] = useState(true);
   const [narrationAvailable, setNarrationAvailable] = useState<boolean | null>(null);
   const [narratorVoice, setNarratorVoice] = useState("Best available English voice");
+  const [narrationSpeaking, setNarrationSpeaking] = useState(false);
+  const [narrationIssue, setNarrationIssue] = useState<string | null>(null);
   const timerRef = useRef<number | null>(null);
   const transitionRef = useRef<number | null>(null);
   const runRef = useRef(0);
@@ -30,19 +32,27 @@ export function FantasySignalStory() {
   const spokenBeatRef = useRef("");
   const chapter = FANTASY_STORY_CHAPTERS[activeIndex];
   const moment = getFantasyStoryMoment(chapter, elapsedMs);
+  const momentIndex = chapter.moments.indexOf(moment);
+  const nextMomentStartsAt = chapter.moments[momentIndex + 1]?.startsAt ?? chapter.durationMs;
+  const beatDurationMs = Math.max(2_000, nextMomentStartsAt - moment.startsAt);
   const progress = Math.min(100, (elapsedMs / chapter.durationMs) * 100);
   const stageStyle = {
     "--story-progress": `${progress}%`,
     "--story-accent": chapterAccents[activeIndex],
     "--story-duration": `${chapter.durationMs}ms`,
+    "--story-beat-duration": `${beatDurationMs}ms`,
     "--story-transition-duration": `${FANTASY_STORY_TRANSITION_MS}ms`,
   } as CSSProperties;
   const isRunning = playback === "playing" || playback === "transitioning";
 
   useEffect(() => {
     const narrator = new BrowserStoryNarrator({
-      onSpeakingChange: (speaking) => scoreRef.current?.setNarrationActive(speaking),
+      onSpeakingChange: (speaking) => {
+        setNarrationSpeaking(speaking);
+        scoreRef.current?.setNarrationActive(speaking);
+      },
       onVoiceChange: setNarratorVoice,
+      onError: setNarrationIssue,
     });
     narratorRef.current = narrator;
     const narrationSupported = BrowserStoryNarrator.isSupported();
@@ -52,7 +62,7 @@ export function FantasySignalStory() {
     return () => {
       runRef.current += 1;
       clearTimers(timerRef, transitionRef);
-      narrator.cancel();
+      narrator.dispose();
       narratorRef.current = null;
       scoreRef.current?.stop();
       scoreRef.current = null;
@@ -101,7 +111,7 @@ export function FantasySignalStory() {
     setScoreAvailable(null);
   }
 
-  function startChapter(index: number, playSeries: boolean): void {
+  function startChapter(index: number, playSeries: boolean, fromUserGesture = false): void {
     clearTimers(timerRef, transitionRef);
     const nextChapter = FANTASY_STORY_CHAPTERS[index];
     const run = ++runRef.current;
@@ -116,6 +126,13 @@ export function FantasySignalStory() {
     void scoreRef.current.play(nextChapter).then((available) => {
       if (runRef.current === run) setScoreAvailable(available);
     });
+
+    if (fromUserGesture && narrationEnabled && narrationAvailable !== false) {
+      const firstMoment = nextChapter.moments[0];
+      spokenBeatRef.current = `${nextChapter.id}:${firstMoment.id}`;
+      const available = narratorRef.current?.speak(firstMoment.line, 0.92) ?? false;
+      if (!available) setNarrationAvailable(false);
+    }
 
     const startedAt = performance.now();
     timerRef.current = window.setInterval(() => {
@@ -153,7 +170,32 @@ export function FantasySignalStory() {
       stopStory();
       return;
     }
-    startChapter(activeIndex, false);
+    startChapter(activeIndex, false, true);
+  }
+
+  function toggleNarration(): void {
+    if (narrationEnabled) {
+      narratorRef.current?.cancel();
+      spokenBeatRef.current = "";
+      setNarrationEnabled(false);
+      setNarrationIssue(null);
+      return;
+    }
+
+    setNarrationEnabled(true);
+    setNarrationIssue(null);
+  }
+
+  function hearNarration(): void {
+    if (!narrationEnabled || narrationAvailable === false) return;
+    const text = playback === "playing"
+      ? moment.line
+      : "Narration is ready. Press play when you are ready to begin.";
+    spokenBeatRef.current = playback === "playing"
+      ? `${chapter.id}:${moment.id}`
+      : "voice-preview";
+    const available = narratorRef.current?.speak(text, playback === "playing" ? 0.92 : 0.96) ?? false;
+    if (!available) setNarrationAvailable(false);
   }
 
   const playbackLabel = isRunning
@@ -179,10 +221,12 @@ export function FantasySignalStory() {
           className={`fantasy-story-stage ${playback === "playing" ? "is-playing" : ""} ${playback === "transitioning" ? "is-turning" : ""}`}
           data-effect={chapter.effect}
           data-medium={chapter.medium}
+          data-shot={momentIndex % 3}
+          data-transition-ms={FANTASY_STORY_TRANSITION_MS}
           style={stageStyle}
         >
           <div
-            key={chapter.id}
+            key={`${chapter.id}-${moment.id}`}
             className={`fantasy-story-art ${storyFrames.length > 1 ? "has-living-frames" : ""}`}
           >
             {storyFrames.map((frame, index) => (
@@ -193,6 +237,11 @@ export function FantasySignalStory() {
                 aria-hidden={index === 0 ? undefined : true}
               />
             ))}
+          </div>
+          <div key={`light-${chapter.id}-${moment.id}`} className="fantasy-story-cinema" aria-hidden="true">
+            <i className="fantasy-cinema-sweep" />
+            <i className="fantasy-cinema-depth" />
+            <i className="fantasy-cinema-pulse" />
           </div>
           <div className="fantasy-story-shade" aria-hidden="true" />
           <div className="fantasy-story-motion" aria-hidden="true">
@@ -232,6 +281,10 @@ export function FantasySignalStory() {
                 <p>{chapter.bridge.therefore}</p>
                 <strong>Next // Chapter {FANTASY_STORY_CHAPTERS[transitionIndex].number}</strong>
               </div>
+              <aside className="fantasy-comic-hold" aria-hidden="true">
+                <span>12-second reading hold</span>
+                <b><i /></b>
+              </aside>
             </div>
           ) : null}
           <div className="fantasy-story-progress" aria-hidden="true"><i /></div>
@@ -257,27 +310,42 @@ export function FantasySignalStory() {
               type="button"
               className="fantasy-series-play"
               aria-pressed={seriesRunning}
-              onClick={() => seriesRunning ? stopStory() : startChapter(0, true)}
+              onClick={() => seriesRunning ? stopStory() : startChapter(0, true, true)}
             >
               {seriesRunning ? "Stop full story" : `Play full story // ${formatTime(FANTASY_STORY_DURATION_MS)}`}
             </button>
           </div>
           <div className="fantasy-narration-control">
-            <button
-              type="button"
-              aria-label={narrationEnabled ? "Turn story narration off" : "Turn story narration on"}
-              aria-pressed={narrationEnabled}
-              disabled={narrationAvailable === false}
-              onClick={() => setNarrationEnabled((enabled) => !enabled)}
-            >
-              <span aria-hidden="true">{narrationEnabled ? "VOICE ON" : "VOICE OFF"}</span>
-              <strong>{narrationEnabled ? "Read this story aloud" : "Captions only"}</strong>
-            </button>
-            <p>
+            <div className="fantasy-narration-buttons">
+              <button
+                type="button"
+                aria-label={narrationEnabled ? "Turn story narration off" : "Turn story narration on"}
+                aria-pressed={narrationEnabled}
+                disabled={narrationAvailable === false}
+                onClick={toggleNarration}
+              >
+                <span aria-hidden="true">{narrationEnabled ? "VOICE ON" : "VOICE OFF"}</span>
+                <strong>{narrationEnabled ? "Read this story aloud" : "Captions only"}</strong>
+              </button>
+              <button
+                type="button"
+                className="fantasy-voice-preview"
+                disabled={!narrationEnabled || narrationAvailable === false}
+                onClick={hearNarration}
+              >
+                <span aria-hidden="true">VOICE CHECK</span>
+                <strong>{narrationSpeaking ? "Speaking now" : "Hear voice"}</strong>
+              </button>
+            </div>
+            <p aria-live="polite" data-speaking={narrationSpeaking || undefined}>
               {narrationAvailable === false
                 ? "Spoken narration is unavailable in this browser; synchronized captions remain on."
+                : narrationIssue
+                  ? narrationIssue
                 : narrationEnabled
-                  ? `${narratorVoice}. The score lowers automatically beneath each line.`
+                  ? narrationSpeaking
+                    ? `${narratorVoice} is speaking now. The score is lowered beneath the voice.`
+                    : `${narratorVoice} ready. If you hear nothing, press Hear voice once to unlock it.`
                   : "Narration is off. Captions and the original score remain on."}
             </p>
           </div>
@@ -289,9 +357,9 @@ export function FantasySignalStory() {
           <p className="signal-status" role="status" aria-live="polite">
             {playback === "playing"
               ? scoreAvailable === false
-                ? "The film is running silently because Web Audio is unavailable."
+                ? "The procedural score is unavailable; narration, captions, and cinematic motion continue."
                 : seriesRunning ? "Full-story mode is live. Narration, captions, and score are moving together." : "Chapter live. Narration and the original score are being performed by your browser."
-              : playback === "transitioning" ? "Turning the page. The comic panel stays up long enough to read and hear." : playback === "complete" ? "Chapter complete. Replay it or choose the next reel." : "Press play for synchronized motion, spoken captions, and an original procedural score."}
+              : playback === "transitioning" ? "Turning the page. This comic panel holds for twelve full seconds." : playback === "complete" ? "Chapter complete. Replay it or choose the next reel." : "Press play for synchronized motion, spoken captions, and an original procedural score."}
           </p>
         </aside>
       </div>

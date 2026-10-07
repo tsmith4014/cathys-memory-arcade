@@ -96,8 +96,9 @@ Each chapter is a six-beat miniature: orientation, want, pressure, reversal, cho
 - Narration begins only after a visitor presses Play. It never speaks over an idle page.
 - On a static GitHub Pages build, choose the best natural English voice available on the visitor’s device and identify it honestly as device narration, not a recorded human performance.
 - Duck the procedural score under speech, then restore it gently. Dialogue and music should feel mixed, not stacked.
-- Comic-book `BUT / THEREFORE` transitions remain visible for 6.65 seconds: the original 1.65-second turn plus five full reading seconds.
-- Cat and Runt use restrained two-frame living illustrations. Their approved identity anchors remain visible most of the loop; motion must never justify face drift.
+- Comic-book `BUT / THEREFORE` transitions hold for 12 full seconds, with an explicit reading timer. The page remains fully visible for nearly the entire hold instead of spending the interval entering or leaving.
+- Cat and Runt use clear two-frame living illustrations. Their approved identity anchors remain visible throughout, but the expression and gesture change must be noticeable within three seconds.
+- Every chapter uses a deliberate moving camera shot and scene-specific light pass. Particle effects support the shot; they are never the only visible motion.
 - Reduced-motion visitors receive the approved still frame with no crossfade, camera move, or particle layer.
 
 ## The Six-Sibling World

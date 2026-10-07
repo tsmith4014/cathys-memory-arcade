@@ -49,7 +49,7 @@ describe("The Road Beyond Free Play", () => {
     expect(getFantasyStoryMoment(cat, 7_399).id).toBe("greenhouse");
     expect(getFantasyStoryMoment(cat, 7_400).id).toBe("names");
     expect(getFantasyStoryMoment(cat, 38_500).id).toBe("runt");
-    expect(FANTASY_STORY_TRANSITION_MS).toBe(6_650);
+    expect(FANTASY_STORY_TRANSITION_MS).toBe(12_000);
     expect(FANTASY_STORY_DURATION_MS).toBe(
       FANTASY_STORY_CHAPTERS.reduce((total, chapter) => total + chapter.durationMs, 0)
       + FANTASY_STORY_TRANSITION_MS * (FANTASY_STORY_CHAPTERS.length - 1),

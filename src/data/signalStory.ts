@@ -24,7 +24,7 @@ export type FantasyStoryChapter = {
   moments: readonly FantasyStoryMoment[];
 };
 
-export const FANTASY_STORY_TRANSITION_MS = 6_650;
+export const FANTASY_STORY_TRANSITION_MS = 12_000;
 
 export const FANTASY_STORY_CHAPTERS: readonly FantasyStoryChapter[] = [
   {
