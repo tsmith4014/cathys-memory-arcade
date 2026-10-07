@@ -1,6 +1,7 @@
 import {
   FANTASY_STORY_CHAPTERS,
   FANTASY_STORY_DURATION_MS,
+  FANTASY_STORY_TRANSITION_MS,
   getFantasyStoryMoment,
 } from "./signalStory";
 
@@ -24,7 +25,7 @@ describe("The Road Beyond Free Play", () => {
 
   it("gives every chapter a timed beginning, turn, exit, and BUT/THEREFORE bridge", () => {
     for (const chapter of FANTASY_STORY_CHAPTERS) {
-      expect(chapter.moments).toHaveLength(4);
+      expect(chapter.moments).toHaveLength(6);
       expect(chapter.moments[0].startsAt).toBe(0);
       expect(chapter.moments.map((moment) => moment.startsAt)).toEqual(
         [...chapter.moments].map((moment) => moment.startsAt).sort((left, right) => left - right),
@@ -34,15 +35,24 @@ describe("The Road Beyond Free Play", () => {
       expect(chapter.bridge.therefore.split(/\s+/).length).toBeGreaterThanOrEqual(6);
       expect(chapter.art).toMatch(/^art\/signal-story-.+-v1\.webp$/);
       expect(chapter.alt.split(/\s+/).length).toBeGreaterThanOrEqual(12);
+      for (const moment of chapter.moments) {
+        expect(moment.line.split(/\s+/).length).toBeLessThanOrEqual(22);
+      }
     }
+    expect(FANTASY_STORY_CHAPTERS[2].animationFrames).toEqual(["art/signal-story-03-cat-v2.webp"]);
+    expect(FANTASY_STORY_CHAPTERS[3].animationFrames).toEqual(["art/signal-story-04-runt-v2.webp"]);
   });
 
   it("selects authored moments at their boundaries and totals the whole serial", () => {
     const cat = FANTASY_STORY_CHAPTERS[2];
     expect(getFantasyStoryMoment(cat, 0).id).toBe("greenhouse");
-    expect(getFantasyStoryMoment(cat, 6_799).id).toBe("greenhouse");
-    expect(getFantasyStoryMoment(cat, 6_800).id).toBe("names");
-    expect(getFantasyStoryMoment(cat, 20_700).id).toBe("runt");
-    expect(FANTASY_STORY_DURATION_MS).toBe(FANTASY_STORY_CHAPTERS.reduce((total, chapter) => total + chapter.durationMs, 0));
+    expect(getFantasyStoryMoment(cat, 7_399).id).toBe("greenhouse");
+    expect(getFantasyStoryMoment(cat, 7_400).id).toBe("names");
+    expect(getFantasyStoryMoment(cat, 38_500).id).toBe("runt");
+    expect(FANTASY_STORY_TRANSITION_MS).toBe(6_650);
+    expect(FANTASY_STORY_DURATION_MS).toBe(
+      FANTASY_STORY_CHAPTERS.reduce((total, chapter) => total + chapter.durationMs, 0)
+      + FANTASY_STORY_TRANSITION_MS * (FANTASY_STORY_CHAPTERS.length - 1),
+    );
   });
 });

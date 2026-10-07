@@ -30,7 +30,7 @@ Before prose or art is approved, every scene must answer these seven lines:
 6. `IMAGE`: What single composition tells most of the beat without text?
 7. `HUMAN NOTE`: What gesture, joke, flaw, or mercy keeps the scene from reading like plot machinery?
 
-Screen copy should usually stay under 30 words. Longer prose belongs in optional briefings, discoveries, or endings, never in a block that hides the art.
+Screen copy should usually stay under 22 words. A chapter should reveal one short spoken caption at a time, with the image remaining dominant. Longer prose belongs in optional briefings, discoveries, or endings, never in a block that hides the art.
 
 ## Truth Boundary
 
@@ -77,14 +77,28 @@ A midnight dragon who did not steal the final note. She trapped it because she w
 
 ## The Road Beyond Free Play
 
-1. Coda wakes with two impossible tokens, **but** one calls from beyond the mountains; **therefore** she follows the moonroad.
-2. Tallow demands a true memory, **but** Coda has none; **therefore** Rook risks a joke and Tallow’s laugh opens a new door.
-3. The door reaches Cat, **but** even she cannot wake the silenced garden; **therefore** she sends them to Runt.
-4. Runt can lift the gate, **but** a tiny nest is trapped below it; **therefore** Coda protects the nest and earns the path forward.
-5. The garden holds forgotten songs, **but** midnight is consuming them; **therefore** Coda plants a token and grows a chorus.
-6. The chorus reaches Vesper, **but** she guards the final note because she fears endings; **therefore** Coda offers her a place in the next verse instead of defeating her.
-7. They reach a doorless arcade, **but** the tokens were never admission; **therefore** Coda uses them as hinges and opens the floor to everyone.
-8. The floor is open, **but** four unanswered tones sound above it; **therefore** Cat and Runt prepare four unnamed lamps without guessing who belongs there.
+The season’s emotional question is whether a person with no remembered past can still choose a meaningful future. Coda does not recover a convenient biography. She builds belonging through the choices she makes under pressure.
+
+1. Coda wakes as her arcade disappears, **but** a distant player repeats three unanswered notes; **therefore** she follows the moonroad rather than guarding an empty room.
+2. Tallow demands a true memory, **but** Coda has no yesterday to offer; **therefore** she gives him a forward-facing truth: she heard someone call and did not turn away.
+3. Cat could seal her greenhouse against the spreading frost, **but** that would abandon the silenced garden; **therefore** she leaves the one room she can protect and goes to find Runt.
+4. Runt can lift the collapsing gate, **but** brute force would crush a hidden nest; **therefore** Coda risks herself to move the hatchlings before Runt moves the mountain.
+5. Coda’s token may be her only clue to the past, **but** keeping it lets the garden die; **therefore** she plants it and grows her first memory from a present-tense choice.
+6. Vesper appears to have stolen the final note, **but** she is preserving the last breath of the song that raised her; **therefore** Coda offers companionship through the silence instead of promising an impossible world without endings.
+7. Coda’s remaining tokens are proof that somebody once expected her, **but** keeping them leaves everyone outside; **therefore** she spends them as hinges and opens the arcade to the whole company.
+8. Coda wants a tidy ending, **but** four sibling signals are not ready to be named; **therefore** Cat and Runt make the booth safe and teach her that patient waiting can also be love.
+
+Each chapter is a six-beat miniature: orientation, want, pressure, reversal, choice, consequence. The chapter image may carry several beats, but every caption must change the audience’s understanding of that image.
+
+## Narration and Motion Contract
+
+- Spoken narration must match the visible subtitle exactly. Do not create a second, longer script that makes a visitor choose between listening and reading.
+- Narration begins only after a visitor presses Play. It never speaks over an idle page.
+- On a static GitHub Pages build, choose the best natural English voice available on the visitor’s device and identify it honestly as device narration, not a recorded human performance.
+- Duck the procedural score under speech, then restore it gently. Dialogue and music should feel mixed, not stacked.
+- Comic-book `BUT / THEREFORE` transitions remain visible for 6.65 seconds: the original 1.65-second turn plus five full reading seconds.
+- Cat and Runt use restrained two-frame living illustrations. Their approved identity anchors remain visible most of the loop; motion must never justify face drift.
+- Reduced-motion visitors receive the approved still frame with no crossfade, camera move, or particle layer.
 
 ## The Six-Sibling World
 

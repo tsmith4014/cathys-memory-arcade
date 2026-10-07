@@ -146,6 +146,9 @@ test("plays the Cat and Runt fantasy serial without leaving the theater", async 
   await page.getByRole("button", { name: /open chapter viii: the six-lamp booth/i }).click();
   await expect(page.getByRole("img", { name: /cat and runt.*authorized family likenesses/i })).toBeVisible();
   await expect(page.getByText("Two lights found.", { exact: false })).toBeVisible();
+  await page.getByRole("button", { name: /play full story/i }).click();
+  await expect(page.getByRole("button", { name: /stop full story/i })).toHaveCount(1);
+  await expect(page.getByRole("button", { name: /stop chapter/i })).toHaveCount(0);
 });
 
 test("plays and restores a branching story file", async ({ page }) => {

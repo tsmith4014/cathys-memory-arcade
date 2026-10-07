@@ -2,9 +2,11 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   FANTASY_STORY_CHAPTERS,
   FANTASY_STORY_DURATION_MS,
+  FANTASY_STORY_TRANSITION_MS,
   getFantasyStoryMoment,
 } from "../data/signalStory";
 import { FantasyTransmissionScore } from "../lib/fantasyTransmission";
+import { BrowserStoryNarrator } from "../lib/storyNarration";
 
 type PlaybackState = "idle" | "playing" | "transitioning" | "complete";
 
@@ -17,30 +19,76 @@ export function FantasySignalStory() {
   const [seriesRunning, setSeriesRunning] = useState(false);
   const [transitionIndex, setTransitionIndex] = useState<number | null>(null);
   const [scoreAvailable, setScoreAvailable] = useState<boolean | null>(null);
+  const [narrationEnabled, setNarrationEnabled] = useState(true);
+  const [narrationAvailable, setNarrationAvailable] = useState<boolean | null>(null);
+  const [narratorVoice, setNarratorVoice] = useState("Best available English voice");
   const timerRef = useRef<number | null>(null);
   const transitionRef = useRef<number | null>(null);
   const runRef = useRef(0);
   const scoreRef = useRef<FantasyTransmissionScore | null>(null);
+  const narratorRef = useRef<BrowserStoryNarrator | null>(null);
+  const spokenBeatRef = useRef("");
   const chapter = FANTASY_STORY_CHAPTERS[activeIndex];
   const moment = getFantasyStoryMoment(chapter, elapsedMs);
   const progress = Math.min(100, (elapsedMs / chapter.durationMs) * 100);
   const stageStyle = {
     "--story-progress": `${progress}%`,
     "--story-accent": chapterAccents[activeIndex],
+    "--story-duration": `${chapter.durationMs}ms`,
+    "--story-transition-duration": `${FANTASY_STORY_TRANSITION_MS}ms`,
   } as CSSProperties;
   const isRunning = playback === "playing" || playback === "transitioning";
 
-  useEffect(() => () => {
-    runRef.current += 1;
-    clearTimers(timerRef, transitionRef);
-    scoreRef.current?.stop();
-    scoreRef.current = null;
+  useEffect(() => {
+    const narrator = new BrowserStoryNarrator({
+      onSpeakingChange: (speaking) => scoreRef.current?.setNarrationActive(speaking),
+      onVoiceChange: setNarratorVoice,
+    });
+    narratorRef.current = narrator;
+    const narrationSupported = BrowserStoryNarrator.isSupported();
+    setNarrationAvailable(narrationSupported);
+    if (!narrationSupported) setNarrationEnabled(false);
+
+    return () => {
+      runRef.current += 1;
+      clearTimers(timerRef, transitionRef);
+      narrator.cancel();
+      narratorRef.current = null;
+      scoreRef.current?.stop();
+      scoreRef.current = null;
+    };
   }, []);
+
+  useEffect(() => {
+    const narrator = narratorRef.current;
+    if (!narrator) return;
+
+    if (!narrationEnabled || playback === "idle" || playback === "complete") {
+      narrator.cancel();
+      spokenBeatRef.current = "";
+      return;
+    }
+
+    const isBridge = playback === "transitioning" && transitionIndex !== null;
+    const spokenBeat = isBridge
+      ? `${chapter.id}:bridge:${transitionIndex}`
+      : `${chapter.id}:${moment.id}`;
+    if (spokenBeatRef.current === spokenBeat) return;
+
+    spokenBeatRef.current = spokenBeat;
+    const text = isBridge
+      ? `But ${chapter.bridge.but} Therefore ${chapter.bridge.therefore}`
+      : moment.line;
+    const available = narrator.speak(text, isBridge ? 1.02 : 0.92);
+    if (!available) setNarrationAvailable(false);
+  }, [chapter, moment, narrationEnabled, playback, transitionIndex]);
 
   function stopStory(nextState: PlaybackState = "idle"): void {
     runRef.current += 1;
     clearTimers(timerRef, transitionRef);
     scoreRef.current?.silence();
+    narratorRef.current?.cancel();
+    spokenBeatRef.current = "";
     setSeriesRunning(false);
     setTransitionIndex(null);
     setPlayback(nextState);
@@ -91,7 +139,7 @@ export function FantasySignalStory() {
         transitionRef.current = window.setTimeout(() => {
           transitionRef.current = null;
           if (runRef.current === run) startChapter(index + 1, true);
-        }, 1_650);
+        }, FANTASY_STORY_TRANSITION_MS);
         return;
       }
 
@@ -109,8 +157,9 @@ export function FantasySignalStory() {
   }
 
   const playbackLabel = isRunning
-    ? seriesRunning ? "Stop full story" : "Stop chapter"
+    ? "Stop chapter"
     : playback === "complete" ? `Replay chapter ${chapter.number}` : `Play chapter ${chapter.number}`;
+  const storyFrames = [chapter.art, ...(chapter.animationFrames ?? [])];
 
   return (
     <section className="fantasy-signal-story" id="road-beyond-free-play" aria-labelledby="fantasy-story-title">
@@ -132,7 +181,19 @@ export function FantasySignalStory() {
           data-medium={chapter.medium}
           style={stageStyle}
         >
-          <img key={chapter.id} src={`${import.meta.env.BASE_URL}${chapter.art}`} alt={chapter.alt} />
+          <div
+            key={chapter.id}
+            className={`fantasy-story-art ${storyFrames.length > 1 ? "has-living-frames" : ""}`}
+          >
+            {storyFrames.map((frame, index) => (
+              <img
+                key={frame}
+                src={`${import.meta.env.BASE_URL}${frame}`}
+                alt={index === 0 ? chapter.alt : ""}
+                aria-hidden={index === 0 ? undefined : true}
+              />
+            ))}
+          </div>
           <div className="fantasy-story-shade" aria-hidden="true" />
           <div className="fantasy-story-motion" aria-hidden="true">
             {Array.from({ length: 18 }, (_, index) => (
@@ -150,12 +211,20 @@ export function FantasySignalStory() {
             <span>CH {chapter.number}</span>
             <span>{chapter.bpm} BPM</span>
           </div>
-          <div className="fantasy-story-caption" aria-live="polite">
-            <span>{moment.timecode} // {moment.id}</span>
+          <div
+            className="fantasy-story-caption"
+            aria-atomic="true"
+            aria-live={narrationEnabled && narrationAvailable ? "off" : "polite"}
+          >
+            <span>{moment.timecode} // subtitles // {moment.id}</span>
             <p>{moment.line}</p>
           </div>
           {transitionIndex !== null ? (
-            <div className="fantasy-comic-break" role="status" aria-live="polite">
+            <div
+              className="fantasy-comic-break"
+              role="status"
+              aria-live={narrationEnabled && narrationAvailable ? "off" : "polite"}
+            >
               <div><span>But</span><p>{chapter.bridge.but}</p></div>
               <i aria-hidden="true" />
               <div>
@@ -179,17 +248,38 @@ export function FantasySignalStory() {
             <div><dt>Score</dt><dd>Live synthesis</dd></div>
           </dl>
           <div className="fantasy-story-actions">
-            <button type="button" className="signal-play" aria-pressed={isRunning && !seriesRunning} onClick={toggleChapter}>
-              <span aria-hidden="true">{isRunning ? "■" : "▶"}</span>{playbackLabel}
-            </button>
+            {!seriesRunning ? (
+              <button type="button" className="signal-play" aria-pressed={isRunning} onClick={toggleChapter}>
+                <span aria-hidden="true">{isRunning ? "■" : "▶"}</span>{playbackLabel}
+              </button>
+            ) : null}
             <button
               type="button"
               className="fantasy-series-play"
               aria-pressed={seriesRunning}
               onClick={() => seriesRunning ? stopStory() : startChapter(0, true)}
             >
-              {seriesRunning ? "Stop serial" : `Play full story // ${formatTime(FANTASY_STORY_DURATION_MS)}`}
+              {seriesRunning ? "Stop full story" : `Play full story // ${formatTime(FANTASY_STORY_DURATION_MS)}`}
             </button>
+          </div>
+          <div className="fantasy-narration-control">
+            <button
+              type="button"
+              aria-label={narrationEnabled ? "Turn story narration off" : "Turn story narration on"}
+              aria-pressed={narrationEnabled}
+              disabled={narrationAvailable === false}
+              onClick={() => setNarrationEnabled((enabled) => !enabled)}
+            >
+              <span aria-hidden="true">{narrationEnabled ? "VOICE ON" : "VOICE OFF"}</span>
+              <strong>{narrationEnabled ? "Read this story aloud" : "Captions only"}</strong>
+            </button>
+            <p>
+              {narrationAvailable === false
+                ? "Spoken narration is unavailable in this browser; synchronized captions remain on."
+                : narrationEnabled
+                  ? `${narratorVoice}. The score lowers automatically beneath each line.`
+                  : "Narration is off. Captions and the original score remain on."}
+            </p>
           </div>
           <div className="fantasy-story-skip">
             <button type="button" onClick={() => selectChapter(activeIndex - 1)} disabled={activeIndex === 0}>← Previous</button>
@@ -200,8 +290,8 @@ export function FantasySignalStory() {
             {playback === "playing"
               ? scoreAvailable === false
                 ? "The film is running silently because Web Audio is unavailable."
-                : seriesRunning ? "Full-story mode is live. The next chapter will begin automatically." : "Chapter live. The score is being built by your browser."
-              : playback === "transitioning" ? "Turning the page. The next score is already finding its key." : playback === "complete" ? "Chapter complete. Replay it or choose the next reel." : "Press play for synchronized motion and an original procedural score."}
+                : seriesRunning ? "Full-story mode is live. Narration, captions, and score are moving together." : "Chapter live. Narration and the original score are being performed by your browser."
+              : playback === "transitioning" ? "Turning the page. The comic panel stays up long enough to read and hear." : playback === "complete" ? "Chapter complete. Replay it or choose the next reel." : "Press play for synchronized motion, spoken captions, and an original procedural score."}
           </p>
         </aside>
       </div>

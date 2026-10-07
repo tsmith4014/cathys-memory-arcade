@@ -1,4 +1,4 @@
-import type { FantasyStoryChapter } from "../data/signalStory";
+import { FANTASY_STORY_TRANSITION_MS, type FantasyStoryChapter } from "../data/signalStory";
 
 type ScheduledSource = OscillatorNode | AudioBufferSourceNode;
 
@@ -32,6 +32,7 @@ export class FantasyTransmissionScore {
   private context: AudioContext | null = null;
   private master: GainNode | null = null;
   private active: ActiveScore | null = null;
+  private narrationActive = false;
 
   async play(chapter: FantasyStoryChapter): Promise<boolean> {
     if (typeof window === "undefined" || typeof window.AudioContext === "undefined") return false;
@@ -99,11 +100,12 @@ export class FantasyTransmissionScore {
     const noise = makeNoise(context, 0.25);
     const root = PALETTES[nextChapter.id].roots[0];
     const start = context.currentTime + 0.03;
-    const duration = 1.55;
+    const duration = FANTASY_STORY_TRANSITION_MS / 1_000 - 0.1;
     bus.connect(master);
     bus.gain.setValueAtTime(0.0001, start);
     bus.gain.exponentialRampToValueAtTime(0.65, start + 0.08);
-    bus.gain.setValueAtTime(0.65, start + 1.05);
+    bus.gain.exponentialRampToValueAtTime(0.32, start + 1.35);
+    bus.gain.setValueAtTime(0.32, start + duration - 0.72);
     bus.gain.exponentialRampToValueAtTime(0.0001, start + duration);
 
     noiseHit(context, bus, sources, noise, start, 0.055, 3_400);
@@ -118,13 +120,37 @@ export class FantasyTransmissionScore {
         attack: 0.025,
       });
     });
+    [1.55, 2.75, 3.95, 5.1].forEach((offset, phrase) => {
+      [0, 7].forEach((interval, index) => {
+        tone(context, bus, sources, {
+          start: start + offset + index * 0.1,
+          duration: 1.15,
+          midi: root + interval + 12 + (phrase % 2 ? 2 : 0),
+          volume: 0.026,
+          type: "sine",
+          pan: index ? 0.45 : -0.45,
+          attack: 0.12,
+        });
+      });
+    });
 
     const closeTimer = window.setTimeout(() => {
       if (this.active?.bus !== bus) return;
       this.active = null;
       bus.disconnect();
-    }, 1_650);
+    }, FANTASY_STORY_TRANSITION_MS);
     this.active = { bus, sources, closeTimer };
+  }
+
+  setNarrationActive(active: boolean): void {
+    this.narrationActive = active;
+    const context = this.context;
+    const master = this.master;
+    if (!context || !master || context.state === "closed") return;
+
+    const now = context.currentTime;
+    master.gain.cancelScheduledValues(now);
+    master.gain.setTargetAtTime(active ? 0.12 : 0.34, now, active ? 0.035 : 0.12);
   }
 
   silence(): void {
@@ -165,7 +191,7 @@ export class FantasyTransmissionScore {
     compressor.ratio.value = 5;
     compressor.attack.value = 0.006;
     compressor.release.value = 0.24;
-    master.gain.value = 0.34;
+    master.gain.value = this.narrationActive ? 0.12 : 0.34;
     master.connect(compressor);
     compressor.connect(context.destination);
     this.context = context;
