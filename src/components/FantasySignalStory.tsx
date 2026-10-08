@@ -303,7 +303,7 @@ export function FantasySignalStory() {
                 <strong>Next // Chapter {FANTASY_STORY_CHAPTERS[transitionIndex].number}</strong>
               </div>
               <aside className="fantasy-comic-hold" aria-hidden="true">
-                <span>6-second reading hold</span>
+                <span>10-second reading hold</span>
                 <b><i /></b>
               </aside>
             </div>
@@ -390,7 +390,7 @@ export function FantasySignalStory() {
               ? scoreAvailable === false
                 ? "The procedural score is unavailable; narration, captions, and cinematic motion continue."
                 : seriesRunning ? "Full-story mode is live. Recorded narration, captions, living frames, and score are moving together." : "Chapter live. Recorded narration and an adaptive original score are playing together."
-              : playback === "transitioning" ? "Turning the page. This comic panel holds for six measured seconds." : playback === "complete" ? "Chapter complete. Replay it or choose the next reel." : "Press play for living artwork, recorded narration, clear captions, and an adaptive original score."}
+              : playback === "transitioning" ? "Turning the page. This comic panel holds for ten measured seconds." : playback === "complete" ? "Chapter complete. Replay it or choose the next reel." : "Press play for living artwork, recorded narration, clear captions, and an adaptive original score."}
           </p>
         </aside>
       </div>

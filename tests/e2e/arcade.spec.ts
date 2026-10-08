@@ -137,7 +137,7 @@ test("plays the Cat and Runt fantasy serial without leaving the theater", async 
   await page.getByRole("button", { name: /open chapter iii: cat/i }).click();
   const fantasyStage = page.locator(".fantasy-story-stage");
   await expect(fantasyStage).toHaveAttribute("data-effect", "bloom");
-  await expect(fantasyStage).toHaveAttribute("data-transition-ms", "6000");
+  await expect(fantasyStage).toHaveAttribute("data-transition-ms", "10000");
   await expect(page.getByRole("img", { name: /young cat.*family likeness/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /hear voice/i })).toBeVisible();
   const narrationRequest = page.waitForRequest(/audio\/fantasy\/cat-greenhouse\.mp3$/);

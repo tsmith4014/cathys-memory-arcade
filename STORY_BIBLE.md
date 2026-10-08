@@ -2,6 +2,8 @@
 
 This file is the continuity and writing contract for every story added to the arcade. It applies to the Signal Theater serial, the branching After Closing files, game chapter copy, and future characters based on people Chad knows.
 
+> **Production hold (October 7, 2026):** The current Signal Theater narration remains live as a visual proof of concept, but it is not the approved final screenplay. Three replacement treatments, six specialist reviews, and the recommended table-read candidate are documented in [`STORY_WORKSHOP.md`](STORY_WORKSHOP.md). Do not regenerate narration, replace chapter copy, or commission matching art until that story passes the workshop approval gate.
+
 ## The Story Engine
 
 The explicit `BUT / THEREFORE` test comes from Trey Parker and Matt Stone’s NYU writing talk, not from the Duffer Brothers. The useful companion lesson from the Duffers is to build the genre spectacle around characters the audience wants to stay with.
@@ -96,7 +98,7 @@ Each chapter is a six-beat miniature: orientation, want, pressure, reversal, cho
 - Narration begins only after a visitor presses Play. It never speaks over an idle page.
 - The primary performance is the prerecorded Danielle generative voice. Its 57 static MP3 clips ship with the site, so playback never sends story text or credentials to AWS. Device speech is an honestly labeled fallback if a recording cannot play.
 - Duck the procedural score under speech, then restore it gently. Dialogue and music should feel mixed, not stacked.
-- Comic-book `BUT / THEREFORE` transitions hold for six full seconds, with an explicit reading timer. The page remains fully visible for nearly the entire hold instead of spending the interval entering or leaving.
+- Comic-book `BUT / THEREFORE` transitions hold for ten full seconds, with an explicit reading timer. The page remains fully visible for nearly the entire hold so narration and reading can finish before the next chapter.
 - Captions occupy a dedicated banner below the frame. They may not cover faces, props, or the lower edge of a painting.
 - Every chapter uses a clear two-frame living illustration. The second frame must advance a character, prop, light source, or piece of weather rather than merely recolor the first frame.
 - Cat and Runt retain their approved identity anchors throughout, and their expression or gesture change must be noticeable within three seconds.

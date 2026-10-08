@@ -24,7 +24,7 @@ export type FantasyStoryChapter = {
   moments: readonly FantasyStoryMoment[];
 };
 
-export const FANTASY_STORY_TRANSITION_MS = 6_000;
+export const FANTASY_STORY_TRANSITION_MS = 10_000;
 export const FANTASY_NARRATION_VOICE = "Danielle";
 export const FANTASY_NARRATION_PREVIEW_PATH = "audio/fantasy/voice-check.mp3";
 
